@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 struct gbc {
-	struct reg {
+	struct {
 		union {
 			struct {
 				#ifdef LITTLE_ENDIAN
@@ -11,9 +11,9 @@ struct gbc {
 				uint8_t a;
 				uint8_t f;
 				#endif
-			}
+			};
 			uint16_t af;
-		}
+		};
 		union {
 			struct {
 				#ifdef LITTLE_ENDIAN
@@ -23,9 +23,9 @@ struct gbc {
 				uint8_t b;
 				uint8_t c;
 				#endif
-			}
-			uint16_t af;
-		}
+			};
+			uint16_t bc;
+		};
 		union {
 			struct {
 				#ifdef LITTLE_ENDIAN
@@ -35,9 +35,9 @@ struct gbc {
 				uint8_t d;
 				uint8_t e;
 				#endif
-			}
-			uint16_t af;
-		}
+			};
+			uint16_t de;
+		};
 		union {
 			struct {
 				#ifdef LITTLE_ENDIAN
@@ -47,12 +47,12 @@ struct gbc {
 				uint8_t h;
 				uint8_t l;
 				#endif
-			}
-			uint16_t af;
-		}
+			};
+			uint16_t hl;
+		};
 		uint16_t sp;
 		uint16_t pc;
-	}
-}
+	} reg;
+};
 
 void gbcc_emulate_cycle(void);

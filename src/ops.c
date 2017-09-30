@@ -1,68 +1,71 @@
+#include <stdio.h>
+#include "ops.h"
+
 void (*ops[0x100])(void) = {
-	NOP,            LD_BC_d16,      LD_BC_A,        INC_BC,
-	INC_B,          DEC_B,          LD_B_d8,        RLCA,
-	LD_a16_SP,      ADD_HL_BC,      LD_A_BC,        DEC_BC,
-	INC_C,          DEC_C,          LD_C_d8,        RRCA,
-	STOP_0,         LD_DE_d16,      LD_DE_A,        INC_DE,
-	INC_D,          DEC_D,          LD_D_d8,        RLA,
-	JR_r8,          ADD_HL_DE,      LD_A_DE,        DEC_DE,
-	INC_E,          DEC_E,          LD_E_d8,        RRA,
-	JR_NZ_r8,       LD_HL_d16,      LD_HLI_A,       INC_HL,
-	INC_H,          DEC_H,          LD_H_d8,        DAA,
-	JR_Z_r8,        ADD_HL_HL,      LD_A_HLI,       DEC_HL,
-	INC_L,          DEC_L,          LD_L_d8,        CPL,
-	JR_NC_r8,       LD_SP_d16,      LD_HLD_A,       INC_SP,
-	INC_HL,         DEC_HL,         LD_HL_d8,       SCF,
-	JR_C_r8,        ADD_HL_SP,      LD_A_HLD,       DEC_SP,
-	INC_A,          DEC_A,          LD_A_d8,        CCF,
-	LD_B_B,         LD_B_C,         LD_B_D,         LD_B_E,
-	LD_B_H,         LD_B_L,         LD_B_HL,        LD_B_A,
-	LD_C_B,         LD_C_C,         LD_C_D,         LD_C_E,
-	LD_C_H,         LD_C_L,         LD_C_HL,        LD_C_A,
-	LD_D_B,         LD_D_C,         LD_D_D,         LD_D_E,
-	LD_D_H,         LD_D_L,         LD_D_HL,        LD_D_A,
-	LD_E_B,         LD_E_C,         LD_E_D,         LD_E_E,
-	LD_E_H,         LD_E_L,         LD_E_HL,        LD_E_A,
-	LD_H_B,         LD_H_C,         LD_H_D,         LD_H_E,
-	LD_H_H,         LD_H_L,         LD_H_HL,        LD_H_A,
-	LD_L_B,         LD_L_C,         LD_L_D,         LD_L_E,
-	LD_L_H,         LD_L_L,         LD_L_HL,        LD_L_A,
-	LD_HL_B,        LD_HL_C,        LD_HL_D,        LD_HL_E,
-	LD_HL_H,        LD_HL_L,        HALT,           LD_HL_A,
-	LD_A_B,         LD_A_C,         LD_A_D,         LD_A_E,
-	LD_A_H,         LD_A_L,         LD_A_HL,        LD_A_A,
-	ADD_A_B,        ADD_A_C,        ADD_A_D,        ADD_A_E,
-	ADD_A_H,        ADD_A_L,        ADD_A_HL,       ADD_A_A,
-	ADC_A_B,        ADC_A_C,        ADC_A_D,        ADC_A_E,
-	ADC_A_H,        ADC_A_L,        ADC_A_HL,       ADC_A_A,
-	SUB_B,          SUB_C,          SUB_D,          SUB_E,
-	SUB_H,          SUB_L,          SUB_HL,         SUB_A,
-	SBC_A_B,        SBC_A_C,        SBC_A_D,        SBC_A_E,
-	SBC_A_H,        SBC_A_L,        SBC_A_HL,       SBC_A_A,
-	AND_B,          AND_C,          AND_D,          AND_E,
-	AND_H,          AND_L,          AND_HL,         AND_A,
-	XOR_B,          XOR_C,          XOR_D,          XOR_E,
-	XOR_H,          XOR_L,          XOR_HL,         XOR_A,
-	OR_B,           OR_C,           OR_D,           OR_E,
-	OR_H,           OR_L,           OR_HL,          OR_A,
-	CP_B,           CP_C,           CP_D,           CP_E,
-	CP_H,           CP_L,           CP_HL,          CP_A,
-	RET_NZ,         POP_BC,         JP_NZ_a16,      JP_a16,
-	CALL_NZ_a16,    PUSH_BC,        ADD_A_d8,       RST_00H,
-	RET_Z,          RET,            JP_Z_a16,       PREFIX_CB,
-	CALL_Z_a16,     CALL_a16,       ADC_A_d8,       RST_08H,
-	RET_NC,         POP_DE,         JP_NC_a16,      INVALID,
-	CALL_NC_a16,    PUSH_DE,        SUB_d8,         RST_10H,
-	RET_C,          RETI,           JP_C_a16,       INVALID,
-	CALL_C_a16,     INVALID,        SBC_A_d8,       RST_18H,
-	LDH_a8_A,       POP_HL,         LD_C_A,         INVALID,
-	INVALID,        PUSH_HL,        AND_d8,         RST_20H,
-	ADD_SP_r8,      JP_HL,          LD_a16_A,       INVALID,
-	INVALID,        INVALID,        XOR_d8,         RST_28H,
-	LDH_A_a8,       POP_AF,         LD_A_C,         DI,
-	INVALID,        PUSH_AF,        OR_d8,          RST_30H,
-	LD_HL_SP_r8,    LD_SP_HL,       LD_A_a16,       EI,
-	INVALID,        INVALID,        CP_d8,          RST_38H
+	NOP,		LD_BC_d16,	LD_AT_BC_A,	INC_BC,
+	INC_B,		DEC_B,		LD_B_d8,	RLCA,
+	LD_a16_SP,	ADD_HL_BC,	LD_A_AT_BC,	DEC_BC,
+	INC_C,		DEC_C,		LD_C_d8,	RRCA,
+	STOP_0,		LD_DE_d16,	LD_AT_DE_A,	INC_DE,
+	INC_D,		DEC_D,		LD_D_d8,	RLA,
+	JR_r8,		ADD_HL_DE,	LD_A_AT_DE,	DEC_DE,
+	INC_E,		DEC_E,		LD_E_d8,	RRA,
+	JR_NZ_r8,	LD_AT_HL_d16,	LDI_AT_HL_A,	INC_HL,
+	INC_H,		DEC_H,		LD_H_d8,	DAA,
+	JR_Z_r8,	ADD_HL_HL,	LDI_A_AT_HL,	DEC_HL,
+	INC_L,		DEC_L,		LD_L_d8,	CPL,
+	JR_NC_r8,	LD_SP_d16,	LDD_AT_HL_A,	INC_SP,
+	INC_AT_HL,		DEC_AT_HL,		LD_AT_HL_d8,	SCF,
+	JR_C_r8,	ADD_HL_SP,	LDD_A_AT_HL,	DEC_SP,
+	INC_A,		DEC_A,		LD_A_d8,	CCF,
+	LD_B_B,		LD_B_C,		LD_B_D,		LD_B_E,
+	LD_B_H,		LD_B_L,		LD_B_AT_HL,	LD_B_A,
+	LD_C_B,		LD_C_C,		LD_C_D,		LD_C_E,
+	LD_C_H,		LD_C_L,		LD_C_AT_HL,	LD_C_A,
+	LD_D_B,		LD_D_C,		LD_D_D,		LD_D_E,
+	LD_D_H,		LD_D_L,		LD_D_AT_HL,	LD_D_A,
+	LD_E_B,		LD_E_C,		LD_E_D,		LD_E_E,
+	LD_E_H,		LD_E_L,		LD_E_AT_HL,	LD_E_A,
+	LD_H_B,		LD_H_C,		LD_H_D,		LD_H_E,
+	LD_H_H,		LD_H_L,		LD_H_AT_HL,	LD_H_A,
+	LD_L_B,		LD_L_C,		LD_L_D,		LD_L_E,
+	LD_L_H,		LD_L_L,		LD_L_AT_HL,	LD_L_A,
+	LD_AT_HL_B,	LD_AT_HL_C,	LD_AT_HL_D,	LD_AT_HL_E,
+	LD_AT_HL_H,	LD_AT_HL_L,	HALT,		LD_AT_HL_A,
+	LD_A_B,		LD_A_C,		LD_A_D,		LD_A_E,
+	LD_A_H,		LD_A_L,		LD_A_AT_HL,	LD_A_A,
+	ADD_A_B,	ADD_A_C,	ADD_A_D,	ADD_A_E,
+	ADD_A_H,	ADD_A_L,	ADD_A_AT_HL,	ADD_A_A,
+	ADC_A_B,	ADC_A_C,	ADC_A_D,	ADC_A_E,
+	ADC_A_H,	ADC_A_L,	ADC_A_AT_HL,	ADC_A_A,
+	SUB_B,		SUB_C,		SUB_D,		SUB_E,
+	SUB_H,		SUB_L,		SUB_AT_HL,		SUB_A,
+	SBC_A_B,	SBC_A_C,	SBC_A_D,	SBC_A_E,
+	SBC_A_H,	SBC_A_L,	SBC_A_AT_HL,	SBC_A_A,
+	AND_B,		AND_C,		AND_D,		AND_E,
+	AND_H,		AND_L,		AND_AT_HL,		AND_A,
+	XOR_B,		XOR_C,		XOR_D,		XOR_E,
+	XOR_H,		XOR_L,		XOR_AT_HL,		XOR_A,
+	OR_B,		OR_C,		OR_D,		OR_E,
+	OR_H,		OR_L,		OR_AT_HL,		OR_A,
+	CP_B,		CP_C,		CP_D,		CP_E,
+	CP_H,		CP_L,		CP_AT_HL,		CP_A,
+	RET_NZ,		POP_BC,		JP_NZ_a16,	JP_a16,
+	CALL_NZ_a16,	PUSH_BC,	ADD_A_d8,	RST_00H,
+	RET_Z,		RET,		JP_Z_a16,	PREFIX_CB,
+	CALL_Z_a16,	CALL_a16,	ADC_A_d8,	RST_08H,
+	RET_NC,		POP_DE,		JP_NC_a16,	INVALID,
+	CALL_NC_a16,	PUSH_DE,	SUB_d8,		RST_10H,
+	RET_C,		RETI,		JP_C_a16,	INVALID,
+	CALL_C_a16,	INVALID,	SBC_A_d8,	RST_18H,
+	LDH_a8_A,	POP_HL,		LD_AT_C_A,		INVALID,
+	INVALID,	PUSH_HL,	AND_d8,		RST_20H,
+	ADD_SP_r8,	JP_HL,		LD_a16_A,	INVALID,
+	INVALID,	INVALID,	XOR_d8,		RST_28H,
+	LDH_A_a8,	POP_AF,		LD_A_AT_C,		DI,
+	INVALID,	PUSH_AF,	OR_d8,		RST_30H,
+	LD_HL_SP_r8,	LD_SP_HL,	LD_A_a16,	EI,
+	INVALID,	INVALID,	CP_d8,		RST_38H
 };
 
 void (*cb_ops[0x100])(void) = {
@@ -141,7 +144,7 @@ void LD_BC_d16(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_BC_A(void)
+void LD_AT_BC_A(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -173,7 +176,7 @@ void ADD_HL_BC(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_A_BC(void)
+void LD_A_AT_BC(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -205,7 +208,7 @@ void LD_DE_d16(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_DE_A(void)
+void LD_AT_DE_A(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -237,7 +240,7 @@ void ADD_HL_DE(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_A_DE(void)
+void LD_A_AT_DE(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -265,11 +268,11 @@ void JR_NZ_r8(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_d16(void)
+void LD_AT_HL_d16(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HLI_A(void)
+void LDI_AT_HL_A(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -301,7 +304,7 @@ void ADD_HL_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_A_HLI(void)
+void LDI_A_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -333,7 +336,7 @@ void LD_SP_d16(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HLD_A(void)
+void LDD_AT_HL_A(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -341,15 +344,15 @@ void INC_SP(void)
 {
 	printf("Unimplemented opcode!");
 }
-void INC_HL(void)
+void INC_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
-void DEC_HL(void)
+void DEC_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_d8(void)
+void LD_AT_HL_d8(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -365,7 +368,7 @@ void ADD_HL_SP(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_A_HLD(void)
+void LDD_A_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -413,7 +416,7 @@ void LD_B_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_B_HL(void)
+void LD_B_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -445,7 +448,7 @@ void LD_C_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_C_HL(void)
+void LD_C_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -477,7 +480,7 @@ void LD_D_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_D_HL(void)
+void LD_D_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -509,7 +512,7 @@ void LD_E_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_E_HL(void)
+void LD_E_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -541,7 +544,7 @@ void LD_H_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_H_HL(void)
+void LD_H_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -573,7 +576,7 @@ void LD_L_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_L_HL(void)
+void LD_L_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -581,27 +584,27 @@ void LD_L_A(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_B(void)
+void LD_AT_HL_B(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_C(void)
+void LD_AT_HL_C(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_D(void)
+void LD_AT_HL_D(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_E(void)
+void LD_AT_HL_E(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_H(void)
+void LD_AT_HL_H(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_L(void)
+void LD_AT_HL_L(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -609,7 +612,7 @@ void HALT(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_HL_A(void)
+void LD_AT_HL_A(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -637,7 +640,7 @@ void LD_A_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_A_HL(void)
+void LD_A_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -669,7 +672,7 @@ void ADD_A_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void ADD_A_HL(void)
+void ADD_A_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -701,7 +704,7 @@ void ADC_A_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void ADC_A_HL(void)
+void ADC_A_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -733,7 +736,7 @@ void SUB_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void SUB_HL(void)
+void SUB_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -765,7 +768,7 @@ void SBC_A_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void SBC_A_HL(void)
+void SBC_A_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -797,7 +800,7 @@ void AND_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void AND_HL(void)
+void AND_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -829,7 +832,7 @@ void XOR_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void XOR_HL(void)
+void XOR_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -861,7 +864,7 @@ void OR_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void OR_HL(void)
+void OR_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -893,7 +896,7 @@ void CP_L(void)
 {
 	printf("Unimplemented opcode!");
 }
-void CP_HL(void)
+void CP_AT_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -977,10 +980,6 @@ void JP_NC_a16(void)
 {
 	printf("Unimplemented opcode!");
 }
-void INVALID(void)
-{
-	printf("Unimplemented opcode!");
-}
 void CALL_NC_a16(void)
 {
 	printf("Unimplemented opcode!");
@@ -1009,15 +1008,7 @@ void JP_C_a16(void)
 {
 	printf("Unimplemented opcode!");
 }
-void INVALID(void)
-{
-	printf("Unimplemented opcode!");
-}
 void CALL_C_a16(void)
-{
-	printf("Unimplemented opcode!");
-}
-void INVALID(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -1037,15 +1028,7 @@ void POP_HL(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_C_A(void)
-{
-	printf("Unimplemented opcode!");
-}
-void INVALID(void)
-{
-	printf("Unimplemented opcode!");
-}
-void INVALID(void)
+void LD_AT_C_A(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -1073,18 +1056,6 @@ void LD_a16_A(void)
 {
 	printf("Unimplemented opcode!");
 }
-void INVALID(void)
-{
-	printf("Unimplemented opcode!");
-}
-void INVALID(void)
-{
-	printf("Unimplemented opcode!");
-}
-void INVALID(void)
-{
-	printf("Unimplemented opcode!");
-}
 void XOR_d8(void)
 {
 	printf("Unimplemented opcode!");
@@ -1101,15 +1072,11 @@ void POP_AF(void)
 {
 	printf("Unimplemented opcode!");
 }
-void LD_A_C(void)
+void LD_A_AT_C(void)
 {
 	printf("Unimplemented opcode!");
 }
 void DI(void)
-{
-	printf("Unimplemented opcode!");
-}
-void INVALID(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -1138,14 +1105,6 @@ void LD_A_a16(void)
 	printf("Unimplemented opcode!");
 }
 void EI(void)
-{
-	printf("Unimplemented opcode!");
-}
-void INVALID(void)
-{
-	printf("Unimplemented opcode!");
-}
-void INVALID(void)
 {
 	printf("Unimplemented opcode!");
 }
@@ -2178,6 +2137,10 @@ void SET_7_HL(void)
 	printf("Unimplemented opcode!");
 }
 void SET_7_A(void)
+{
+	printf("Unimplemented opcode!");
+}
+void INVALID(void)
 {
 	printf("Unimplemented opcode!");
 }
