@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include "gbc_constants.h"
 #include "gbc.h"
 
@@ -27,14 +29,14 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	size_t read;
 	uint8_t rom_size_flag;
 
-	FILE *rom = fopen(filename, "r");
+	FILE *rom = fopen(filename, "rb");
 	if (rom == NULL)
 	{
 		fprintf(stderr, "Error opening file: %s\n", filename);
 		exit(1);
 	}
 	
-	fseek(rom, CART_ROM_TYPE, SEEK_SET);
+	fseek(rom, CART_ROM_SIZE, SEEK_SET);
 	if (ferror(rom)) {
 		fprintf(stderr, "Error seeking in file: %s\n", filename);
 		fclose(rom);
@@ -63,7 +65,7 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	}
 
 	gbc->cart.rom = malloc(gbc->cart.rom_size);
-	if (gbc->cart == NULL) {
+	if (gbc->cart.rom == NULL) {
 		fprintf(stderr, "Error allocating memory\n");
 		fclose(rom);
 		exit(1);
@@ -89,7 +91,7 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 
 void gbcc_parse_header(struct gbc *gbc)
 {
-	gbcc_get_cartridge_hardware(struct gbc *gbc);
+	gbcc_get_cartridge_hardware(gbc);
 	gbcc_init_ram(gbc);
 
 }
@@ -126,7 +128,7 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 			break;
 		case 0x0Du:	/* MMM01 + RAM + BATTERY */
 			gbc->cart.mbc = MMM01;
-			gbc->battery = true;
+			gbc->cart.battery = true;
 			break;
 		case 0x0Fu:	/* MBC3 + TIMER + BATTERY */
 		case 0x10u:	/* MBC3 + TIMER + RAM + BATTERY */
@@ -134,36 +136,36 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 			gbc->cart.battery = true;
 		case 0x11u:	/* MBC3 */
 		case 0x12u:	/* MBC3 + RAM */
-			gbc->mbc = MBC3;
+			gbc->cart.mbc = MBC3;
 			break;
 		case 0x13u:	/* MBC3 + RAM + BATTERY */
-			gbc->mbc = MBC3;
-			gbc->battery = true;
+			gbc->cart.mbc = MBC3;
+			gbc->cart.battery = true;
 			break;
 		case 0x15u:	/* MBC4 */
 		case 0x16u:	/* MBC4 + RAM */
-			gbc->mbc = MBC4;
+			gbc->cart.mbc = MBC4;
 			break;
 		case 0x17u:	/* MBC4 + RAM + BATTERY */
-			gbc->mbc = MBC4;
-			gbc->battery = true;
+			gbc->cart.mbc = MBC4;
+			gbc->cart.battery = true;
 		case 0x19u:	/* MBC5 */
 		case 0x1Au:	/* MBC5 + RAM */
-			gbc->mbc = MBC5;
+			gbc->cart.mbc = MBC5;
 			break;
 		case 0x1Bu:	/* MBC5 + RAM + BATTERY */
-			gbc->mbc = MBC5;
-			gbc->battery = true;
+			gbc->cart.mbc = MBC5;
+			gbc->cart.battery = true;
 			break;
 		case 0x1Cu:	/* MBC5 + RUMBLE */
 		case 0x1Du:	/* MBC5 + RUMBLE + RAM */
-			gbc->mbc = MBC5;
-			gbc->rumble = true;
+			gbc->cart.mbc = MBC5;
+			gbc->cart.rumble = true;
 			break;
 		case 0x1Eu:	/* MBC5 + RUMBLE + RAM + BATTERY */
-			gbc->mbc = MBC5;
-			gbc->rumble = true;
-			gbc->battery = true;
+			gbc->cart.mbc = MBC5;
+			gbc->cart.rumble = true;
+			gbc->cart.battery = true;
 			break;
 	}
 }
@@ -208,7 +210,7 @@ void gbcc_init_mode(struct gbc *gbc)
 {
 	uint8_t mode_flag;
 
-	mode_flag = gbc->rom[CART_GBC_FLAG]; 
+	mode_flag = gbc->cart.rom[CART_GBC_FLAG]; 
 	if (mode_flag == 0x80u || mode_flag == 0xC0u) {
 		gbc->mode = GBC;
 	}

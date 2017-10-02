@@ -59,5 +59,7 @@ tags
 #Mac OS files
 .DS_Store
 
+#Project specific files
+gbcc
 roms/
 resources/

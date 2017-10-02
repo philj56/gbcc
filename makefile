@@ -1,7 +1,7 @@
 ODIR=obj
 SRCDIR=src
 CC=gcc
-CFLAGS=-Wall -Wextra -pedantic -O2 -g
+CFLAGS=-Wall -Wextra -pedantic -g
 LIBS=-lSDL2 -lm
 
 _DEPS = gbc.h gbc_constants.h

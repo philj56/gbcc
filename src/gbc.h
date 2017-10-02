@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include "gbc_constants.h"
 
 struct gbc {
 	/* Registers */
@@ -57,7 +58,7 @@ struct gbc {
 	} reg;
 	uint8_t memory[0x10000];
 
-	CART_MODE mode;
+	enum CART_MODE mode;
 
 	/* Cartridge data & flags */
 	struct {
@@ -65,7 +66,7 @@ struct gbc {
 		size_t rom_size;
 		uint8_t *ram;
 		size_t ram_size;
-		MBC mbc;
+		enum MBC mbc;
 		bool battery;
 		bool timer;
 		bool rumble;
