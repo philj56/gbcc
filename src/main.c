@@ -11,6 +11,8 @@ int main(int argc, char **argv)
 	struct gbc gbc;
 
 	gbcc_initialise(&gbc, argv[1]);
+	
+	gbcc_execute_instruction(&gbc);
 
 	return 0;
 }

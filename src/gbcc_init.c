@@ -78,8 +78,7 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 		exit(1);
 	}
 
-	/* TODO: Handle reading on big-endian systems */
-	read = fread(gbc->cart.rom, 4, gbc->cart.rom_size / 4, rom);
+	read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
 	if (read == 0) {
 		fprintf(stderr, "Error reading from file: %s\n", filename);
 		fclose(rom);
