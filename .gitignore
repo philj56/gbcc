@@ -53,6 +53,11 @@ dkms.conf
 
 # Vim files
 *.swp
+*.taghl
+tags
+
+#Mac OS files
+.DS_Store
 
 roms/
 resources/

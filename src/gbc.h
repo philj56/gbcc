@@ -1,6 +1,8 @@
 #include <stdint.h>
+#include <stdbool.h>
 
 struct gbc {
+	/* Registers */
 	struct {
 		union {
 			struct {
@@ -53,6 +55,20 @@ struct gbc {
 		uint16_t sp;
 		uint16_t pc;
 	} reg;
+	uint8_t memory[0x10000];
+
+	/* Cartridge data & flags */
+	struct {
+		uint8_t *rom;
+		size_t rom_size;
+		uint8_t *ram;
+		size_t ram_size;
+		MBC mbc;
+		bool battery;
+		bool timer;
+		bool rumble;
+	} cart;
 };
 
-void gbcc_emulate_cycle(void);
+void gbcc_initialise(struct gbc *gbc, const char *filename);
+void gbcc_execute_instruction(struct gbc *gbc);
