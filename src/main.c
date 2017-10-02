@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "gbc.h"
+#include "gbcc.h"
 
 int main(int argc, char **argv)
 {

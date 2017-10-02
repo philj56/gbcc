@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "ops.h"
+#include "gbcc_cpu.h"
 
 void (*ops[0x100])(void) = {
 	NOP,		LD_BC_d16,	LD_AT_BC_A,	INC_BC,

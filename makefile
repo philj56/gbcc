@@ -4,10 +4,10 @@ CC=gcc
 CFLAGS=-Wall -Wextra -pedantic -g
 LIBS=-lSDL2 -lm
 
-_DEPS = gbc.h gbc_constants.h
+_DEPS = gbcc.h gbcc_constants.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
-_OBJ = main.o gbc.o
+_OBJ = main.o gbcc_init.o gbcc_cpu.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS)

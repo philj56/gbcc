@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "gbc_constants.h"
+#include "gbcc_constants.h"
 
 struct gbc {
 	/* Registers */

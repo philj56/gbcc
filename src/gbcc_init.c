@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "gbc_constants.h"
-#include "gbc.h"
+#include "gbcc_constants.h"
+#include "gbcc.h"
 
 void gbcc_load_rom(struct gbc *gbc, const char *filename);
 void gbcc_parse_header(struct gbc *gbc);
@@ -45,7 +45,7 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	
 	read = fread(&rom_size_flag, 1, 1, rom);
 	if (read == 0) {
-		fprintf(stderr, "Error reading from file: %s\n", filename);
+		fprintf(stderr, "Error reading ROM SIZE from: %s\n", filename);
 		fclose(rom);
 		exit(1);
 	}
@@ -64,22 +64,22 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 		exit(1);
 	}
 
-	gbc->cart.rom = malloc(gbc->cart.rom_size);
+	gbc->cart.rom = (uint8_t *) malloc(gbc->cart.rom_size);
 	if (gbc->cart.rom == NULL) {
 		fprintf(stderr, "Error allocating memory\n");
 		fclose(rom);
 		exit(1);
 	}
 
-	fseek(rom, 0, SEEK_SET);
-	if (ferror(rom)) {
+
+	if (fseek(rom, 0, SEEK_SET) != 0) {
 		fprintf(stderr, "Error seeking in file: %s\n", filename);
 		fclose(rom);
 		exit(1);
 	}
 
 	/* TODO: Handle reading on big-endian systems */
-	read = fread(&(gbc->cart.rom), 4, gbc->cart.rom_size / 4, rom);
+	read = fread(gbc->cart.rom, 4, gbc->cart.rom_size / 4, rom);
 	if (read == 0) {
 		fprintf(stderr, "Error reading from file: %s\n", filename);
 		fclose(rom);
@@ -93,7 +93,6 @@ void gbcc_parse_header(struct gbc *gbc)
 {
 	gbcc_get_cartridge_hardware(gbc);
 	gbcc_init_ram(gbc);
-
 }
 
 void gbcc_get_cartridge_hardware(struct gbc *gbc)
