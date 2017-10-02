@@ -4,7 +4,8 @@
 int main()
 {
 	struct gbc gbc;
-	gbc.reg.a = 1;
-	printf("%u\n", gbc.reg.a);
+
+	gbcc_initialise(&gbc);
+
 	return 0;
 }

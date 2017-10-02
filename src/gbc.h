@@ -57,6 +57,8 @@ struct gbc {
 	} reg;
 	uint8_t memory[0x10000];
 
+	CART_MODE mode;
+
 	/* Cartridge data & flags */
 	struct {
 		uint8_t *rom;

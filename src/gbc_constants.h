@@ -36,5 +36,6 @@
 #define CART_HEADER_CHECKSUM 0x014Du
 
 enum MBC { NONE, MBC1, MBC2, MBC3, MBC4, MBC5, MMM01 };
+enum CART_MODE { GBC, DMG };
 
 #endif /* GBC_CONSTANTS_H */
