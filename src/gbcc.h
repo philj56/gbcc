@@ -60,13 +60,7 @@ struct gbc {
 	/* Non-Register state data */
 	uint8_t memory[0x10000];
 	enum CART_MODE mode;
-	union {
-		struct {
-		uint8_t prefix;
-		uint8_t opcode;
-		uint8_t imm1;
-		uint8_t imm2;
-	} instruction;
+	uint8_t opcode;
 
 	/* Cartridge data & flags */
 	struct {

@@ -12,7 +12,9 @@ int main(int argc, char **argv)
 
 	gbcc_initialise(&gbc, argv[1]);
 	
-	gbcc_execute_instruction(&gbc);
+	while (true) {
+		gbcc_execute_instruction(&gbc);
+	}
 
 	return 0;
 }
