@@ -2,8 +2,10 @@
 #include <stdio.h>
 #include "gbcc_ops.h"
 
+uint8_t *CB_GET_OPERAND(struct gbc *gbc);
+
 /* Main opcode jump table */
-void (*gbcc_ops[0x100])(void) = {
+void (*gbcc_ops[0x100])(struct gbc *gbc) = {
 /* 0x00 */	NOP,		LD_BC_d16,	LD_AT_BC_A,	INC_BC,
 /* 0x04 */	INC_B,		DEC_B,		LD_B_d8,	RLCA,
 /* 0x08 */	LD_a16_SP,	ADD_HL_BC,	LD_A_AT_BC,	DEC_BC,
@@ -71,71 +73,71 @@ void (*gbcc_ops[0x100])(void) = {
 };
 
 /* CB-prefixed opcode jump table */
-void (*gbcc_cb_ops[0x100])(void) = {
-/* 0x00 */	RLC_B,		RLC_C,		RLC_D,		RLC_E,
-/* 0x04 */	RLC_H,		RLC_L,		RLC_HL,		RLC_A,
-/* 0x08 */	RRC_B,		RRC_C,		RRC_D,		RRC_E,
-/* 0x0C */	RRC_H,		RRC_L,		RRC_HL,		RRC_A,
-/* 0x10 */	RL_B,		RL_C,		RL_D,		RL_E,
-/* 0x14 */	RL_H,		RL_L,		RL_HL,		RL_A,
-/* 0x18 */	RR_B,		RR_C,		RR_D,		RR_E,
-/* 0x1C */	RR_H,		RR_L,		RR_HL,		RR_A,
-/* 0x20 */	SLA_B,		SLA_C,		SLA_D,		SLA_E,
-/* 0x24 */	SLA_H,		SLA_L,		SLA_HL,		SLA_A,
-/* 0x28 */	SRA_B,		SRA_C,		SRA_D,		SRA_E,
-/* 0x2C */	SRA_H,		SRA_L,		SRA_HL,		SRA_A,
-/* 0x30 */	SWAP_B,		SWAP_C,		SWAP_D,		SWAP_E,
-/* 0x34 */	SWAP_H,		SWAP_L,		SWAP_HL,	SWAP_A,
-/* 0x38 */	SRL_B,		SRL_C,		SRL_D,		SRL_E,
-/* 0x3C */	SRL_H,		SRL_L,		SRL_HL,		SRL_A,
-/* 0x40 */	BIT_0_B,	BIT_0_C,	BIT_0_D,	BIT_0_E,
-/* 0x44 */	BIT_0_H,	BIT_0_L,	BIT_0_HL,	BIT_0_A,
-/* 0x48 */	BIT_1_B,	BIT_1_C,	BIT_1_D,	BIT_1_E,
-/* 0x4C */	BIT_1_H,	BIT_1_L,	BIT_1_HL,	BIT_1_A,
-/* 0x50 */	BIT_2_B,	BIT_2_C,	BIT_2_D,	BIT_2_E,
-/* 0x54 */	BIT_2_H,	BIT_2_L,	BIT_2_HL,	BIT_2_A,
-/* 0x58 */	BIT_3_B,	BIT_3_C,	BIT_3_D,	BIT_3_E,
-/* 0x5C */	BIT_3_H,	BIT_3_L,	BIT_3_HL,	BIT_3_A,
-/* 0x60 */	BIT_4_B,	BIT_4_C,	BIT_4_D,	BIT_4_E,
-/* 0x64 */	BIT_4_H,	BIT_4_L,	BIT_4_HL,	BIT_4_A,
-/* 0x68 */	BIT_5_B,	BIT_5_C,	BIT_5_D,	BIT_5_E,
-/* 0x6C */	BIT_5_H,	BIT_5_L,	BIT_5_HL,	BIT_5_A,
-/* 0x70 */	BIT_6_B,	BIT_6_C,	BIT_6_D,	BIT_6_E,
-/* 0x74 */	BIT_6_H,	BIT_6_L,	BIT_6_HL,	BIT_6_A,
-/* 0x78 */	BIT_7_B,	BIT_7_C,	BIT_7_D,	BIT_7_E,
-/* 0x7C */	BIT_7_H,	BIT_7_L,	BIT_7_HL,	BIT_7_A,
-/* 0x80 */	RES_0_B,	RES_0_C,	RES_0_D,	RES_0_E,
-/* 0x84 */	RES_0_H,	RES_0_L,	RES_0_HL,	RES_0_A,
-/* 0x88 */	RES_1_B,	RES_1_C,	RES_1_D,	RES_1_E,
-/* 0x8C */	RES_1_H,	RES_1_L,	RES_1_HL,	RES_1_A,
-/* 0x90 */	RES_2_B,	RES_2_C,	RES_2_D,	RES_2_E,
-/* 0x94 */	RES_2_H,	RES_2_L,	RES_2_HL,	RES_2_A,
-/* 0x98 */	RES_3_B,	RES_3_C,	RES_3_D,	RES_3_E,
-/* 0x9C */	RES_3_H,	RES_3_L,	RES_3_HL,	RES_3_A,
-/* 0xA0 */	RES_4_B,	RES_4_C,	RES_4_D,	RES_4_E,
-/* 0xA4 */	RES_4_H,	RES_4_L,	RES_4_HL,	RES_4_A,
-/* 0xA8 */	RES_5_B,	RES_5_C,	RES_5_D,	RES_5_E,
-/* 0xAC */	RES_5_H,	RES_5_L,	RES_5_HL,	RES_5_A,
-/* 0xB0 */	RES_6_B,	RES_6_C,	RES_6_D,	RES_6_E,
-/* 0xB4 */	RES_6_H,	RES_6_L,	RES_6_HL,	RES_6_A,
-/* 0xB8 */	RES_7_B,	RES_7_C,	RES_7_D,	RES_7_E,
-/* 0xBC */	RES_7_H,	RES_7_L,	RES_7_HL,	RES_7_A,
-/* 0xC0 */	SET_0_B,	SET_0_C,	SET_0_D,	SET_0_E,
-/* 0xC4 */	SET_0_H,	SET_0_L,	SET_0_HL,	SET_0_A,
-/* 0xC8 */	SET_1_B,	SET_1_C,	SET_1_D,	SET_1_E,
-/* 0xCC */	SET_1_H,	SET_1_L,	SET_1_HL,	SET_1_A,
-/* 0xD0 */	SET_2_B,	SET_2_C,	SET_2_D,	SET_2_E,
-/* 0xD4 */	SET_2_H,	SET_2_L,	SET_2_HL,	SET_2_A,
-/* 0xD8 */	SET_3_B,	SET_3_C,	SET_3_D,	SET_3_E,
-/* 0xDC */	SET_3_H,	SET_3_L,	SET_3_HL,	SET_3_A,
-/* 0xE0 */	SET_4_B,	SET_4_C,	SET_4_D,	SET_4_E,
-/* 0xE4 */	SET_4_H,	SET_4_L,	SET_4_HL,	SET_4_A,
-/* 0xE8 */	SET_5_B,	SET_5_C,	SET_5_D,	SET_5_E,
-/* 0xEC */	SET_5_H,	SET_5_L,	SET_5_HL,	SET_5_A,
-/* 0xF0 */	SET_6_B,	SET_6_C,	SET_6_D,	SET_6_E,
-/* 0xF4 */	SET_6_H,	SET_6_L,	SET_6_HL,	SET_6_A,
-/* 0xF8 */	SET_7_B,	SET_7_C,	SET_7_D,	SET_7_E,
-/* 0xFC */	SET_7_H,	SET_7_L,	SET_7_HL,	SET_7_A
+void (*gbcc_cb_ops[0x100])(struct gbc *gbc) = {
+/* 0x00 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x04 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x08 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x0C */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x10 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x14 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x18 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x1C */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x20 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x24 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x28 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x2C */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x30 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x34 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x38 */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x3C */	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,	CB_SHIFT_OP,
+/* 0x40 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x44 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x48 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x4C */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x50 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x54 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x58 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x5C */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x60 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x64 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x68 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x6C */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x70 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x74 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x78 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x7C */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,
+/* 0x80 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0x84 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0x88 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0x8C */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0x90 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0x94 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0x98 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0x9C */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xA0 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xA4 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xA8 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xAC */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xB0 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xB4 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xB8 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xBC */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xC0 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xC4 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xC8 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xCC */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xD0 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xD4 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xD8 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xDC */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xE0 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xE4 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xE8 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xEC */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xF0 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xF4 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xF8 */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	
+/* 0xFC */	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP,	CB_BIT_OP
 };
 
 
@@ -182,2012 +184,1337 @@ const uint8_t gbcc_op_sizes[0x100] = {
 /* 0xF0 */	2, 1, 2, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1
 };
 
-void INVALID(void)
+void INVALID(struct gbc *gbc)
 {
-	printf("Invalid opcode!\n");
+	printf("Invalid opcode: 0x%02X\n", gbc->opcode);
 }
-void NOP(void)
+void NOP(struct gbc *gbc)
 {
 	return;
 }
-void LD_BC_d16(void)
+void LD_BC_d16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_BC_A(void)
+void LD_AT_BC_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_BC(void)
+void INC_BC(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_B(void)
+void INC_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_B(void)
+void DEC_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_d8(void)
+void LD_B_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLCA(void)
+void RLCA(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_a16_SP(void)
+void LD_a16_SP(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_HL_BC(void)
+void ADD_HL_BC(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_AT_BC(void)
+void LD_A_AT_BC(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_BC(void)
+void DEC_BC(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_C(void)
+void INC_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_C(void)
+void DEC_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_d8(void)
+void LD_C_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRCA(void)
+void RRCA(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void STOP_0(void)
+void STOP_0(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_DE_d16(void)
+void LD_DE_d16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_DE_A(void)
+void LD_AT_DE_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_DE(void)
+void INC_DE(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_D(void)
+void INC_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_D(void)
+void DEC_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_d8(void)
+void LD_D_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLA(void)
+void RLA(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JR_r8(void)
+void JR_r8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_HL_DE(void)
+void ADD_HL_DE(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_AT_DE(void)
+void LD_A_AT_DE(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_DE(void)
+void DEC_DE(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_E(void)
+void INC_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_E(void)
+void DEC_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_d8(void)
+void LD_E_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRA(void)
+void RRA(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JR_NZ_r8(void)
+void JR_NZ_r8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_d16(void)
+void LD_AT_HL_d16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LDI_AT_HL_A(void)
+void LDI_AT_HL_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_HL(void)
+void INC_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_H(void)
+void INC_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_H(void)
+void DEC_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_d8(void)
+void LD_H_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DAA(void)
+void DAA(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JR_Z_r8(void)
+void JR_Z_r8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_HL_HL(void)
+void ADD_HL_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LDI_A_AT_HL(void)
+void LDI_A_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_HL(void)
+void DEC_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_L(void)
+void INC_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_L(void)
+void DEC_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_d8(void)
+void LD_L_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CPL(void)
+void CPL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JR_NC_r8(void)
+void JR_NC_r8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_SP_d16(void)
+void LD_SP_d16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LDD_AT_HL_A(void)
+void LDD_AT_HL_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_SP(void)
+void INC_SP(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_AT_HL(void)
+void INC_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_AT_HL(void)
+void DEC_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_d8(void)
+void LD_AT_HL_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SCF(void)
+void SCF(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JR_C_r8(void)
+void JR_C_r8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_HL_SP(void)
+void ADD_HL_SP(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LDD_A_AT_HL(void)
+void LDD_A_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_SP(void)
+void DEC_SP(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void INC_A(void)
+void INC_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DEC_A(void)
+void DEC_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_d8(void)
+void LD_A_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CCF(void)
+void CCF(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_B(void)
+void LD_B_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_C(void)
+void LD_B_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_D(void)
+void LD_B_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_E(void)
+void LD_B_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_H(void)
+void LD_B_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_L(void)
+void LD_B_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_AT_HL(void)
+void LD_B_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_B_A(void)
+void LD_B_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_B(void)
+void LD_C_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_C(void)
+void LD_C_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_D(void)
+void LD_C_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_E(void)
+void LD_C_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_H(void)
+void LD_C_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_L(void)
+void LD_C_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_AT_HL(void)
+void LD_C_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_C_A(void)
+void LD_C_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_B(void)
+void LD_D_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_C(void)
+void LD_D_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_D(void)
+void LD_D_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_E(void)
+void LD_D_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_H(void)
+void LD_D_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_L(void)
+void LD_D_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_AT_HL(void)
+void LD_D_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_D_A(void)
+void LD_D_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_B(void)
+void LD_E_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_C(void)
+void LD_E_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_D(void)
+void LD_E_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_E(void)
+void LD_E_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_H(void)
+void LD_E_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_L(void)
+void LD_E_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_AT_HL(void)
+void LD_E_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_E_A(void)
+void LD_E_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_B(void)
+void LD_H_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_C(void)
+void LD_H_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_D(void)
+void LD_H_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_E(void)
+void LD_H_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_H(void)
+void LD_H_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_L(void)
+void LD_H_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_AT_HL(void)
+void LD_H_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_H_A(void)
+void LD_H_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_B(void)
+void LD_L_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_C(void)
+void LD_L_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_D(void)
+void LD_L_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_E(void)
+void LD_L_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_H(void)
+void LD_L_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_L(void)
+void LD_L_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_AT_HL(void)
+void LD_L_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_L_A(void)
+void LD_L_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_B(void)
+void LD_AT_HL_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_C(void)
+void LD_AT_HL_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_D(void)
+void LD_AT_HL_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_E(void)
+void LD_AT_HL_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_H(void)
+void LD_AT_HL_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_L(void)
+void LD_AT_HL_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void HALT(void)
+void HALT(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_HL_A(void)
+void LD_AT_HL_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_B(void)
+void LD_A_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_C(void)
+void LD_A_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_D(void)
+void LD_A_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_E(void)
+void LD_A_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_H(void)
+void LD_A_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_L(void)
+void LD_A_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_AT_HL(void)
+void LD_A_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_A(void)
+void LD_A_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_B(void)
+void ADD_A_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_C(void)
+void ADD_A_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_D(void)
+void ADD_A_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_E(void)
+void ADD_A_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_H(void)
+void ADD_A_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_L(void)
+void ADD_A_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_AT_HL(void)
+void ADD_A_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_A(void)
+void ADD_A_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_B(void)
+void ADC_A_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_C(void)
+void ADC_A_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_D(void)
+void ADC_A_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_E(void)
+void ADC_A_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_H(void)
+void ADC_A_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_L(void)
+void ADC_A_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_AT_HL(void)
+void ADC_A_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_A(void)
+void ADC_A_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_B(void)
+void SUB_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_C(void)
+void SUB_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_D(void)
+void SUB_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_E(void)
+void SUB_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_H(void)
+void SUB_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_L(void)
+void SUB_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_AT_HL(void)
+void SUB_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_A(void)
+void SUB_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_B(void)
+void SBC_A_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_C(void)
+void SBC_A_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_D(void)
+void SBC_A_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_E(void)
+void SBC_A_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_H(void)
+void SBC_A_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_L(void)
+void SBC_A_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_AT_HL(void)
+void SBC_A_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_A(void)
+void SBC_A_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_B(void)
+void AND_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_C(void)
+void AND_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_D(void)
+void AND_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_E(void)
+void AND_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_H(void)
+void AND_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_L(void)
+void AND_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_AT_HL(void)
+void AND_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_A(void)
+void AND_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_B(void)
+void XOR_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_C(void)
+void XOR_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_D(void)
+void XOR_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_E(void)
+void XOR_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_H(void)
+void XOR_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_L(void)
+void XOR_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_AT_HL(void)
+void XOR_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_A(void)
+void XOR_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_B(void)
+void OR_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_C(void)
+void OR_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_D(void)
+void OR_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_E(void)
+void OR_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_H(void)
+void OR_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_L(void)
+void OR_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_AT_HL(void)
+void OR_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_A(void)
+void OR_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_B(void)
+void CP_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_C(void)
+void CP_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_D(void)
+void CP_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_E(void)
+void CP_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_H(void)
+void CP_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_L(void)
+void CP_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_AT_HL(void)
+void CP_AT_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_A(void)
+void CP_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RET_NZ(void)
+void RET_NZ(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void POP_BC(void)
+void POP_BC(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JP_NZ_a16(void)
+void JP_NZ_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JP_a16(void)
+void JP_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CALL_NZ_a16(void)
+void CALL_NZ_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void PUSH_BC(void)
+void PUSH_BC(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_A_d8(void)
+void ADD_A_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_00H(void)
+void RST_00H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RET_Z(void)
+void RET_Z(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RET(void)
+void RET(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JP_Z_a16(void)
+void JP_Z_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void PREFIX_CB(void)
+void PREFIX_CB(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CALL_Z_a16(void)
+void CALL_Z_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CALL_a16(void)
+void CALL_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADC_A_d8(void)
+void ADC_A_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_08H(void)
+void RST_08H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RET_NC(void)
+void RET_NC(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void POP_DE(void)
+void POP_DE(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JP_NC_a16(void)
+void JP_NC_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CALL_NC_a16(void)
+void CALL_NC_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void PUSH_DE(void)
+void PUSH_DE(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SUB_d8(void)
+void SUB_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_10H(void)
+void RST_10H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RET_C(void)
+void RET_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RETI(void)
+void RETI(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JP_C_a16(void)
+void JP_C_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CALL_C_a16(void)
+void CALL_C_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SBC_A_d8(void)
+void SBC_A_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_18H(void)
+void RST_18H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LDH_a8_A(void)
+void LDH_a8_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void POP_HL(void)
+void POP_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_AT_C_A(void)
+void LD_AT_C_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void PUSH_HL(void)
+void PUSH_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void AND_d8(void)
+void AND_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_20H(void)
+void RST_20H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void ADD_SP_r8(void)
+void ADD_SP_r8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void JP_HL(void)
+void JP_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_a16_A(void)
+void LD_a16_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void XOR_d8(void)
+void XOR_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_28H(void)
+void RST_28H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LDH_A_a8(void)
+void LDH_A_a8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void POP_AF(void)
+void POP_AF(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_AT_C(void)
+void LD_A_AT_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void DI(void)
+void DI(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void PUSH_AF(void)
+void PUSH_AF(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void OR_d8(void)
+void OR_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_30H(void)
+void RST_30H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_HL_SP_r8(void)
+void LD_HL_SP_r8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_SP_HL(void)
+void LD_SP_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void LD_A_a16(void)
+void LD_A_a16(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void EI(void)
+void EI(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void CP_d8(void)
+void CP_d8(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_38H(void)
+void RST_38H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLC_B(void)
+void RLC_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLC_C(void)
+void RLC_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLC_D(void)
+void RLC_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLC_E(void)
+void RLC_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLC_H(void)
+void RLC_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
 
-void RLC_L(void)
+void RLC_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLC_HL(void)
+void RLC_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLC_A(void)
+void RLC_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRC_B(void)
+void RRC_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRC_C(void)
+void RRC_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRC_D(void)
+void RRC_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRC_E(void)
+void RRC_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRC_H(void)
+void RRC_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRC_L(void)
+void RRC_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRC_HL(void)
+void RRC_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRC_A(void)
+void RRC_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RL_B(void)
+void RL_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RL_C(void)
+void RL_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RL_D(void)
+void RL_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RL_E(void)
+void RL_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RL_H(void)
+void RL_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RL_L(void)
+void RL_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RL_HL(void)
+void RL_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RL_A(void)
+void RL_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RR_B(void)
+void RR_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RR_C(void)
+void RR_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RR_D(void)
+void RR_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RR_E(void)
+void RR_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RR_H(void)
+void RR_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RR_L(void)
+void RR_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RR_HL(void)
+void RR_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RR_A(void)
+void RR_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SLA_B(void)
+void SLA_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SLA_C(void)
+void SLA_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SLA_D(void)
+void SLA_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SLA_E(void)
+void SLA_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SLA_H(void)
+void SLA_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SLA_L(void)
+void SLA_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SLA_HL(void)
+void SLA_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SLA_A(void)
+void SLA_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRA_B(void)
+void SRA_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRA_C(void)
+void SRA_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRA_D(void)
+void SRA_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRA_E(void)
+void SRA_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRA_H(void)
+void SRA_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRA_L(void)
+void SRA_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRA_HL(void)
+void SRA_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRA_A(void)
+void SRA_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SWAP_B(void)
+void SWAP_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SWAP_C(void)
+void SWAP_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SWAP_D(void)
+void SWAP_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SWAP_E(void)
+void SWAP_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SWAP_H(void)
+void SWAP_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SWAP_L(void)
+void SWAP_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SWAP_HL(void)
+void SWAP_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SWAP_A(void)
+void SWAP_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRL_B(void)
+void SRL_B(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRL_C(void)
+void SRL_C(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRL_D(void)
+void SRL_D(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRL_E(void)
+void SRL_E(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRL_H(void)
+void SRL_H(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRL_L(void)
+void SRL_L(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRL_HL(void)
+void SRL_HL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void SRL_A(void)
+void SRL_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void BIT_0_B(void)
+
+void CB_SHIFT_OP(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	uint8_t *operand = CB_GET_OPERAND(gbc);
+	uint8_t operation = gbc->opcode / 0x08u;
+	uint8_t tmp;
+
+	switch (operation) {
+		case 0:	/* RLC */
+			gbc->reg.cf = (*operand & 0x80u) >> 7;
+			*operand = (*operand << 1) | (*operand >> 7);
+			break;
+		case 1:	/* RRC */
+			gbc->reg.cf = *operand & 1;
+			*operand = (*operand >> 1) | (*operand << 7);
+			break;
+		case 2:	/* RL */
+			tmp = gbc->reg.cf;
+			gbc->reg.cf = (*operand & 0x80u) >> 7;
+			*operand = (*operand << 1) | tmp;
+			break;
+		case 3:	/* RR */
+			tmp = gbc->reg.cf;
+			gbc->reg.cf = *operand & 1;
+			*operand = (*operand >> 1) | tmp << 7;
+			break;
+		case 4:	/* SLA */
+			gbc->reg.cf = (*operand & 0x80u) >> 7;
+			*operand = (*operand << 1);
+			break;
+		case 5:	/* SRA */
+			gbc->reg.cf = *operand & 1;
+			*operand = (*operand >> 1) | (*operand & 0x80u);
+			break;
+		case 6:	/* SWAP */
+			gbc->reg.cf = 0;
+			*operand = ((*operand & 0x0Fu) << 4) | ((*operand & 0xF0u) >> 4);
+			break;
+		case 7:	/* SRL */
+			gbc->reg.cf = *operand & 1;
+			*operand >>= 1;
+			break;
+	}
+	gbc->reg.zf = (*operand == 0);
+	gbc->reg.nf = 0;
+	gbc->reg.hf = 0;
 }
-void BIT_0_C(void)
+
+void CB_BIT_OP(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	uint8_t *operand = CB_GET_OPERAND(gbc);
+	uint8_t mask = 1 << ((gbc->opcode & 0x0Fu) / 0x08u);
+	uint8_t operation = ((gbc->opcode & 0xF0u) / 0x40u);
+
+	switch (operation) {
+		case 1: /* BIT */
+			gbc->reg.zf = ~(*operand >> ((gbc->opcode & 0x0Fu) / 0x08u) & 1);
+			gbc->reg.nf = 0;
+			gbc->reg.hf = 1;
+			break;
+		case 2:	/* RES */
+			*operand &= ~mask;
+			break;
+		case 3:	/* SET */
+			*operand |= mask;
+			break;
+	}
 }
-void BIT_0_D(void)
+
+uint8_t *CB_GET_OPERAND(struct gbc *gbc)
 {
-	printf("Unimplemented opcode!\n");
+	switch (gbc->opcode % 0x08u) {
+		case 0x0u:
+			return &(gbc->reg.b);
+		case 0x1u:
+			return &(gbc->reg.c);
+		case 0x2u:
+			return &(gbc->reg.d);
+		case 0x3u:
+			return &(gbc->reg.e);
+		case 0x4u:
+			return &(gbc->reg.h);
+		case 0x5u:
+			return &(gbc->reg.l);
+		case 0x6u:
+			return &(gbc->memory[gbc->reg.hl]);
+		case 0x7u:
+			return &(gbc->reg.a);
+		default:
+			return NULL;
+	}
 }
-void BIT_0_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_0_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_0_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_0_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_0_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_1_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_1_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_1_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_1_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_1_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_1_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_1_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_1_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_2_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_2_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_2_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_2_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_2_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_2_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_2_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_2_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_3_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_3_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_3_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_3_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_3_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_3_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_3_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_3_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_4_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_4_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_4_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_4_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_4_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_4_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_4_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_4_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_5_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_5_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_5_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_5_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_5_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_5_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_5_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_5_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_6_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_6_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_6_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_6_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_6_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_6_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_6_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_6_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_7_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_7_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_7_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_7_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_7_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_7_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_7_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void BIT_7_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_0_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_0_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_0_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_0_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_0_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_0_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_0_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_0_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_1_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_1_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_1_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_1_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_1_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_1_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_1_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_1_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_2_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_2_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_2_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_2_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_2_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_2_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_2_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_2_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_3_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_3_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_3_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_3_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_3_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_3_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_3_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_3_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_4_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_4_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_4_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_4_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_4_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_4_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_4_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_4_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_5_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_5_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_5_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_5_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_5_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_5_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_5_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_5_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_6_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_6_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_6_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_6_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_6_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_6_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_6_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_6_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_7_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_7_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_7_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_7_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_7_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_7_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_7_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void RES_7_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_0_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_0_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_0_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_0_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_0_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_0_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_0_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_0_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_1_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_1_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_1_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_1_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_1_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_1_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_1_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_1_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_2_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_2_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_2_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_2_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_2_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_2_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_2_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_2_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_3_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_3_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_3_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_3_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_3_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_3_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_3_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_3_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_4_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_4_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_4_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_4_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_4_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_4_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_4_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_4_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_5_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_5_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_5_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_5_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_5_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_5_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_5_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_5_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_6_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_6_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_6_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_6_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_6_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_6_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_6_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_6_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_7_B(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_7_C(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_7_D(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_7_E(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_7_H(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_7_L(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_7_HL(void)
-{
-	printf("Unimplemented opcode!\n");
-}
-void SET_7_A(void)
-{
-	printf("Unimplemented opcode!\n");
-}
+

@@ -1,7 +1,7 @@
 ODIR=obj
 SRCDIR=src
 CC=gcc
-CFLAGS=-Wall -Wextra -pedantic -g
+CFLAGS=-Wall -Wextra -pedantic -g -Wno-unused-parameter
 LIBS=-lSDL2 -lm
 
 _DEPS = gbcc.h gbcc_constants.h gbcc_cpu.h gbcc_ops.h

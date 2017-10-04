@@ -1,6 +1,7 @@
 #ifndef GBC_CONSTANTS_H
 #define GBC_CONSTANTS_H
 
+/* Memory map */
 #define ROM0_START 0x0000u
 #define ROM0_SIZE 0x4000u
 #define ROMX_START 0x4000u
@@ -25,6 +26,7 @@
 #define HRAM_SIZE 0x007Fu
 #define IEREG 0xFFFFu
 
+/* Cartridge header map */
 #define CART_HEADER_START 0x0100u
 #define CART_HEADER_SIZE 0x004Fu
 #define CART_LOGO_START 0x0104u
