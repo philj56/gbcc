@@ -246,7 +246,7 @@ void gbcc_init_mmap(struct gbc *gbc)
 	}
 
 	gbc->memory.rom0 = gbc->cart.rom;
-	gbc->memory.romx = gbc->cart.rom + ROM0_SIZE;
+	gbc->memory.romx = gbc->cart.rom + ROMX_START;
 	gbc->memory.vram = gbc->memory.emu_vram;
 	gbc->memory.sram = gbc->cart.ram;
 	gbc->memory.wram0 = gbc->memory.emu_wram;

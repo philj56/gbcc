@@ -382,7 +382,7 @@ void LD_REG_REG(struct gbc *gbc)
 			gbc->reg.l = op;
 			break;
 		case 6:
-			gbcc_write_memory(gbc, gbc->reg.hl, op);
+			gbcc_memory_write(gbc, gbc->reg.hl, op);
 			break;
 		case 7:
 			gbc->reg.a = op;
@@ -821,7 +821,7 @@ uint8_t READ_OPERAND(struct gbc *gbc)
 		case 5:
 			return gbc->reg.l;
 		case 6:
-			return gbcc_read_memory(gbc, gbc->reg.hl);
+			return gbcc_memory_read(gbc, gbc->reg.hl);
 		case 7:
 			return gbc->reg.a;
 		default:
@@ -845,7 +845,7 @@ void WRITE_OPERAND(struct gbc *gbc, uint8_t val)
 		case 5:
 			gbc->reg.l = val;
 		case 6:
-			gbcc_write_memory(gbc, gbc->reg.hl, val);
+			gbcc_memory_write(gbc, gbc->reg.hl, val);
 		case 7:
 			gbc->reg.a = val;
 	}
