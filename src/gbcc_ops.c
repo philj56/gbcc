@@ -2,8 +2,10 @@
 #include <stdio.h>
 #include "gbcc_ops.h"
 #include "gbcc_cpu.h"
+#include "gbcc_memory.h"
 
-uint8_t *GET_OPERAND(struct gbc *gbc);
+uint8_t READ_OPERAND(struct gbc *gbc);
+void WRITE_OPERAND(struct gbc *gbc, uint8_t val);
 
 /* Main opcode jump table */
 void (*gbcc_ops[0x100])(struct gbc *gbc) = {
@@ -358,37 +360,34 @@ void CCF(struct gbc *gbc)
 }
 void LD_REG_REG(struct gbc *gbc)
 {
-	uint8_t *op1;
-	uint8_t *op2 = GET_OPERAND(gbc);
+	uint8_t op = READ_OPERAND(gbc);
 
 	switch ((gbc->opcode - 0x40u) / 0x08u) {
 		case 0:
-			op1 = &(gbc->reg.b);
+			gbc->reg.b = op;
 			break;
 		case 1:
-			op1 = &(gbc->reg.c);
+			gbc->reg.c = op;
 			break;
 		case 2:
-			op1 = &(gbc->reg.d);
+			gbc->reg.d = op;
 			break;
 		case 3:
-			op1 = &(gbc->reg.e);
+			gbc->reg.e = op;
 			break;
 		case 4:
-			op1 = &(gbc->reg.h);
+			gbc->reg.h = op;
 			break;
 		case 5:
-			op1 = &(gbc->reg.l);
+			gbc->reg.l = op;
 			break;
 		case 6:
-			op1 = &(gbc->memory[gbc->reg.hl]);
+			gbcc_write_memory(gbc, gbc->reg.hl, op);
 			break;
 		case 7:
-			op1 = &(gbc->reg.a);
+			gbc->reg.a = op;
 			break;
 	}
-
-	*op1 = *op2;
 }
 void HALT(struct gbc *gbc)
 {
@@ -396,78 +395,76 @@ void HALT(struct gbc *gbc)
 }
 void ALU_OP(struct gbc *gbc)
 {
-	uint8_t d8;
 	uint8_t *op1 = &(gbc->reg.a);
-	uint8_t *op2;
+	uint8_t op2;
 	uint8_t tmp;
 	uint8_t offset;
  	
 	if (gbc->opcode < 0xC0u) {
-		op2 = GET_OPERAND(gbc);
+		op2 = READ_OPERAND(gbc);
 		offset = 0x80u;
 	} else {
-		d8 = gbcc_fetch_instruction(gbc);
-		op2 = &d8;
+		op2 = gbcc_fetch_instruction(gbc);
 		offset = 0xC0u;
 	}
 	
 	switch ((gbc->opcode - offset) / 0x08u) {
 		case 0: /* ADD */
-			gbc->reg.hf = (((*op1 & 0x0Fu) + (*op2 & 0x0Fu)) & 0x10u) == 0x10u;
+			gbc->reg.hf = (((*op1 & 0x0Fu) + (op2 & 0x0Fu)) & 0x10u) == 0x10u;
 			tmp = *op1;
-			*op1 += *op2;
+			*op1 += op2;
 			gbc->reg.zf = (*op1 == 0);
 			gbc->reg.nf = 0;
 			gbc->reg.cf = *op1 < tmp;
 			break;
 		case 1: /* ADC */
-			gbc->reg.hf = (((*op1 & 0x0Fu) + (*op2 & 0x0Fu) + gbc->reg.cf) & 0x10u) == 0x10u;
+			gbc->reg.hf = (((*op1 & 0x0Fu) + (op2 & 0x0Fu) + gbc->reg.cf) & 0x10u) == 0x10u;
 			tmp = *op1;
-			*op1 += *op2 + gbc->reg.cf;
+			*op1 += op2 + gbc->reg.cf;
 			gbc->reg.zf = (*op1 == 0);
 			gbc->reg.nf = 0;
 			gbc->reg.cf = *op1 < tmp;
 			break;
 		case 2: /* SUB */
-			gbc->reg.hf = ((*op1 & 0x0Fu) - (*op2 & 0x0Fu)) > 0x0Fu;
+			gbc->reg.hf = ((*op1 & 0x0Fu) - (op2 & 0x0Fu)) > 0x0Fu;
 			tmp = *op1;
-			*op1 -= *op2;
+			*op1 -= op2;
 			gbc->reg.zf = (*op1 == 0);
 			gbc->reg.nf = 1;
 			gbc->reg.cf = *op1 > tmp;
 			break;
 		case 3: /* SBC */
-			gbc->reg.hf = ((*op1 & 0x0Fu) - (*op2 & 0x0Fu) - gbc->reg.cf) > 0x0Fu;
+			gbc->reg.hf = ((*op1 & 0x0Fu) - (op2 & 0x0Fu) - gbc->reg.cf) > 0x0Fu;
 			tmp = *op1;
-			*op1 -= *op2 - gbc->reg.cf;
+			*op1 -= op2 - gbc->reg.cf;
 			gbc->reg.zf = (*op1 == 0);
 			gbc->reg.nf = 1;
 			gbc->reg.cf = *op1 > tmp;
 			break;
 		case 4: /* AND */
-			*op1 &= *op2;
+			*op1 &= op2;
 			gbc->reg.zf = (*op1 == 0);
 			gbc->reg.nf = 0;
 			gbc->reg.hf = 1;
 			gbc->reg.cf = 0;
 			break;
 		case 5: /* XOR */
-			*op1 ^= *op2;
+			*op1 ^= op2;
 			gbc->reg.zf = (*op1 == 0);
 			gbc->reg.nf = 0;
 			gbc->reg.hf = 0;
 			gbc->reg.cf = 0;
 			break;
 		case 6: /* OR */
-			*op1 |= *op2;
+			*op1 |= op2;
 			gbc->reg.zf = (*op1 == 0);
 			gbc->reg.nf = 0;
 			gbc->reg.hf = 0;
 			gbc->reg.cf = 0;
 			break;
 		case 7: /* CP */
-			gbc->reg.hf = ((*op1 & 0x0Fu) - (*op2 & 0x0Fu)) > 0x0Fu;
-			tmp = *op1 - *op2;
+			gbc->reg.hf = ((*op1 & 0x0Fu) - (op2 & 0x0Fu)) > 0x0Fu;
+			tmp = *op1 - op2;
 			gbc->reg.zf = (tmp == 0);
 			gbc->reg.nf = 1;
 			gbc->reg.cf = tmp > *op1;
@@ -728,103 +725,128 @@ void RST_38H(struct gbc *gbc)
 
 void CB_SHIFT_OP(struct gbc *gbc)
 {
-	uint8_t *operand = GET_OPERAND(gbc);
+	uint8_t op = READ_OPERAND(gbc);
 	uint8_t operation = gbc->opcode / 0x08u;
 	uint8_t tmp;
 
 	switch (operation) {
 		case 0:	/* RLC */
-			gbc->reg.cf = (*operand & 0x80u) >> 7;
-			*operand = (*operand << 1) | (*operand >> 7);
+			gbc->reg.cf = (op & 0x80u) >> 7;
+			op = (op << 1) | (op >> 7);
 			break;
 		case 1:	/* RRC */
-			gbc->reg.cf = *operand & 1;
-			*operand = (*operand >> 1) | (*operand << 7);
+			gbc->reg.cf = op & 1;
+			op = (op >> 1) | (op << 7);
 			break;
 		case 2:	/* RL */
 			tmp = gbc->reg.cf;
-			gbc->reg.cf = (*operand & 0x80u) >> 7;
-			*operand = (*operand << 1) | tmp;
+			gbc->reg.cf = (op & 0x80u) >> 7;
+			op = (op << 1) | tmp;
 			break;
 		case 3:	/* RR */
 			tmp = gbc->reg.cf;
-			gbc->reg.cf = *operand & 1;
-			*operand = (*operand >> 1) | tmp << 7;
+			gbc->reg.cf = op & 1;
+			op = (op >> 1) | tmp << 7;
 			break;
 		case 4:	/* SLA */
-			gbc->reg.cf = (*operand & 0x80u) >> 7;
-			*operand = (*operand << 1);
+			gbc->reg.cf = (op & 0x80u) >> 7;
+			op = (op << 1);
 			break;
 		case 5:	/* SRA */
-			gbc->reg.cf = *operand & 1;
-			*operand = (*operand >> 1) | (*operand & 0x80u);
+			gbc->reg.cf = op & 1;
+			op = (op >> 1) | (op & 0x80u);
 			break;
 		case 6:	/* SWAP */
 			gbc->reg.cf = 0;
-			*operand = ((*operand & 0x0Fu) << 4) | ((*operand & 0xF0u) >> 4);
+			op = ((op & 0x0Fu) << 4) | ((op & 0xF0u) >> 4);
 			break;
 		case 7:	/* SRL */
-			gbc->reg.cf = *operand & 1;
-			*operand >>= 1;
+			gbc->reg.cf = op & 1;
+			op >>= 1;
 			break;
 	}
-	gbc->reg.zf = (*operand == 0);
+	gbc->reg.zf = (op == 0);
 	gbc->reg.nf = 0;
 	gbc->reg.hf = 0;
+
+	WRITE_OPERAND(gbc, op);
 	
 	gbcc_add_instruction_cycles(gbc, 8);
-	if (operand == &(gbc->memory[gbc->reg.hl])) {
+	if ((gbc->opcode % 0x08u) == 6) {	/* Operating on (hl) */
 		gbcc_add_instruction_cycles(gbc, 8);
 	}
 }
 
 void CB_BIT_OP(struct gbc *gbc)
 {
-	uint8_t *operand = GET_OPERAND(gbc);
+	uint8_t op = READ_OPERAND(gbc);
 	uint8_t mask = 1 << ((gbc->opcode & 0x0Fu) / 0x08u);
 	uint8_t operation = ((gbc->opcode & 0xF0u) / 0x40u);
 
 	switch (operation) {
 		case 1: /* BIT */
-			gbc->reg.zf = ~(*operand >> ((gbc->opcode & 0x0Fu) / 0x08u) & 1);
+			gbc->reg.zf = ~(op >> ((gbc->opcode & 0x0Fu) / 0x08u) & 1);
 			gbc->reg.nf = 0;
 			gbc->reg.hf = 1;
 			break;
 		case 2:	/* RES */
-			*operand &= ~mask;
+			op &= ~mask;
 			break;
 		case 3:	/* SET */
-			*operand |= mask;
+			op |= mask;
 			break;
 	}
 
+	WRITE_OPERAND(gbc, op);
+
 	gbcc_add_instruction_cycles(gbc, 8);
-	if (operand == &(gbc->memory[gbc->reg.hl])) {
+	if ((gbc->opcode % 0x08u) == 6) {	/* Operating on (hl) */
 		gbcc_add_instruction_cycles(gbc, 8);
 	}
 }
 
-uint8_t *GET_OPERAND(struct gbc *gbc)
+uint8_t READ_OPERAND(struct gbc *gbc)
 {
 	switch (gbc->opcode % 0x08u) {
 		case 0:
-			return &(gbc->reg.b);
+			return gbc->reg.b;
 		case 1:
-			return &(gbc->reg.c);
+			return gbc->reg.c;
 		case 2:
-			return &(gbc->reg.d);
+			return gbc->reg.d;
 		case 3:
-			return &(gbc->reg.e);
+			return gbc->reg.e;
 		case 4:
-			return &(gbc->reg.h);
+			return gbc->reg.h;
 		case 5:
-			return &(gbc->reg.l);
+			return gbc->reg.l;
 		case 6:
-			return gbcc_get_memory_ref(gbc->reg.hl);
+			return gbcc_read_memory(gbc, gbc->reg.hl);
 		case 7:
-			return &(gbc->reg.a);
+			return gbc->reg.a;
 		default:
-			return NULL;
+			return 0;
 	}
 }
 
+void WRITE_OPERAND(struct gbc *gbc, uint8_t val)
+{
+	switch (gbc->opcode % 0x08u) {
+		case 0:
+			gbc->reg.b = val;
+		case 1:
+			gbc->reg.c = val;
+		case 2:
+			gbc->reg.d = val;
+		case 3:
+			gbc->reg.e = val;
+		case 4:
+			gbc->reg.h = val;
+		case 5:
+			gbc->reg.l = val;
+		case 6:
+			gbcc_write_memory(gbc, gbc->reg.hl, val);
+		case 7:
+			gbc->reg.a = val;
+	}
+}
