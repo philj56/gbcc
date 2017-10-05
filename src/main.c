@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "gbcc.h"
+#include "gbcc_cpu.h"
 
 int main(int argc, char **argv)
 {

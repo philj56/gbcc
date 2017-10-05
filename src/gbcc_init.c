@@ -8,6 +8,7 @@ void gbcc_parse_header(struct gbc *gbc);
 void gbcc_get_cartridge_hardware(struct gbc *gbc);
 void gbcc_init_ram(struct gbc *gbc);
 void gbcc_init_mode(struct gbc *gbc);
+void gbcc_init_mmap(struct gbc *gbc);
 
 void gbcc_initialise(struct gbc *gbc, const char *filename)
 {
@@ -22,6 +23,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbcc_load_rom(gbc, filename);
 	gbcc_parse_header(gbc);
 	gbcc_init_mode(gbc);
+	gbcc_init_mmap(gbc);
 }
 
 void gbcc_load_rom(struct gbc *gbc, const char *filename)
@@ -231,4 +233,23 @@ void gbcc_init_mode(struct gbc *gbc)
 		gbc->reg.sp = 0xFFFEu;
 		gbc->reg.pc = 0x0100u;
 	}
+}
+
+void gbcc_init_mmap(struct gbc *gbc)
+{
+	if(gbc->mode == DMG) {
+		gbc->memory.emu_wram = malloc(WRAM0_SIZE * 2);
+		gbc->memory.emu_vram = malloc(VRAM_SIZE);
+	} else if (gbc->mode == GBC) {
+		gbc->memory.emu_wram = malloc(WRAM0_SIZE * 8);
+		gbc->memory.emu_vram = malloc(VRAM_SIZE * 2);
+	}
+
+	gbc->memory.rom0 = gbc->cart.rom;
+	gbc->memory.romx = gbc->cart.rom + ROM0_SIZE;
+	gbc->memory.vram = gbc->memory.emu_vram;
+	gbc->memory.sram = gbc->cart.ram;
+	gbc->memory.wram0 = gbc->memory.emu_wram;
+	gbc->memory.wramx = gbc->memory.emu_wram + WRAM0_SIZE;
+	gbc->memory.echo = gbc->memory.wram0;
 }

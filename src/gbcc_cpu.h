@@ -3,9 +3,8 @@
 
 #include "gbcc.h"
 
-extern void (*gbcc_ops[0x100])(struct gbc* gbc);
-extern void (*gbcc_cb_ops[0x100])(struct gbc* gbc);
-extern uint8_t gbcc_op_sizes[0x100];
-extern uint8_t gbcc_op_times[0x100];
+uint8_t gbcc_fetch_instruction(struct gbc *gbc);
+void gbcc_execute_instruction(struct gbc *gbc);
+void gbcc_add_instruction_cycles(struct gbc *gbc, uint8_t cycles);
 
 #endif /* GBCC_CPU_H */

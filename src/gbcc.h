@@ -78,8 +78,27 @@ struct gbc {
 		uint16_t pc;
 	} reg;
 
+	/* Memory map */
+	struct {
+		/* GBC areas */
+		uint8_t *rom0;	/* Non-switchable ROM */
+		uint8_t *romx;	/* Switchable ROM */
+		uint8_t *vram;	/* VRAM (switchable in GBC mode) */
+		uint8_t *sram;	/* Cartridge RAM */
+		uint8_t *wram0;	/* Non-switchable Work RAM */
+		uint8_t *wramx;	/* Work RAM (switchable in GBC mode) */
+		uint8_t *echo;	/* Mirror of WRAM */
+		uint8_t oam[OAM_SIZE];	/* Object Attribute Table */
+		uint8_t unused[UNUSED_SIZE];	/* Complicated unused memory */
+		uint8_t ioreg[IOREG_SIZE];	/* I/O Registers */
+		uint8_t hram[HRAM_SIZE];	/* Internal CPU RAM */
+		uint8_t iereg;	/* Interrupt enable flags */
+		/* Emulator areas */
+		uint8_t *emu_wram;	/* Actual location of WRAM */
+		uint8_t *emu_vram;	/* Actual location of WRAM */
+	} memory;
+
 	/* Non-Register state data */
-	uint8_t memory[0x10000];
 	enum CART_MODE mode;
 	uint8_t opcode;
 
@@ -97,6 +116,5 @@ struct gbc {
 };
 
 void gbcc_initialise(struct gbc *gbc, const char *filename);
-void gbcc_execute_instruction(struct gbc *gbc);
 
 #endif /* GBCC_H */
