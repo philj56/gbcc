@@ -1,4 +1,5 @@
 #include "gbcc_memory.h"
+#include "gbcc_mbc.h"
 
 uint8_t gbcc_vram_read(struct gbc *gbc, uint16_t addr);
 void gbcc_vram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
