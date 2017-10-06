@@ -2,7 +2,7 @@
 #include "gbcc.h"
 #include "gbcc_cpu.h"
 #include "gbcc_memory.h"
-#include "gbcc_dissassembly.h"
+#include "gbcc_debug.h"
 
 extern void (*gbcc_ops[0x100])(struct gbc* gbc);
 extern uint8_t gbcc_op_sizes[0x100];
@@ -22,7 +22,9 @@ void gbcc_execute_instruction(struct gbc *gbc)
 	}
 	printf("\t%s\n", op_dissassemblies[gbc->opcode]);
 	gbcc_ops[gbc->opcode](gbc);
+	gbcc_print_registers(gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
+	printf("\n");
 }
 
 void gbcc_add_instruction_cycles(struct gbc *gbc, uint8_t cycles)

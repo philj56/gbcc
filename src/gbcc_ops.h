@@ -3,49 +3,29 @@
 
 #include "gbcc.h"
 
-void LD_AT_BC_A(struct gbc *gbc);
-
 void RLCA(struct gbc *gbc);
 
 void LD_a16_SP(struct gbc *gbc);
-void ADD_HL_BC(struct gbc *gbc);
-void LD_A_AT_BC(struct gbc *gbc);
 
 void RRCA(struct gbc *gbc);
 
 void STOP_0(struct gbc *gbc);
-void LD_AT_DE_A(struct gbc *gbc);
 
 void RLA(struct gbc *gbc);
 
-void ADD_HL_DE(struct gbc *gbc);
-void LD_A_AT_DE(struct gbc *gbc);
-
 void RRA(struct gbc *gbc);
-
-void LDI_AT_HL_A(struct gbc *gbc);
 
 void DAA(struct gbc *gbc);
 
-void ADD_HL_HL(struct gbc *gbc);
-void LDI_A_AT_HL(struct gbc *gbc);
-
 void CPL(struct gbc *gbc);
 
-void LDD_AT_HL_A(struct gbc *gbc);
-
 void SCF(struct gbc *gbc);
-
-void ADD_HL_SP(struct gbc *gbc);
-void LDD_A_AT_HL(struct gbc *gbc);
 
 void CCF(struct gbc *gbc);
 
 void RET_NZ(struct gbc *gbc);
-void POP_BC(struct gbc *gbc);
 
 void CALL_NZ_a16(struct gbc *gbc);
-void PUSH_BC(struct gbc *gbc);
 void RST_00H(struct gbc *gbc);
 
 void RET_Z(struct gbc *gbc);
@@ -57,11 +37,9 @@ void CALL_a16(struct gbc *gbc);
 void RST_08H(struct gbc *gbc);
 
 void RET_NC(struct gbc *gbc);
-void POP_DE(struct gbc *gbc);
 void INVALID(struct gbc *gbc);
 
 void CALL_NC_a16(struct gbc *gbc);
-void PUSH_DE(struct gbc *gbc);
 void RST_10H(struct gbc *gbc);
 
 void RET_C(struct gbc *gbc);
@@ -71,10 +49,8 @@ void CALL_C_a16(struct gbc *gbc);
 void RST_18H(struct gbc *gbc);
 
 void LDH_a8_A(struct gbc *gbc);
-void POP_HL(struct gbc *gbc);
 void LD_AT_C_A(struct gbc *gbc);
 
-void PUSH_HL(struct gbc *gbc);
 void RST_20H(struct gbc *gbc);
 
 void ADD_SP_r8(struct gbc *gbc);
@@ -84,11 +60,9 @@ void LD_a16_A(struct gbc *gbc);
 void RST_28H(struct gbc *gbc);
 
 void LDH_A_a8(struct gbc *gbc);
-void POP_AF(struct gbc *gbc);
 void LD_A_AT_C(struct gbc *gbc);
 void DI(struct gbc *gbc);
 
-void PUSH_AF(struct gbc *gbc);
 void RST_30H(struct gbc *gbc);
 
 void LD_HL_SP_r8(struct gbc *gbc);
@@ -106,11 +80,14 @@ void HALT(struct gbc *gbc);
 void LD_REG_REG(struct gbc *gbc);
 void LD_d8(struct gbc *gbc);
 void LD_d16(struct gbc *gbc);
+void LD_A(struct gbc *gbc);
+void PUSH_POP(struct gbc *gbc);
 
 /* ALU */
 void ALU_OP(struct gbc *gbc);
 void INC_DEC_8_BIT(struct gbc *gbc);
 void INC_DEC_16_BIT(struct gbc *gbc);
+void ADD_HL(struct gbc *gbc);
 
 /* Jumps */
 void JP(struct gbc *gbc);
