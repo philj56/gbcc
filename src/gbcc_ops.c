@@ -12,13 +12,13 @@ void WRITE_OPERAND_DIV(struct gbc *gbc, uint8_t offset, uint8_t val);
 /* Main opcode jump table */
 void (*gbcc_ops[0x100])(struct gbc *gbc) = {
 /* 0x00 */	NOP,		LD_d16,		LD_A,		INC_DEC_16_BIT,
-/* 0x04 */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		RLCA,
+/* 0x04 */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
 /* 0x08 */	LD_a16_SP,	ADD_HL,		LD_A,		INC_DEC_16_BIT,
-/* 0x0C */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		RRCA,
+/* 0x0C */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
 /* 0x10 */	STOP_0,		LD_d16,		LD_A,		INC_DEC_16_BIT,
-/* 0x14 */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		RLA,
+/* 0x14 */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
 /* 0x18 */	JR,		ADD_HL,		LD_A,		INC_DEC_16_BIT,
-/* 0x1C */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		RRA,
+/* 0x1C */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
 /* 0x20 */	JR_COND,	LD_d16,		LD_A,		INC_DEC_16_BIT,
 /* 0x24 */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		DAA,
 /* 0x28 */	JR_COND,	ADD_HL,		LD_A,		INC_DEC_16_BIT,
@@ -59,22 +59,22 @@ void (*gbcc_ops[0x100])(struct gbc *gbc) = {
 /* 0xB4 */	ALU_OP,		ALU_OP,		ALU_OP,		ALU_OP,
 /* 0xB8 */	ALU_OP,		ALU_OP,		ALU_OP,		ALU_OP,
 /* 0xBC */	ALU_OP,		ALU_OP,		ALU_OP,		ALU_OP,
-/* 0xC0 */	RET_NZ,		PUSH_POP,	JP_COND,	JP,
-/* 0xC4 */	CALL_NZ_a16,	PUSH_POP,	ALU_OP,		RST_00H,
-/* 0xC8 */	RET_Z,		RET,		JP_COND,	PREFIX_CB,
-/* 0xCC */	CALL_Z_a16,	CALL_a16,	ALU_OP,		RST_08H,
-/* 0xD0 */	RET_NC,		PUSH_POP,	JP_COND,	INVALID,
-/* 0xD4 */	CALL_NC_a16,	PUSH_POP,	ALU_OP,		RST_10H,
-/* 0xD8 */	RET_C,		RETI,		JP_COND,	INVALID,
-/* 0xDC */	CALL_C_a16,	INVALID,	ALU_OP,		RST_18H,
+/* 0xC0 */	RET_COND,	PUSH_POP,	JP_COND,	JP,
+/* 0xC4 */	CALL_COND,	PUSH_POP,	ALU_OP,		RST,
+/* 0xC8 */	RET_COND,	RET,		JP_COND,	PREFIX_CB,
+/* 0xCC */	CALL_COND,	CALL,		ALU_OP,		RST,
+/* 0xD0 */	RET_COND,	PUSH_POP,	JP_COND,	INVALID,
+/* 0xD4 */	CALL_COND,	PUSH_POP,	ALU_OP,		RST,
+/* 0xD8 */	RET_COND,	RETI,		JP_COND,	INVALID,
+/* 0xDC */	CALL_COND,	INVALID,	ALU_OP,		RST,
 /* 0xE0 */	LDH_a8_A,	PUSH_POP,	LD_AT_C_A,	INVALID,
-/* 0xE4 */	INVALID,	PUSH_POP,	ALU_OP,		RST_20H,
+/* 0xE4 */	INVALID,	PUSH_POP,	ALU_OP,		RST,
 /* 0xE8 */	ADD_SP_r8,	JP_HL,		LD_a16_A,	INVALID,
-/* 0xEC */	INVALID,	INVALID,	ALU_OP,		RST_28H,
+/* 0xEC */	INVALID,	INVALID,	ALU_OP,		RST,
 /* 0xF0 */	LDH_A_a8,	PUSH_POP,	LD_A_AT_C,	DI,
-/* 0xF4 */	INVALID,	PUSH_POP,	ALU_OP,		RST_30H,
+/* 0xF4 */	INVALID,	PUSH_POP,	ALU_OP,		RST,
 /* 0xF8 */	LD_HL_SP_r8,	LD_SP_HL,	LD_A_a16,	EI,
-/* 0xFC */	INVALID,	INVALID,	ALU_OP,		RST_38H
+/* 0xFC */	INVALID,	INVALID,	ALU_OP,		RST
 };
 
 /*
@@ -128,15 +128,7 @@ void NOP(struct gbc *gbc)
 {
 	return;
 }
-void RLCA(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
 void LD_a16_SP(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RRCA(struct gbc *gbc)
 {
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
@@ -144,29 +136,144 @@ void STOP_0(struct gbc *gbc)
 {
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RLA(struct gbc *gbc)
+void RST(struct gbc *gbc)
 {
+	uint8_t addr = gbc->opcode - 0xC7u;
+	gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
+	gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+	gbc->reg.pc = 0x0000u | addr;
+}
+void CALL(struct gbc *gbc)
+{
+	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
+	gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
+	gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+	gbc->reg.pc = addr;
+}
+void CALL_COND(struct gbc *gbc)
+{
+	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
+	bool call = false;
+	switch ((gbc->opcode - 0xC0u) / 0x08u) {
+		case 0:	/* CALL NZ */
+			if (!gbc->reg.zf) {
+				call = true;
+				gbcc_add_instruction_cycles(gbc, 24);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 12);
+			}
+			break;
+		case 1:	/* CALL Z */
+			if (gbc->reg.zf) {
+				call = true;
+				gbcc_add_instruction_cycles(gbc, 24);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 12);
+			}
+			break;
+		case 2:	/* CALL NC */
+			if (!gbc->reg.cf) {
+				call = true;
+				gbcc_add_instruction_cycles(gbc, 24);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 12);
+			}
+			break;
+		case 3:	/* CALL C */
+			if (gbc->reg.cf) {
+				call = true;
+				gbcc_add_instruction_cycles(gbc, 24);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 12);
+			}
+			break;
+	}
+	if (call) {
+		gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
+		gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+		gbc->reg.pc = addr;
+	}
+}
+void RET(struct gbc *gbc) {
+	gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
+	gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
+}
+void RETI(struct gbc *gbc) {
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RRA(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
+void RET_COND(struct gbc *gbc) {
+	bool ret = false;
+	switch ((gbc->opcode - 0xC0u) / 0x08u) {
+		case 0:	/* RET NZ */
+			if (!gbc->reg.zf) {
+				ret = true;
+				gbcc_add_instruction_cycles(gbc, 20);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 8);
+			}
+			break;
+		case 1:	/* RET Z */
+			if (gbc->reg.zf) {
+				ret = true;
+				gbcc_add_instruction_cycles(gbc, 20);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 8);
+			}
+			break;
+		case 2:	/* RET NC */
+			if (!gbc->reg.cf) {
+				ret = true;
+				gbcc_add_instruction_cycles(gbc, 20);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 8);
+			}
+			break;
+		case 3:	/* RET C */
+			if (gbc->reg.cf) {
+				ret = true;
+				gbcc_add_instruction_cycles(gbc, 20);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 8);
+			}
+			break;
+	}
+	if (ret) {
+		gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
+		gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
+	}
 }
 void DAA(struct gbc *gbc)
 {
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
+	uint8_t *op = &(gbc->reg.a);
+	if ((*op & 0x0Fu) > 0x09u || gbc->reg.hf) {
+		*op += 0x06u;
+	}
+	if ((*op & 0xF0u) > 0x90u || gbc->reg.cf) {
+		*op += 0x60u;
+		gbc->reg.cf = 1;
+	} else {
+		gbc->reg.cf = 0;
+	}
+	gbc->reg.zf = (*op == 0);
+	gbc->reg.hf = 0;
 }
 void CPL(struct gbc *gbc)
 {
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
+	gbc->reg.a = ~gbc->reg.a;
+	gbc->reg.nf = 1;
+	gbc->reg.hf = 1;
 }
 void SCF(struct gbc *gbc)
 {
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
+	gbc->reg.cf = 1;
+	gbc->reg.nf = 0;
+	gbc->reg.hf = 0;
 }
 void CCF(struct gbc *gbc)
 {
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
+	gbc->reg.cf = ~gbc->reg.cf;
+	gbc->reg.nf = 1;
+	gbc->reg.hf = 1;
 }
 void LD_REG_REG(struct gbc *gbc)
 {
@@ -396,9 +503,35 @@ void ADD_HL(struct gbc *gbc)
 	gbc->reg.hl += op;
 	gbc->reg.cf = (tmp > gbc->reg.hl);
 }
-void RET_NZ(struct gbc *gbc)
+void SHIFT_A(struct gbc *gbc)
 {
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
+	uint8_t *op = &(gbc->reg.a);
+	uint8_t operation = gbc->opcode / 0x08u;
+	uint8_t tmp;
+
+	switch (operation) {
+		case 0:	/* RLC */
+			gbc->reg.cf = (*op & 0x80u) >> 7;
+			*op = (*op << 1) | (*op >> 7);
+			break;
+		case 1:	/* RRC */
+			gbc->reg.cf = *op & 1;
+			*op = (*op >> 1) | (*op << 7);
+			break;
+		case 2:	/* RL */
+			tmp = gbc->reg.cf;
+			gbc->reg.cf = (*op & 0x80u) >> 7;
+			*op = (*op << 1) | tmp;
+			break;
+		case 3:	/* RR */
+			tmp = gbc->reg.cf;
+			gbc->reg.cf = *op & 1;
+			*op = (*op >> 1) | tmp << 7;
+			break;
+	}
+	gbc->reg.zf = 0;
+	gbc->reg.nf = 0;
+	gbc->reg.hf = 0;
 }
 void JP(struct gbc *gbc)
 {
@@ -490,22 +623,6 @@ void JR_COND(struct gbc *gbc)
 			break;
 	}
 }
-void CALL_NZ_a16(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RST_00H(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RET_Z(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RET(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
 void PREFIX_CB(struct gbc *gbc)
 {
 	if (gbc->opcode < 0x40u) {
@@ -513,46 +630,6 @@ void PREFIX_CB(struct gbc *gbc)
 	} else {
 		CB_BIT_OP(gbc);
 	}
-}
-void CALL_Z_a16(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void CALL_a16(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RST_08H(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RET_NC(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void CALL_NC_a16(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RST_10H(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RET_C(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RETI(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void CALL_C_a16(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RST_18H(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
 void LDH_a8_A(struct gbc *gbc)
 {
@@ -562,19 +639,11 @@ void LD_AT_C_A(struct gbc *gbc)
 {
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
-void RST_20H(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
 void ADD_SP_r8(struct gbc *gbc)
 {
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
 void LD_a16_A(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RST_28H(struct gbc *gbc)
 {
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
@@ -587,10 +656,6 @@ void LD_A_AT_C(struct gbc *gbc)
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
 void DI(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RST_30H(struct gbc *gbc)
 {
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
@@ -607,10 +672,6 @@ void LD_A_a16(struct gbc *gbc)
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }
 void EI(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RST_38H(struct gbc *gbc)
 {
 	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
 }

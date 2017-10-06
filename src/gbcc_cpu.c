@@ -22,9 +22,9 @@ void gbcc_execute_instruction(struct gbc *gbc)
 	}
 	printf("\t%s\n", op_dissassemblies[gbc->opcode]);
 	gbcc_ops[gbc->opcode](gbc);
-	gbcc_print_registers(gbc);
+	//gbcc_print_registers(gbc);
+	//printf("\n");
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
-	printf("\n");
 }
 
 void gbcc_add_instruction_cycles(struct gbc *gbc, uint8_t cycles)
