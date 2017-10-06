@@ -13,9 +13,9 @@ void WRITE_OPERAND_DIV(struct gbc *gbc, uint8_t offset, uint8_t val);
 void (*gbcc_ops[0x100])(struct gbc *gbc) = {
 /* 0x00 */	NOP,		LD_d16,		LD_A,		INC_DEC_16_BIT,
 /* 0x04 */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
-/* 0x08 */	LD_a16_SP,	ADD_HL,		LD_A,		INC_DEC_16_BIT,
+/* 0x08 */	STORE_SP,	ADD_HL,		LD_A,		INC_DEC_16_BIT,
 /* 0x0C */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
-/* 0x10 */	STOP_0,		LD_d16,		LD_A,		INC_DEC_16_BIT,
+/* 0x10 */	STOP,		LD_d16,		LD_A,		INC_DEC_16_BIT,
 /* 0x14 */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
 /* 0x18 */	JR,		ADD_HL,		LD_A,		INC_DEC_16_BIT,
 /* 0x1C */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
@@ -67,13 +67,13 @@ void (*gbcc_ops[0x100])(struct gbc *gbc) = {
 /* 0xD4 */	CALL_COND,	PUSH_POP,	ALU_OP,		RST,
 /* 0xD8 */	RET_COND,	RETI,		JP_COND,	INVALID,
 /* 0xDC */	CALL_COND,	INVALID,	ALU_OP,		RST,
-/* 0xE0 */	LDH_a8_A,	PUSH_POP,	LD_AT_C_A,	INVALID,
+/* 0xE0 */	LD_OFFSET,	PUSH_POP,	LD_OFFSET,	INVALID,
 /* 0xE4 */	INVALID,	PUSH_POP,	ALU_OP,		RST,
-/* 0xE8 */	ADD_SP_r8,	JP_HL,		LD_a16_A,	INVALID,
+/* 0xE8 */	ADD_SP,		JP_HL,		LD_a16,		INVALID,
 /* 0xEC */	INVALID,	INVALID,	ALU_OP,		RST,
-/* 0xF0 */	LDH_A_a8,	PUSH_POP,	LD_A_AT_C,	DI,
+/* 0xF0 */	LD_OFFSET,	PUSH_POP,	LD_OFFSET,	DI,
 /* 0xF4 */	INVALID,	PUSH_POP,	ALU_OP,		RST,
-/* 0xF8 */	LD_HL_SP_r8,	LD_SP_HL,	LD_A_a16,	EI,
+/* 0xF8 */	LD_HL,		LD_HL,		LD_a16,		EI,
 /* 0xFC */	INVALID,	INVALID,	ALU_OP,		RST
 };
 
@@ -120,128 +120,28 @@ const uint8_t gbcc_op_sizes[0x100] = {
 /* 0xF0 */	2, 1, 2, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1
 };
 
+/* Miscellaneous */
+
 void INVALID(struct gbc *gbc)
 {
 	printf("Invalid opcode: 0x%02X\n", gbc->opcode);
 }
+
 void NOP(struct gbc *gbc)
 {
 	return;
 }
-void LD_a16_SP(struct gbc *gbc)
+
+void STOP(struct gbc *gbc)
 {
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
+	gbc->stop = true;
 }
-void STOP_0(struct gbc *gbc)
+
+void HALT(struct gbc *gbc)
 {
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
+	gbc->halt = true;
 }
-void RST(struct gbc *gbc)
-{
-	uint8_t addr = gbc->opcode - 0xC7u;
-	gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
-	gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
-	gbc->reg.pc = 0x0000u | addr;
-}
-void CALL(struct gbc *gbc)
-{
-	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
-	gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
-	gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
-	gbc->reg.pc = addr;
-}
-void CALL_COND(struct gbc *gbc)
-{
-	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
-	bool call = false;
-	switch ((gbc->opcode - 0xC0u) / 0x08u) {
-		case 0:	/* CALL NZ */
-			if (!gbc->reg.zf) {
-				call = true;
-				gbcc_add_instruction_cycles(gbc, 24);
-			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
-			}
-			break;
-		case 1:	/* CALL Z */
-			if (gbc->reg.zf) {
-				call = true;
-				gbcc_add_instruction_cycles(gbc, 24);
-			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
-			}
-			break;
-		case 2:	/* CALL NC */
-			if (!gbc->reg.cf) {
-				call = true;
-				gbcc_add_instruction_cycles(gbc, 24);
-			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
-			}
-			break;
-		case 3:	/* CALL C */
-			if (gbc->reg.cf) {
-				call = true;
-				gbcc_add_instruction_cycles(gbc, 24);
-			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
-			}
-			break;
-	}
-	if (call) {
-		gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
-		gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
-		gbc->reg.pc = addr;
-	}
-}
-void RET(struct gbc *gbc) {
-	gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
-	gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
-}
-void RETI(struct gbc *gbc) {
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void RET_COND(struct gbc *gbc) {
-	bool ret = false;
-	switch ((gbc->opcode - 0xC0u) / 0x08u) {
-		case 0:	/* RET NZ */
-			if (!gbc->reg.zf) {
-				ret = true;
-				gbcc_add_instruction_cycles(gbc, 20);
-			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
-			}
-			break;
-		case 1:	/* RET Z */
-			if (gbc->reg.zf) {
-				ret = true;
-				gbcc_add_instruction_cycles(gbc, 20);
-			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
-			}
-			break;
-		case 2:	/* RET NC */
-			if (!gbc->reg.cf) {
-				ret = true;
-				gbcc_add_instruction_cycles(gbc, 20);
-			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
-			}
-			break;
-		case 3:	/* RET C */
-			if (gbc->reg.cf) {
-				ret = true;
-				gbcc_add_instruction_cycles(gbc, 20);
-			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
-			}
-			break;
-	}
-	if (ret) {
-		gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
-		gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
-	}
-}
+
 void DAA(struct gbc *gbc)
 {
 	uint8_t *op = &(gbc->reg.a);
@@ -257,32 +157,50 @@ void DAA(struct gbc *gbc)
 	gbc->reg.zf = (*op == 0);
 	gbc->reg.hf = 0;
 }
+
 void CPL(struct gbc *gbc)
 {
 	gbc->reg.a = ~gbc->reg.a;
 	gbc->reg.nf = 1;
 	gbc->reg.hf = 1;
 }
+
 void SCF(struct gbc *gbc)
 {
 	gbc->reg.cf = 1;
 	gbc->reg.nf = 0;
 	gbc->reg.hf = 0;
 }
+
 void CCF(struct gbc *gbc)
 {
 	gbc->reg.cf = ~gbc->reg.cf;
 	gbc->reg.nf = 1;
 	gbc->reg.hf = 1;
 }
+
+void EI(struct gbc *gbc)
+{
+	gbc->ime = true;
+}
+
+void DI(struct gbc *gbc)
+{
+	gbc->ime = false;
+}
+
+/* Loads */
+
 void LD_REG_REG(struct gbc *gbc)
 {
 	WRITE_OPERAND_DIV(gbc, 0x40u, READ_OPERAND_MOD(gbc));
 }
+
 void LD_d8(struct gbc *gbc)
 {
 	WRITE_OPERAND_DIV(gbc, 0x00u, gbcc_fetch_instruction(gbc));
 }
+
 void LD_d16(struct gbc *gbc)
 {
 	uint16_t val = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
@@ -301,6 +219,7 @@ void LD_d16(struct gbc *gbc)
 			break;
 	}
 }
+
 void LD_A(struct gbc *gbc)
 {
 	uint16_t op;
@@ -327,6 +246,64 @@ void LD_A(struct gbc *gbc)
 			break;
 	}
 }
+
+void LD_a16(struct gbc *gbc)
+{
+	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
+	switch ((gbc->opcode - 0xE0u) / 0x10u) {
+		case 0:
+			gbcc_memory_write(gbc, addr, gbc->reg.a);
+			break;
+		case 1:
+			gbc->reg.a = gbcc_memory_read(gbc, addr);
+			break;
+	}
+}
+
+void LD_OFFSET(struct gbc *gbc) {
+	uint8_t op;
+	switch ((gbc->opcode % 0x10u) / 0x02u) {
+		case 0:
+			op = gbcc_fetch_instruction(gbc);
+			break;
+		case 1:
+			op = gbc->reg.c;
+			break;
+	}
+	switch ((gbc->opcode - 0xE0u) / 0x10u) {
+		case 0:
+			gbcc_memory_write(gbc, 0xFF00u + op, gbc->reg.a);
+			break;
+		case 1:
+			gbc->reg.a = gbcc_memory_read(gbc, 0xFF00u + op);
+			break;
+	}
+}
+
+void STORE_SP(struct gbc *gbc)
+{
+	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
+	gbcc_memory_write(gbc, addr, gbc->reg.sp);
+}
+
+void LD_HL(struct gbc *gbc)
+{
+	uint8_t offset;
+	switch (gbc->opcode - 0xF8u) {
+		case 0:
+			offset = gbcc_fetch_instruction(gbc);
+			gbc->reg.hf = (((gbc->reg.sp & 0x00FFu) + (gbc->reg.sp & 0x00FFu)) & 0x0100u) == 0x0100u;
+			gbc->reg.hl = gbc->reg.sp + offset;
+			gbc->reg.cf = gbc->reg.hl < gbc->reg.sp;
+			gbc->reg.zf = 0;
+			gbc->reg.nf = 0;
+			break;
+		case 1:
+			gbc->reg.sp = gbc->reg.hl;
+			break;
+	}
+}
+
 void PUSH_POP(struct gbc *gbc)
 {
 	uint16_t *op;
@@ -355,10 +332,9 @@ void PUSH_POP(struct gbc *gbc)
 			break;
 	}
 }
-void HALT(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
+
+/* ALU */
+
 void ALU_OP(struct gbc *gbc)
 {
 	uint8_t *op1 = &(gbc->reg.a);
@@ -437,6 +413,7 @@ void ALU_OP(struct gbc *gbc)
 			break;
 	}
 }
+
 void INC_DEC_8_BIT(struct gbc *gbc)
 {
 	uint8_t op = READ_OPERAND_DIV(gbc, 0x00u);
@@ -454,6 +431,7 @@ void INC_DEC_8_BIT(struct gbc *gbc)
 	}
 	gbc->reg.zf = (op == 0);
 }
+
 void INC_DEC_16_BIT(struct gbc *gbc)
 {
 	uint16_t *op;
@@ -480,6 +458,7 @@ void INC_DEC_16_BIT(struct gbc *gbc)
 			break;
 	}
 }
+
 void ADD_HL(struct gbc *gbc)
 {
 	uint16_t op;
@@ -503,6 +482,18 @@ void ADD_HL(struct gbc *gbc)
 	gbc->reg.hl += op;
 	gbc->reg.cf = (tmp > gbc->reg.hl);
 }
+
+void ADD_SP(struct gbc *gbc)
+{
+	uint16_t op = gbcc_fetch_instruction(gbc);
+	uint16_t tmp = gbc->reg.sp;
+	gbc->reg.hf = (((gbc->reg.sp & 0x00FFu) + (op & 0x00FFu)) & 0x0100u) == 0x0100u;
+	gbc->reg.sp += op;
+	gbc->reg.cf = gbc->reg.sp < tmp;
+	gbc->reg.zf = 0;
+	gbc->reg.nf = 0;
+}
+
 void SHIFT_A(struct gbc *gbc)
 {
 	uint8_t *op = &(gbc->reg.a);
@@ -533,15 +524,20 @@ void SHIFT_A(struct gbc *gbc)
 	gbc->reg.nf = 0;
 	gbc->reg.hf = 0;
 }
+
+/* Jumps */
+
 void JP(struct gbc *gbc)
 {
 	gbc->reg.pc = (uint16_t)gbcc_fetch_instruction(gbc) 
 		| (uint16_t)gbcc_fetch_instruction(gbc) << 8;
 }
+
 void JP_HL(struct gbc *gbc)
 {
 	gbc->reg.pc = gbc->reg.hl;
 }
+
 void JP_COND(struct gbc *gbc)
 {
 	uint16_t addr = (uint16_t)gbcc_fetch_instruction(gbc) 
@@ -581,10 +577,12 @@ void JP_COND(struct gbc *gbc)
 			break;
 	}
 }
+
 void JR(struct gbc *gbc)
 {
 	gbc->reg.pc += (int8_t)gbcc_fetch_instruction(gbc);
 }
+
 void JR_COND(struct gbc *gbc)
 {
 	uint16_t addr = gbc->reg.pc + (int8_t)gbcc_fetch_instruction(gbc); 
@@ -623,6 +621,125 @@ void JR_COND(struct gbc *gbc)
 			break;
 	}
 }
+
+/* Calls */
+
+void CALL(struct gbc *gbc)
+{
+	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
+	gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
+	gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+	gbc->reg.pc = addr;
+}
+
+void CALL_COND(struct gbc *gbc)
+{
+	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
+	bool call = false;
+	switch ((gbc->opcode - 0xC0u) / 0x08u) {
+		case 0:	/* CALL NZ */
+			if (!gbc->reg.zf) {
+				call = true;
+				gbcc_add_instruction_cycles(gbc, 24);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 12);
+			}
+			break;
+		case 1:	/* CALL Z */
+			if (gbc->reg.zf) {
+				call = true;
+				gbcc_add_instruction_cycles(gbc, 24);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 12);
+			}
+			break;
+		case 2:	/* CALL NC */
+			if (!gbc->reg.cf) {
+				call = true;
+				gbcc_add_instruction_cycles(gbc, 24);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 12);
+			}
+			break;
+		case 3:	/* CALL C */
+			if (gbc->reg.cf) {
+				call = true;
+				gbcc_add_instruction_cycles(gbc, 24);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 12);
+			}
+			break;
+	}
+	if (call) {
+		gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
+		gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+		gbc->reg.pc = addr;
+	}
+}
+
+void RET(struct gbc *gbc) {
+	gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
+	gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
+}
+
+void RETI(struct gbc *gbc) {
+	gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
+	gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
+	gbc->ime = true;
+}
+
+void RET_COND(struct gbc *gbc) {
+	bool ret = false;
+	switch ((gbc->opcode - 0xC0u) / 0x08u) {
+		case 0:	/* RET NZ */
+			if (!gbc->reg.zf) {
+				ret = true;
+				gbcc_add_instruction_cycles(gbc, 20);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 8);
+			}
+			break;
+		case 1:	/* RET Z */
+			if (gbc->reg.zf) {
+				ret = true;
+				gbcc_add_instruction_cycles(gbc, 20);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 8);
+			}
+			break;
+		case 2:	/* RET NC */
+			if (!gbc->reg.cf) {
+				ret = true;
+				gbcc_add_instruction_cycles(gbc, 20);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 8);
+			}
+			break;
+		case 3:	/* RET C */
+			if (gbc->reg.cf) {
+				ret = true;
+				gbcc_add_instruction_cycles(gbc, 20);
+			} else {
+				gbcc_add_instruction_cycles(gbc, 8);
+			}
+			break;
+	}
+	if (ret) {
+		gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
+		gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
+	}
+}
+
+void RST(struct gbc *gbc)
+{
+	uint8_t addr = gbc->opcode - 0xC7u;
+	gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
+	gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+	gbc->reg.pc = 0x0000u | addr;
+}
+
+/* CB-prefix */
+
 void PREFIX_CB(struct gbc *gbc)
 {
 	if (gbc->opcode < 0x40u) {
@@ -631,51 +748,6 @@ void PREFIX_CB(struct gbc *gbc)
 		CB_BIT_OP(gbc);
 	}
 }
-void LDH_a8_A(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void LD_AT_C_A(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void ADD_SP_r8(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void LD_a16_A(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void LDH_A_a8(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void LD_A_AT_C(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void DI(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void LD_HL_SP_r8(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void LD_SP_HL(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void LD_A_a16(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-void EI(struct gbc *gbc)
-{
-	printf("Unimplemented opcode: 0x%02X\n", gbc->opcode);
-}
-
 
 void CB_SHIFT_OP(struct gbc *gbc)
 {
@@ -758,6 +830,8 @@ void CB_BIT_OP(struct gbc *gbc)
 		gbcc_add_instruction_cycles(gbc, 8);
 	}
 }
+
+/* Helper functions */
 
 uint8_t READ_OPERAND_MOD(struct gbc *gbc)
 {

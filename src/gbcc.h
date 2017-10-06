@@ -102,6 +102,9 @@ struct gbc {
 	/* Non-Register state data */
 	enum CART_MODE mode;
 	uint8_t opcode;
+	bool ime;
+	bool halt;
+	bool stop;
 
 	/* Cartridge data & flags */
 	struct {

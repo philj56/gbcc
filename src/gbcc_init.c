@@ -20,6 +20,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->cart.rumble = false;
 	gbc->cart.ram_size = 0;
 	gbc->mode = DMG;
+	gbc->ime = true;
 	gbcc_load_rom(gbc, filename);
 	gbcc_parse_header(gbc);
 	gbcc_init_mode(gbc);
