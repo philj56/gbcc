@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 #include "gbcc_constants.h"
 
 struct gbc {
@@ -103,8 +104,14 @@ struct gbc {
 	enum CART_MODE mode;
 	uint8_t opcode;
 	bool ime;
-	bool halt;
+	struct {
+		bool set;
+		bool no_interrupt;
+		uint8_t skip;
+	} halt;
 	bool stop;
+	uint8_t instruction_timer;
+	uint64_t clock;
 
 	/* Cartridge data & flags */
 	struct {

@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 	gbcc_initialise(&gbc, argv[1]);
 	
 	while (true) {
-		gbcc_execute_instruction(&gbc);
+		gbcc_emulate_cycle(&gbc);
 	}
 
 	return 0;

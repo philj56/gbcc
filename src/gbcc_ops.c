@@ -140,7 +140,13 @@ void STOP(struct gbc *gbc)
 
 void HALT(struct gbc *gbc)
 {
-	gbc->halt = true;
+	uint8_t int_enable = gbcc_memory_read(gbc, IE);
+	uint8_t int_flags = gbcc_memory_read(gbc, IF);
+	uint8_t interrupt = int_enable & int_flags & 0x1Fu;
+
+	gbc->halt.set = true;
+	gbc->halt.no_interrupt = !gbc->ime && !interrupt;
+	gbc->halt.skip = !gbc->ime && interrupt;
 }
 
 void DAA(struct gbc *gbc)

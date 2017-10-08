@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/time.h>
 #include "gbcc_constants.h"
 #include "gbcc.h"
 
@@ -21,6 +22,12 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->cart.ram_size = 0;
 	gbc->mode = DMG;
 	gbc->ime = true;
+	gbc->halt.set = false;
+	gbc->halt.no_interrupt = false;
+	gbc->halt.skip = 0;
+	gbc->stop = false;
+	gbc->instruction_timer = 0;
+	gbc->clock = 0;
 	gbcc_load_rom(gbc, filename);
 	gbcc_parse_header(gbc);
 	gbcc_init_mode(gbc);
