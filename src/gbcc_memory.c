@@ -50,9 +50,9 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr)
 		return gbcc_unused_read(gbc, addr);
 	} else if (addr >= IOREG_START && addr < HRAM_START) {
 		return gbcc_ioreg_read(gbc, addr);
-	} else if (addr >= HRAM_START && addr < IEREG) {
+	} else if (addr >= HRAM_START && addr < IE) {
 		return gbcc_hram_read(gbc, addr);
-	} else if (addr == IEREG) {
+	} else if (addr == IE) {
 		return gbc->memory.iereg;
 	}
 	return 0;
@@ -89,51 +89,57 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		gbcc_unused_write(gbc, addr, val);
 	} else if (addr >= IOREG_START && addr < HRAM_START) {
 		gbcc_ioreg_write(gbc, addr, val);
-	} else if (addr >= HRAM_START && addr < IEREG) {
+	} else if (addr >= HRAM_START && addr < IE) {
 		gbcc_hram_write(gbc, addr, val);
-	} else if (addr == IEREG) {
+	} else if (addr == IE) {
 		gbc->memory.iereg = val;
 	}
 }
 
 uint8_t gbcc_vram_read(struct gbc *gbc, uint16_t addr) {
-	return 0;
+	return gbc->memory.emu_vram[addr - VRAM_START];
 }
 
 void gbcc_vram_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+	gbc->memory.emu_vram[addr - VRAM_START] = val;
 }
 
 uint8_t gbcc_wram_read(struct gbc *gbc, uint16_t addr) {
-	return 0;
+	return gbc->memory.emu_wram[addr - WRAM0_START];
 }
 
 void gbcc_wram_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+	gbc->memory.emu_wram[addr - WRAM0_START] = val;
 }
 
 uint8_t gbcc_oam_read(struct gbc *gbc, uint16_t addr) {
-	return 0;
+	return gbc->memory.oam[addr - OAM_START];
 }
 
 void gbcc_oam_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+	gbc->memory.oam[addr - OAM_START] = val;
 }
 
 uint8_t gbcc_unused_read(struct gbc *gbc, uint16_t addr) {
-	return 0;
+	return gbc->memory.unused[addr - UNUSED_START];
 }
 
 void gbcc_unused_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+	gbc->memory.unused[addr - UNUSED_START] = val;
 }
 
 uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr) {
-	return 0;
+	return gbc->memory.ioreg[addr - IOREG_START];
 }
 
 void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+	gbc->memory.ioreg[addr - IOREG_START] = val;
 }
 
 uint8_t gbcc_hram_read(struct gbc *gbc, uint16_t addr) {
-	return 0;
+	return gbc->memory.hram[addr - HRAM_START];
 }
 
 void gbcc_hram_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+	gbc->memory.hram[addr - HRAM_START] = val;
 }

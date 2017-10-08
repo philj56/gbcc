@@ -22,9 +22,15 @@ void gbcc_execute_instruction(struct gbc *gbc)
 	}
 	printf("\t%s\n", op_dissassemblies[gbc->opcode]);
 	gbcc_ops[gbc->opcode](gbc);
-	//gbcc_print_registers(gbc);
-	//printf("\n");
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
+	if(gbc->reg.pc >= 0x0297) {
+	/*	FILE *f = fopen("tile0.bin", "wb");
+		fwrite(gbc->memory.emu_vram, 16, 1, f);
+		fclose(f);
+		exit(0);*/
+		gbcc_print_registers(gbc);
+	printf("\n");
+	}
 }
 
 void gbcc_add_instruction_cycles(struct gbc *gbc, uint8_t cycles)

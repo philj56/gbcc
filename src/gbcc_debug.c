@@ -70,13 +70,13 @@ const char* const op_dissassemblies[0x100] = {
 
 void gbcc_print_registers(struct gbc *gbc) {
 	printf("Registers:\n");
-	printf("\ta: %u\n", gbc->reg.a);
-	printf("\tb: %u\n", gbc->reg.b);
-	printf("\tc: %u\n", gbc->reg.c);
-	printf("\td: %u\n", gbc->reg.d);
-	printf("\te: %u\n", gbc->reg.e);
-	printf("\th: %u\n", gbc->reg.h);
-	printf("\tl: %u\n", gbc->reg.l);
+	printf("\ta: %u\t\tbc: %04X\n", gbc->reg.a, gbc->reg.bc);
+	printf("\tb: %u\t\tde: %04X\n", gbc->reg.b, gbc->reg.de);
+	printf("\tc: %u\t\thl: %04X\n", gbc->reg.c, gbc->reg.hl);
+	printf("\td: %u\t\tz: %u\n", gbc->reg.d, gbc->reg.zf);
+	printf("\te: %u\t\tn: %u\n", gbc->reg.e, gbc->reg.nf);
+	printf("\th: %u\t\th: %u\n", gbc->reg.h, gbc->reg.hf);
+	printf("\tl: %u\t\tc: %u\n", gbc->reg.l, gbc->reg.cf);
 	printf("\tsp: %04X\n", gbc->reg.sp);
 	printf("\tpc: %04X\n", gbc->reg.pc);
 }

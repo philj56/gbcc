@@ -135,6 +135,7 @@ void NOP(struct gbc *gbc)
 void STOP(struct gbc *gbc)
 {
 	gbc->stop = true;
+	gbcc_fetch_instruction(gbc); /* Discard next byte */
 }
 
 void HALT(struct gbc *gbc)
