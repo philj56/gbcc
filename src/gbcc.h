@@ -97,7 +97,7 @@ struct gbc {
 		uint8_t iereg;	/* Interrupt enable flags */
 		/* Emulator areas */
 		uint8_t *emu_wram;	/* Actual location of WRAM */
-		uint8_t *emu_vram;	/* Actual location of WRAM */
+		uint8_t *emu_vram;	/* Actual location of VRAM */
 	} memory;
 
 	/* Non-Register state data */

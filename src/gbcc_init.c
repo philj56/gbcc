@@ -3,6 +3,7 @@
 #include <sys/time.h>
 #include "gbcc_constants.h"
 #include "gbcc.h"
+#include "gbcc_memory.h"
 
 void gbcc_load_rom(struct gbc *gbc, const char *filename);
 void gbcc_parse_header(struct gbc *gbc);
@@ -10,6 +11,7 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc);
 void gbcc_init_ram(struct gbc *gbc);
 void gbcc_init_mode(struct gbc *gbc);
 void gbcc_init_mmap(struct gbc *gbc);
+void gbcc_init_registers(struct gbc *gbc);
 
 void gbcc_initialise(struct gbc *gbc, const char *filename)
 {
@@ -32,6 +34,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbcc_parse_header(gbc);
 	gbcc_init_mode(gbc);
 	gbcc_init_mmap(gbc);
+	gbcc_init_registers(gbc);
 }
 
 void gbcc_load_rom(struct gbc *gbc, const char *filename)
@@ -142,6 +145,7 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 		case 0x10u:	/* MBC3 + TIMER + RAM + BATTERY */
 			gbc->cart.timer = true;
 			gbc->cart.battery = true;
+			/* Fall through */
 		case 0x11u:	/* MBC3 */
 		case 0x12u:	/* MBC3 + RAM */
 			gbc->cart.mbc = MBC3;
@@ -157,6 +161,7 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 		case 0x17u:	/* MBC4 + RAM + BATTERY */
 			gbc->cart.mbc = MBC4;
 			gbc->cart.battery = true;
+			break;
 		case 0x19u:	/* MBC5 */
 		case 0x1Au:	/* MBC5 + RAM */
 			gbc->cart.mbc = MBC5;
@@ -176,6 +181,7 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 			gbc->cart.battery = true;
 			break;
 	}
+	printf("MBC%d\n", gbc->cart.mbc);
 }
 
 void gbcc_init_ram(struct gbc *gbc)
@@ -260,4 +266,11 @@ void gbcc_init_mmap(struct gbc *gbc)
 	gbc->memory.wram0 = gbc->memory.emu_wram;
 	gbc->memory.wramx = gbc->memory.emu_wram + WRAM0_SIZE;
 	gbc->memory.echo = gbc->memory.wram0;
+}
+
+void gbcc_init_registers(struct gbc *gbc)
+{
+	for (uint16_t i = IOREG_START; i < IOREG_START + IOREG_SIZE; i++) {
+		gbcc_memory_write(gbc, i, 0);
+	}
 }

@@ -14,10 +14,17 @@ void gbcc_execute_instruction(struct gbc *gbc);
 
 void gbcc_emulate_cycle(struct gbc *gbc) 
 {
-	printf("%04X\n", gbc->reg.pc);
 	gbc->clock += 4;
-	if (gbc->clock % 70224 == 0) { /* VBLANK */
+	if (gbc->clock % 456 == 0) {
+		//printf("LY: %u\n", gbcc_memory_read(gbc, LY));
+		gbc->memory.ioreg[LY - IOREG_START] += 1;
+	}
+	if ((gbc->clock % 456 == 4) && gbcc_memory_read(gbc, LY) == 144) { /* VBLANK */
 		gbcc_memory_write(gbc, IF, gbcc_memory_read(gbc, IF) | 1);
+	} else if ((gbc->clock % 456 == 8) && gbcc_memory_read(gbc, LY) == 144) {
+		gbcc_memory_write(gbc, IF, gbcc_memory_read(gbc, IF) & 0xFEu);
+	} else if (gbcc_memory_read(gbc, LY) == 154 ) {
+		gbc->memory.ioreg[LY - IOREG_START] = 0;
 	}
 	if (gbc->instruction_timer == 0) {
 		gbcc_check_interrupts(gbc);
@@ -27,6 +34,7 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 	}
 	if (gbc->instruction_timer == 0) {
 		gbcc_execute_instruction(gbc);
+		//printf("pc: %04X\n", gbc->reg.pc);
 	}
 	gbc->instruction_timer -= 4;
 }
@@ -41,7 +49,7 @@ void gbcc_check_interrupts(struct gbc *gbc)
 		
 		if (interrupt & (1 << 0)) {
 			addr = INT_VBLANK;
-			printf("VBLANK\n");
+			//printf("VBLANK\n");
 			gbcc_memory_write(gbc, IF, int_flags & ~(1 << 0));
 		} else if (interrupt & (1 << 1)) {
 			addr = INT_LCDSTAT;
@@ -80,13 +88,13 @@ void gbcc_check_interrupts(struct gbc *gbc)
 void gbcc_execute_instruction(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
-/*	printf("%02X", gbc->opcode);
+	printf("%02X", gbc->opcode);
 	for (uint8_t i = 0; i < gbcc_op_sizes[gbc->opcode] - 1; i++) {
 		printf("%02X", gbcc_memory_read(gbc, gbc->reg.pc + i));
 	}
 	printf("\t%s\n", op_dissassemblies[gbc->opcode]);
-*/	gbcc_ops[gbc->opcode](gbc);
-//	gbcc_print_registers(gbc);
+	gbcc_ops[gbc->opcode](gbc);
+	gbcc_print_registers(gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
 	if(gbc->reg.pc == 0x282a) {
 		FILE *f = fopen("tile0.bin", "wb");
@@ -94,6 +102,10 @@ void gbcc_execute_instruction(struct gbc *gbc)
 		fclose(f);
 		exit(0);
 	}
+	/*for (uint16_t i = 0; i < VRAM_SIZE; i++) {
+		printf("%02X", gbc->memory.vram[i]);
+	}*/
+	printf("\n");
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)

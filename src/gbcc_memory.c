@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "gbcc_memory.h"
 #include "gbcc_mbc.h"
 
@@ -107,20 +108,27 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			|| (addr > SRAM_START && addr < SRAM_START + SRAM_SIZE)) {
 		switch (gbc->cart.mbc) {
 			case NONE:
-				return;
+				break;
 			case MBC1:
 				gbcc_mbc_mbc1_write(gbc, addr, val);
+				break;
 			case MBC2:
 				gbcc_mbc_mbc2_write(gbc, addr, val);
+				break;
 			case MBC3:
 				gbcc_mbc_mbc3_write(gbc, addr, val);
+				break;
 			case MBC4:
 				gbcc_mbc_mbc4_write(gbc, addr, val);
+				break;
 			case MBC5:
 				gbcc_mbc_mbc5_write(gbc, addr, val);
+				break;
 			case MMM01:
 				gbcc_mbc_mmm01_write(gbc, addr, val);
+				break;
 		}
+		return;
 	}
 	if (addr >= VRAM_START && addr < SRAM_START) {
 		gbcc_vram_write(gbc, addr, val);
@@ -215,7 +223,7 @@ void gbcc_unused_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 
 uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr) {
 	uint8_t mask = ioreg_read_masks[addr - IOREG_START];
-	return gbc->memory.ioreg[addr - IOREG_START] | ~mask;
+	return gbc->memory.ioreg[addr - IOREG_START] | (uint8_t)~mask;
 }
 
 void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val) {

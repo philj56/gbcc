@@ -62,4 +62,4 @@ tags
 #Project specific files
 gbcc
 roms/
-resources/
+#resources/
