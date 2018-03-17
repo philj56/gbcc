@@ -3,6 +3,8 @@
 
 #include "gbcc.h"
 
+extern const uint8_t gbcc_op_sizes[0x100];
+
 /* Miscellaneous */
 void INVALID(struct gbc *gbc);
 void NOP(struct gbc *gbc);
@@ -23,7 +25,8 @@ void LD_A(struct gbc *gbc);
 void LD_a16(struct gbc *gbc);
 void LD_OFFSET(struct gbc *gbc);
 void STORE_SP(struct gbc *gbc);
-void LD_HL(struct gbc *gbc);
+void LD_HL_SP(struct gbc *gbc);
+void LD_SP_HL(struct gbc *gbc);
 void PUSH_POP(struct gbc *gbc);
 
 /* ALU */

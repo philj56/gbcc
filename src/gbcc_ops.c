@@ -3,6 +3,7 @@
 #include "gbcc_ops.h"
 #include "gbcc_cpu.h"
 #include "gbcc_memory.h"
+#include "gbcc_util.h"
 
 uint8_t READ_OPERAND_MOD(struct gbc *gbc);
 void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val);
@@ -73,7 +74,7 @@ void (*gbcc_ops[0x100])(struct gbc *gbc) = {
 /* 0xEC */	INVALID,	INVALID,	ALU_OP,		RST,
 /* 0xF0 */	LD_OFFSET,	PUSH_POP,	LD_OFFSET,	DI,
 /* 0xF4 */	INVALID,	PUSH_POP,	ALU_OP,		RST,
-/* 0xF8 */	LD_HL,		LD_HL,		LD_a16,		EI,
+/* 0xF8 */	LD_HL_SP,	LD_SP_HL,	LD_a16,		EI,
 /* 0xFC */	INVALID,	INVALID,	ALU_OP,		RST
 };
 
@@ -182,8 +183,8 @@ void SCF(struct gbc *gbc)
 void CCF(struct gbc *gbc)
 {
 	gbc->reg.cf = ~gbc->reg.cf;
-	gbc->reg.nf = 1;
-	gbc->reg.hf = 1;
+	gbc->reg.nf = 0;
+	gbc->reg.hf = 0;
 }
 
 void EI(struct gbc *gbc)
@@ -290,31 +291,36 @@ void LD_OFFSET(struct gbc *gbc) {
 void STORE_SP(struct gbc *gbc)
 {
 	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
-	gbcc_memory_write(gbc, addr, gbc->reg.sp);
+	gbcc_memory_write(gbc, addr, high_byte(gbc->reg.sp));
+	gbcc_memory_write(gbc, addr+1, low_byte(gbc->reg.sp));
 }
 
-void LD_HL(struct gbc *gbc)
+void LD_HL_SP(struct gbc *gbc)
 {
-	uint8_t offset;
-	switch (gbc->opcode - 0xF8u) {
-		case 0:
-			offset = gbcc_fetch_instruction(gbc);
-			gbc->reg.hf = (((gbc->reg.sp & 0x00FFu) + (gbc->reg.sp & 0x00FFu)) & 0x0100u) == 0x0100u;
-			gbc->reg.hl = gbc->reg.sp + offset;
-			gbc->reg.cf = gbc->reg.hl < gbc->reg.sp;
-			gbc->reg.zf = 0;
-			gbc->reg.nf = 0;
-			break;
-		case 1:
-			gbc->reg.sp = gbc->reg.hl;
-			break;
+	int8_t op = gbcc_fetch_instruction(gbc);
+	if (op < 0) {
+		uint16_t op2 = low_byte((uint16_t)op);
+		gbc->reg.hf = (uint16_t)(low_byte(gbc->reg.sp) - op2) > 0xFFu; // TODO: CHECK THIS
+		gbc->reg.hl = gbc->reg.sp + op;
+		gbc->reg.cf = gbc->reg.hl > gbc->reg.sp;
+	} else {
+		gbc->reg.hf = ((low_byte(gbc->reg.sp) + op) & 0x0100u) == 0x0100u;
+		gbc->reg.hl = gbc->reg.sp + op;
+		gbc->reg.cf = gbc->reg.hl < gbc->reg.sp;
 	}
+	gbc->reg.zf = 0;
+	gbc->reg.nf = 0;
+}
+
+void LD_SP_HL(struct gbc *gbc)
+{
+	gbc->reg.sp = gbc->reg.hl;
 }
 
 void PUSH_POP(struct gbc *gbc)
 {
 	uint16_t *op;
-	switch (gbc->opcode / 0x10u) {
+	switch ((gbc->opcode % 0x40u) / 0x10u) {
 		case 0:
 			op = &(gbc->reg.bc);
 			break;
@@ -328,14 +334,14 @@ void PUSH_POP(struct gbc *gbc)
 			op = &(gbc->reg.af);
 			break;
 	}
-	switch (gbc->opcode / 0x04u) {
+	switch ((gbc->opcode % 0x10u) / 0x04u) {
 		case 0: /* POP */
 			*op = gbcc_memory_read(gbc, gbc->reg.sp++);
 			*op |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
 			break;
 		case 1: /* PUSH */
-			gbcc_memory_write(gbc, --(gbc->reg.sp), *op >> 8);
-			gbcc_memory_write(gbc, --(gbc->reg.sp), *op & 0x00FFu);
+			gbcc_memory_write(gbc, --(gbc->reg.sp), high_byte(*op));
+			gbcc_memory_write(gbc, --(gbc->reg.sp), low_byte(*op));
 			break;
 	}
 }
@@ -484,7 +490,7 @@ void ADD_HL(struct gbc *gbc)
 			op = gbc->reg.sp;
 			break;
 	}
-	gbc->reg.hf = (((op & 0x00FFu) + (gbc->reg.hl & 0x00FFu)) & 0x0100u) == 0x0100u;
+	gbc->reg.hf = ((low_byte(gbc->reg.hl) + low_byte(op)) & 0x0100u) == 0x0100u;
 	tmp = gbc->reg.hl;
 	gbc->reg.hl += op;
 	gbc->reg.cf = (tmp > gbc->reg.hl);
@@ -492,11 +498,18 @@ void ADD_HL(struct gbc *gbc)
 
 void ADD_SP(struct gbc *gbc)
 {
-	uint16_t op = gbcc_fetch_instruction(gbc);
 	uint16_t tmp = gbc->reg.sp;
-	gbc->reg.hf = (((gbc->reg.sp & 0x00FFu) + (op & 0x00FFu)) & 0x0100u) == 0x0100u;
-	gbc->reg.sp += op;
-	gbc->reg.cf = gbc->reg.sp < tmp;
+	int8_t op = gbcc_fetch_instruction(gbc);
+	if (op < 0) {
+		uint16_t op2 = (uint16_t)op & 0xFFu;
+		gbc->reg.hf = ((tmp & 0xFFu) - op2) > 0xFFu; // TODO: CHECK THIS
+		gbc->reg.sp += op;
+		gbc->reg.cf = gbc->reg.sp > tmp;
+	} else {
+		gbc->reg.hf = ((low_byte(gbc->reg.sp) + op) & 0x0100u) == 0x0100u;
+		gbc->reg.sp += op;
+		gbc->reg.cf = gbc->reg.sp < tmp;
+	}
 	gbc->reg.zf = 0;
 	gbc->reg.nf = 0;
 }
@@ -587,16 +600,17 @@ void JP_COND(struct gbc *gbc)
 
 void JR(struct gbc *gbc)
 {
-	gbc->reg.pc += (int8_t)gbcc_fetch_instruction(gbc);
+	int8_t rel_addr = (int8_t)gbcc_fetch_instruction(gbc); 
+	gbc->reg.pc += rel_addr;
 }
 
 void JR_COND(struct gbc *gbc)
 {
-	uint16_t addr = gbc->reg.pc + (int8_t)gbcc_fetch_instruction(gbc); 
+	int8_t rel_addr = (int8_t)gbcc_fetch_instruction(gbc); 
 	switch ((gbc->opcode - 0x20u) / 0x08u) {
 		case 0:	/* JR NZ */
 			if (!gbc->reg.zf) {
-				gbc->reg.pc = addr;
+				gbc->reg.pc += rel_addr;
 				gbcc_add_instruction_cycles(gbc, 12);
 			} else {
 				gbcc_add_instruction_cycles(gbc, 8);
@@ -604,7 +618,7 @@ void JR_COND(struct gbc *gbc)
 			break;
 		case 1:	/* JR Z */
 			if (gbc->reg.zf) {
-				gbc->reg.pc = addr;
+				gbc->reg.pc += rel_addr;
 				gbcc_add_instruction_cycles(gbc, 12);
 			} else {
 				gbcc_add_instruction_cycles(gbc, 8);
@@ -612,7 +626,7 @@ void JR_COND(struct gbc *gbc)
 			break;
 		case 2:	/* JR NC */
 			if (!gbc->reg.cf) {
-				gbc->reg.pc = addr;
+				gbc->reg.pc += rel_addr;
 				gbcc_add_instruction_cycles(gbc, 12);
 			} else {
 				gbcc_add_instruction_cycles(gbc, 8);
@@ -620,7 +634,7 @@ void JR_COND(struct gbc *gbc)
 			break;
 		case 3:	/* JR C */
 			if (gbc->reg.cf) {
-				gbc->reg.pc = addr;
+				gbc->reg.pc += rel_addr;
 				gbcc_add_instruction_cycles(gbc, 12);
 			} else {
 				gbcc_add_instruction_cycles(gbc, 8);
@@ -634,8 +648,8 @@ void JR_COND(struct gbc *gbc)
 void CALL(struct gbc *gbc)
 {
 	uint16_t addr = gbcc_fetch_instruction(gbc) | ((uint16_t)gbcc_fetch_instruction(gbc) << 8);
-	gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
-	gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+	gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc));
+	gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc));
 	gbc->reg.pc = addr;
 }
 
@@ -678,8 +692,8 @@ void CALL_COND(struct gbc *gbc)
 			break;
 	}
 	if (call) {
-		gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
-		gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+		gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc));
+		gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc));
 		gbc->reg.pc = addr;
 	}
 }
@@ -690,8 +704,7 @@ void RET(struct gbc *gbc) {
 }
 
 void RETI(struct gbc *gbc) {
-	gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
-	gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
+	RET(gbc);
 	gbc->ime = true;
 }
 
@@ -732,16 +745,15 @@ void RET_COND(struct gbc *gbc) {
 			break;
 	}
 	if (ret) {
-		gbc->reg.pc = gbcc_memory_read(gbc, gbc->reg.sp++);
-		gbc->reg.pc |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8;
+		RET(gbc);
 	}
 }
 
 void RST(struct gbc *gbc)
 {
 	uint8_t addr = gbc->opcode - 0xC7u;
-	gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
-	gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+	gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc));
+	gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc));
 	gbc->reg.pc = 0x0000u | addr;
 }
 
@@ -749,6 +761,8 @@ void RST(struct gbc *gbc)
 
 void PREFIX_CB(struct gbc *gbc)
 {
+	gbc->opcode = gbcc_fetch_instruction(gbc);
+	printf("%02X\n", gbc->opcode);
 	if (gbc->opcode < 0x40u) {
 		CB_SHIFT_OP(gbc);
 	} else {

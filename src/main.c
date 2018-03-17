@@ -2,8 +2,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <signal.h>
+#include <string.h>
 #include "gbcc.h"
 #include "gbcc_cpu.h"
+#include "gbcc_debug.h"
 
 bool printscr = false;
 
@@ -28,12 +30,17 @@ int main(int argc, char **argv)
 	gbcc_initialise(&gbc, argv[1]);
 
 	while (true) {
-		gbcc_emulate_cycle(&gbc);
-		if (printscr) {
-			printf("Test\n");
-			exit(1);
+		if (printscr && fgetc(stdin) == 'r') {
+			printscr = false;
+		}
+		do {
+			gbcc_emulate_cycle(&gbc);
+		} while (gbc.instruction_timer > 0);
+		if (printscr && gbc.instruction_timer == 0) {
+			gbcc_print_registers(&gbc);
 		}
 	}
 
+	printf("END\n");
 	return 0;
 }

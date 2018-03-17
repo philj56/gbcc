@@ -3,6 +3,7 @@
 #include "gbcc.h"
 #include "gbcc_cpu.h"
 #include "gbcc_memory.h"
+#include "gbcc_util.h"
 #include "gbcc_debug.h"
 
 extern void (*gbcc_ops[0x100])(struct gbc* gbc);
@@ -76,8 +77,8 @@ void gbcc_check_interrupts(struct gbc *gbc)
 			if (gbc->halt.set) {
 				gbcc_add_instruction_cycles(gbc, 4);
 			}
-			gbcc_memory_write(gbc, --gbc->reg.sp, (gbc->reg.pc & 0xFF00u) >> 8);
-			gbcc_memory_write(gbc, --gbc->reg.sp, gbc->reg.pc & 0x00FFu);
+			gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc));
+			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc));
 			gbc->reg.pc = addr;
 		}
 		gbc->halt.set = false;
@@ -88,24 +89,19 @@ void gbcc_check_interrupts(struct gbc *gbc)
 void gbcc_execute_instruction(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
-	printf("%02X", gbc->opcode);
-	for (uint8_t i = 0; i < gbcc_op_sizes[gbc->opcode] - 1; i++) {
-		printf("%02X", gbcc_memory_read(gbc, gbc->reg.pc + i));
-	}
-	printf("\t%s\n", op_dissassemblies[gbc->opcode]);
+	gbcc_print_op(gbc);
 	gbcc_ops[gbc->opcode](gbc);
-	gbcc_print_registers(gbc);
+	//gbcc_print_registers(gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
 	if(gbc->reg.pc == 0x282a) {
 		FILE *f = fopen("tile0.bin", "wb");
-		fwrite(gbc->memory.emu_vram, 16, 1, f);
+		fwrite(gbc->memory.emu_vram, VRAM_SIZE, 1, f);
 		fclose(f);
 		exit(0);
 	}
 	/*for (uint16_t i = 0; i < VRAM_SIZE; i++) {
 		printf("%02X", gbc->memory.vram[i]);
 	}*/
-	printf("\n");
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)

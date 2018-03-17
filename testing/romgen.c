@@ -49,7 +49,6 @@ int main() {
 	FILE *f = fopen("test.gb", "wb");
 	uint8_t i = 0;
 	uint16_t k = 0;
-	uint8_t ff = 0xFFu;
 	uint8_t tmp;
 	while (k < 0x150u)
 	{
@@ -58,18 +57,19 @@ int main() {
 	}
 	do {
 		fwrite(&i, 1, 1, f);
-		for (uint8_t j = 1; j < gbcc_op_sizes[i]; j++) {
+/*		for (uint8_t j = 1; j < gbcc_op_sizes[i]; j++) {
 			tmp = (uint8_t) rand();
 			fwrite(&tmp, 1, 1, f);
 			k++;
 		}
-		i++;
+*/		i++;
 		k++;
 	} while (i > 0);
 
 	while (k < 32768)
 	{
-		fwrite(&ff, 1, 1, f);
+		tmp = (uint8_t) rand();
+		fwrite(&tmp, 1, 1, f);
 		k++;
 	}
 

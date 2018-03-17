@@ -65,6 +65,7 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr)
 {
 	if (addr < ROMX_START + ROMX_SIZE 
 			|| (addr >= SRAM_START && addr < SRAM_START + SRAM_SIZE)) {
+		//printf("Reading from address %04X (ROM).\n", addr);
 		switch (gbc->cart.mbc) {
 			case NONE:
 				return gbcc_mbc_none_read(gbc, addr);
@@ -83,27 +84,37 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr)
 		}
 	}
 	if (addr >= VRAM_START && addr < SRAM_START) {
+		//printf("Reading from address %04X (VRAM).\n", addr);
 		return gbcc_vram_read(gbc, addr);
 	} else if (addr >= WRAM0_START && addr < ECHO_START) {
+		//printf("Reading from address %04X (WRAM).\n", addr);
 		return gbcc_wram_read(gbc, addr);
 	} else if (addr >= ECHO_START && addr < OAM_START) {
+		//printf("Reading from address %04X (ECHO).\n", addr);
 		return gbcc_echo_read(gbc, addr);
 	} else if (addr >= OAM_START && addr < UNUSED_START) {
+		//printf("Reading from address %04X (OAM).\n", addr);
 		return gbcc_oam_read(gbc, addr);
 	} else if (addr >= UNUSED_START && addr < IOREG_START) {
+		//printf("Reading from address %04X (UNUSED).\n", addr);
 		return gbcc_unused_read(gbc, addr);
 	} else if (addr >= IOREG_START && addr < HRAM_START) {
+		//printf("Reading from address %04X (IOREG).\n", addr);
 		return gbcc_ioreg_read(gbc, addr);
 	} else if (addr >= HRAM_START && addr < IE) {
+		//printf("Reading from address %04X (HRAM).\n", addr);
 		return gbcc_hram_read(gbc, addr);
 	} else if (addr == IE) {
+		//printf("Reading from address %04X (IE).\n", addr);
 		return gbc->memory.iereg;
 	}
+	//printf("Reading from address %04X (UNKNOWN).\n", addr);
 	return 0;
 }
 
 void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
+	//printf("Writing %02X to address %04X", val, addr);
 	if (addr < ROMX_START + ROMX_SIZE 
 			|| (addr > SRAM_START && addr < SRAM_START + SRAM_SIZE)) {
 		switch (gbc->cart.mbc) {
@@ -128,25 +139,35 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 				gbcc_mbc_mmm01_write(gbc, addr, val);
 				break;
 		}
+		//printf("(ROM).\n");
 		return;
 	}
 	if (addr >= VRAM_START && addr < SRAM_START) {
 		gbcc_vram_write(gbc, addr, val);
+		//printf("(VRAM).");
 	} else if (addr >= WRAM0_START && addr < ECHO_START) {
 		gbcc_wram_write(gbc, addr, val);
+		//printf("(WRAM).");
 	} else if (addr >= ECHO_START && addr < OAM_START) {
 		gbcc_echo_write(gbc, addr, val);
+		//printf("(ECHO).");
 	} else if (addr >= OAM_START && addr < UNUSED_START) {
 		gbcc_oam_write(gbc, addr, val);
+		//printf("(OAM).");
 	} else if (addr >= UNUSED_START && addr < IOREG_START) {
 		gbcc_unused_write(gbc, addr, val);
+		//printf("(UNUSED).");
 	} else if (addr >= IOREG_START && addr < HRAM_START) {
 		gbcc_ioreg_write(gbc, addr, val);
+		//printf("(IOREG).");
 	} else if (addr >= HRAM_START && addr < IE) {
 		gbcc_hram_write(gbc, addr, val);
+		//printf("(HRAM).");
 	} else if (addr == IE) {
 		gbc->memory.iereg = val;
+		//printf("(IE).");
 	}
+	//printf("\n");
 }
 
 uint8_t gbcc_vram_read(struct gbc *gbc, uint16_t addr) {

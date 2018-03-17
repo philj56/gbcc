@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include "gbcc_debug.h"
+#include "gbcc_ops.h"
+#include "gbcc_memory.h"
 
 const char* const op_dissassemblies[0x100] = {
 /* 0x00 */	"NOP",		"LD BC,d16",	"LD (BC),A",	"INC BC",
@@ -70,13 +72,21 @@ const char* const op_dissassemblies[0x100] = {
 
 void gbcc_print_registers(struct gbc *gbc) {
 	printf("Registers:\n");
-	printf("\ta: %u\t\tbc: %04X\n", gbc->reg.a, gbc->reg.bc);
-	printf("\tb: %u\t\tde: %04X\n", gbc->reg.b, gbc->reg.de);
-	printf("\tc: %u\t\thl: %04X\n", gbc->reg.c, gbc->reg.hl);
-	printf("\td: %u\t\tz: %u\n", gbc->reg.d, gbc->reg.zf);
-	printf("\te: %u\t\tn: %u\n", gbc->reg.e, gbc->reg.nf);
-	printf("\th: %u\t\th: %u\n", gbc->reg.h, gbc->reg.hf);
-	printf("\tl: %u\t\tc: %u\n", gbc->reg.l, gbc->reg.cf);
-	printf("\tsp: %04X\n", gbc->reg.sp);
+	printf("\ta: %u\t\taf: %04X\n", gbc->reg.a, gbc->reg.af);
+	printf("\tb: %u\t\tbc: %04X\n", gbc->reg.b, gbc->reg.bc);
+	printf("\tc: %u\t\tde: %04X\n", gbc->reg.c, gbc->reg.de);
+	printf("\td: %u\t\thl: %04X\n", gbc->reg.d, gbc->reg.hl);
+	printf("\te: %u\t\tz: %u\n", gbc->reg.e, gbc->reg.zf);
+	printf("\th: %u\t\tn: %u\n", gbc->reg.h, gbc->reg.nf);
+	printf("\tl: %u\t\th: %u\n", gbc->reg.l, gbc->reg.hf);
+	printf("\tsp: %04X\tc: %u\n", gbc->reg.sp, gbc->reg.cf);
 	printf("\tpc: %04X\n", gbc->reg.pc);
+}
+
+void gbcc_print_op(struct gbc *gbc) {
+	printf("%02X", gbc->opcode);
+	for (uint8_t i = 0; i < gbcc_op_sizes[gbc->opcode] - 1; i++) {
+		printf("%02X", gbcc_memory_read(gbc, gbc->reg.pc + i));
+	}
+	printf("\t%s\n", op_dissassemblies[gbc->opcode]);
 }
