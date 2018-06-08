@@ -1,17 +1,17 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/time.h>
-#include "gbcc_constants.h"
 #include "gbcc.h"
+#include "gbcc_constants.h"
 #include "gbcc_memory.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
 
-void gbcc_load_rom(struct gbc *gbc, const char *filename);
-void gbcc_parse_header(struct gbc *gbc);
-void gbcc_get_cartridge_hardware(struct gbc *gbc);
-void gbcc_init_ram(struct gbc *gbc);
-void gbcc_init_mode(struct gbc *gbc);
-void gbcc_init_mmap(struct gbc *gbc);
-void gbcc_init_registers(struct gbc *gbc);
+static void gbcc_load_rom(struct gbc *gbc, const char *filename);
+static void gbcc_parse_header(struct gbc *gbc);
+static void gbcc_get_cartridge_hardware(struct gbc *gbc);
+static void gbcc_init_ram(struct gbc *gbc);
+static void gbcc_init_mode(struct gbc *gbc);
+static void gbcc_init_mmap(struct gbc *gbc);
+static void gbcc_init_registers(struct gbc *gbc);
 
 void gbcc_initialise(struct gbc *gbc, const char *filename)
 {
@@ -37,32 +37,42 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbcc_init_registers(gbc);
 }
 
-void gbcc_load_rom(struct gbc *gbc, const char *filename)
+void gbcc_free(struct gbc *gbc)
+{
+	free(gbc->cart.rom);
+	if (gbc->cart.ram_size > 0) {
+		free(gbc->cart.ram);
+	}
+	free(gbc->memory.emu_wram);
+	free(gbc->memory.emu_vram);
+}
+
+static void gbcc_load_rom(struct gbc *gbc, const char *filename)
 {
 	size_t read;
 	uint8_t rom_size_flag;
 
-	FILE *rom = fopen(filename, "rb");
+	FILE *rom = fopen(filename, "rbe");
 	if (rom == NULL)
 	{
-		fprintf(stderr, "Error opening file: %s\n", filename);
+		fprintf(stderr, "Error opening file: %s.\n", filename);
 		exit(1);
 	}
-	
+
 	fseek(rom, CART_ROM_SIZE, SEEK_SET);
 	if (ferror(rom)) {
-		fprintf(stderr, "Error seeking in file: %s\n", filename);
+		fprintf(stderr, "Error seeking in file: %s.\n", filename);
 		fclose(rom);
 		exit(1);
 	}
-	
+
 	read = fread(&rom_size_flag, 1, 1, rom);
 	if (read == 0) {
-		fprintf(stderr, "Error reading ROM SIZE from: %s\n", filename);
+		fprintf(stderr, "Error reading ROM size from: %s.\n", filename);
 		fclose(rom);
 		exit(1);
 	}
-	
+
 	if (rom_size_flag < 0x08u) {
 		gbc->cart.rom_size = 0x8000u << rom_size_flag; /* 32KB shl N */
 	} else if (rom_size_flag == 0x52u) {
@@ -72,28 +82,28 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	} else if (rom_size_flag == 0x54u) {
 		gbc->cart.rom_size = 0x180000u;
 	} else {
-		fprintf(stderr, "Unknown rom size flag: %u\n", rom_size_flag);
+		fprintf(stderr, "Unknown ROM size flag: %u.\n", rom_size_flag);
 		fclose(rom);
 		exit(1);
 	}
 
-	gbc->cart.rom = (uint8_t *) malloc(gbc->cart.rom_size);
+	gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
 	if (gbc->cart.rom == NULL) {
-		fprintf(stderr, "Error allocating memory\n");
+		fprintf(stderr, "Error allocating ROM.\n");
 		fclose(rom);
 		exit(1);
 	}
 
 
 	if (fseek(rom, 0, SEEK_SET) != 0) {
-		fprintf(stderr, "Error seeking in file: %s\n", filename);
+		fprintf(stderr, "Error seeking in file: %s.\n", filename);
 		fclose(rom);
 		exit(1);
 	}
 
 	read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
 	if (read == 0) {
-		fprintf(stderr, "Error reading from file: %s\n", filename);
+		fprintf(stderr, "Error reading from file: %s.\n", filename);
 		fclose(rom);
 		exit(1);
 	}
@@ -101,13 +111,13 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	fclose(rom);
 }
 
-void gbcc_parse_header(struct gbc *gbc)
+static void gbcc_parse_header(struct gbc *gbc)
 {
 	gbcc_get_cartridge_hardware(gbc);
 	gbcc_init_ram(gbc);
 }
 
-void gbcc_get_cartridge_hardware(struct gbc *gbc)
+static void gbcc_get_cartridge_hardware(struct gbc *gbc)
 {
 	switch (gbc->cart.rom[CART_TYPE]) {
 		case 0x00u:	/* ROM ONLY */
@@ -184,12 +194,12 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 	printf("MBC%d\n", gbc->cart.mbc);
 }
 
-void gbcc_init_ram(struct gbc *gbc)
+static void gbcc_init_ram(struct gbc *gbc)
 {
 	uint8_t ram_size_flag;
 
 	ram_size_flag = gbc->cart.rom[CART_RAM_SIZE];
-	
+
 	switch (ram_size_flag) {
 		case 0x00u:
 			if (gbc->cart.mbc == MBC2) {
@@ -206,29 +216,28 @@ void gbcc_init_ram(struct gbc *gbc)
 			gbc->cart.ram_size = 0x8000u;
 			break;
 		default:
-			fprintf(stderr, "Unknown ram size flag: %u\n", ram_size_flag);
+			fprintf(stderr, "Unknown ram size flag: %u.\n", ram_size_flag);
 			exit(1);
-			break;
 	}
 
 	if (gbc->cart.ram_size > 0) {
-		gbc->cart.ram = malloc(CART_RAM_SIZE);
+		gbc->cart.ram = (uint8_t *) calloc(CART_RAM_SIZE, 1);
 		if (gbc->cart.ram == NULL) {
-			fprintf(stderr, "Error allocating memory\n");
+			fprintf(stderr, "Error allocating RAM.\n");
 			exit(1);
 		}
 	}
 }
 
-void gbcc_init_mode(struct gbc *gbc)
+static void gbcc_init_mode(struct gbc *gbc)
 {
 	uint8_t mode_flag;
 
-	mode_flag = gbc->cart.rom[CART_GBC_FLAG]; 
+	mode_flag = gbc->cart.rom[CART_GBC_FLAG];
 	if (mode_flag == 0x80u || mode_flag == 0xC0u) {
 		gbc->mode = GBC;
 	}
-	if ((mode_flag & (1 << 6)) && (mode_flag & (3 << 2))) {
+	if ((mode_flag & (1u << 6u)) && (mode_flag & (3u << 2u))) {
 		/* TODO: Handle this */
 	}
 
@@ -249,14 +258,31 @@ void gbcc_init_mode(struct gbc *gbc)
 	}
 }
 
-void gbcc_init_mmap(struct gbc *gbc)
+static void gbcc_init_mmap(struct gbc *gbc)
 {
-	if(gbc->mode == DMG) {
-		gbc->memory.emu_wram = malloc(WRAM0_SIZE * 2);
-		gbc->memory.emu_vram = malloc(VRAM_SIZE);
+	unsigned int wram_mult;
+	unsigned int vram_mult;
+	if (gbc->mode == DMG) {
+		wram_mult = 2;
+		vram_mult = 1;
 	} else if (gbc->mode == GBC) {
-		gbc->memory.emu_wram = malloc(WRAM0_SIZE * 8);
-		gbc->memory.emu_vram = malloc(VRAM_SIZE * 2);
+		wram_mult = 8;
+		vram_mult = 2;
+	} else {
+		fprintf(stderr, "Unrecognised GBC mode.\n");
+		exit(1);
+	}
+
+	gbc->memory.emu_wram = (uint8_t *) calloc(WRAM0_SIZE * wram_mult, 1);
+	if (gbc->memory.emu_wram == NULL) {
+		fprintf(stderr, "Error allocating WRAM.\n");
+		exit(1);
+	}
+
+	gbc->memory.emu_vram = (uint8_t *) calloc(VRAM_SIZE * vram_mult, 1);
+	if (gbc->memory.emu_vram == NULL) {
+		fprintf(stderr, "Error allocating VRAM.\n");
+		exit(1);
 	}
 
 	gbc->memory.rom0 = gbc->cart.rom;
@@ -268,7 +294,7 @@ void gbcc_init_mmap(struct gbc *gbc)
 	gbc->memory.echo = gbc->memory.wram0;
 }
 
-void gbcc_init_registers(struct gbc *gbc)
+static void gbcc_init_registers(struct gbc *gbc)
 {
 	for (uint16_t i = IOREG_START; i < IOREG_START + IOREG_SIZE; i++) {
 		gbcc_memory_write(gbc, i, 0);

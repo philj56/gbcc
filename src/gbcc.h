@@ -1,11 +1,14 @@
 #ifndef GBCC_H
 #define GBCC_H
 
+#include "gbcc_constants.h"
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <time.h>
-#include "gbcc_constants.h"
+
+/* TODO: Find a better way to do this */
+#define LITTLE_ENDIAN
 
 struct gbc {
 	/* Registers */
@@ -80,6 +83,19 @@ struct gbc {
 		uint16_t pc;
 	} reg;
 
+	/* Non-Register state data */
+	enum CART_MODE mode;
+	uint8_t opcode;
+	bool ime;
+	struct {
+		bool set;
+		bool no_interrupt;
+		uint8_t skip;
+	} halt;
+	bool stop;
+	uint16_t instruction_timer; /* uint16_t used over uint8_t for padding */
+	uint64_t clock;
+
 	/* Memory map */
 	struct {
 		/* GBC areas */
@@ -100,19 +116,6 @@ struct gbc {
 		uint8_t *emu_vram;	/* Actual location of VRAM */
 	} memory;
 
-	/* Non-Register state data */
-	enum CART_MODE mode;
-	uint8_t opcode;
-	bool ime;
-	struct {
-		bool set;
-		bool no_interrupt;
-		uint8_t skip;
-	} halt;
-	bool stop;
-	uint8_t instruction_timer;
-	uint64_t clock;
-
 	/* Cartridge data & flags */
 	struct {
 		uint8_t *rom;
@@ -123,9 +126,11 @@ struct gbc {
 		bool battery;
 		bool timer;
 		bool rumble;
+		bool padding; /* TODO: remove */
 	} cart;
 };
 
 void gbcc_initialise(struct gbc *gbc, const char *filename);
+void gbcc_free(struct gbc *gbc);
 
 #endif /* GBCC_H */

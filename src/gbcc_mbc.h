@@ -1,8 +1,8 @@
 #ifndef GBCC_MBC_H
 #define GBCC_MBC_H
 
-#include <stdint.h>
 #include "gbcc.h"
+#include <stdint.h>
 
 uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr);
 uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr);

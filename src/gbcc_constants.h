@@ -118,6 +118,7 @@
 #define GBC_CLOCK_PERIOD 238	/* Clock period in ns */
 #define GBC_SCREEN_WIDTH 160	/* Screen width in pixels */
 #define GBC_SCREEN_HEIGHT 144	/* Screen height in pixels */
+#define GBC_SCREEN_SIZE (GBC_SCREEN_WIDTH * GBC_SCREEN_HEIGHT)	/* Total number of pixels */
 
 
 enum MBC { NONE, MBC1, MBC2, MBC3, MBC4, MBC5, MMM01 };

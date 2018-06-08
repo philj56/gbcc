@@ -1,9 +1,9 @@
-#include <stdio.h>
 #include "gbcc_debug.h"
-#include "gbcc_ops.h"
 #include "gbcc_memory.h"
+#include "gbcc_ops.h"
+#include <stdio.h>
 
-const char* const op_dissassemblies[0x100] = {
+static const char* const op_dissassemblies[0x100] = {
 /* 0x00 */	"NOP",		"LD BC,d16",	"LD (BC),A",	"INC BC",
 /* 0x04 */	"INC B",	"DEC B",	"LD B,d8",	"RLCA",
 /* 0x08 */	"LD (a16),SP",	"ADD HL,BC",	"LD A,(BC)",	"DEC BC",

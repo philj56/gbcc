@@ -3,7 +3,9 @@
 
 #include "gbcc.h"
 
+extern void (*gbcc_ops[0x100])(struct gbc* gbc);
 extern const uint8_t gbcc_op_sizes[0x100];
+extern const uint8_t gbcc_op_times[0x100];
 
 /* Miscellaneous */
 void INVALID(struct gbc *gbc);
