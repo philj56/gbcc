@@ -22,7 +22,7 @@ static const uint8_t ioreg_read_masks[0x80] = {
 };
 
 static const uint8_t ioreg_write_masks[0x80] = {
-/* 0xFF00 */	0xF0, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
+/* 0xFF00 */	0x30, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
 /* 0xFF08 */	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F,
 /* 0xFF10 */	0xFF, 0xFF, 0xFF, 0xFF, 0xC7, 0x00, 0xFF, 0xFF,
 /* 0xFF18 */	0xFF, 0xC7, 0xFF, 0xFF, 0xFF, 0xFF, 0xC7, 0x00,
@@ -252,6 +252,24 @@ void gbcc_unused_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 
 uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr) {
 	uint8_t mask = ioreg_read_masks[addr - IOREG_START];
+	/* Only update the keys when we actually want to read from them */
+	if (addr == JOYP) {
+		uint8_t joyp = gbc->memory.ioreg[addr - IOREG_START] | 0x0Eu;
+		if (joyp & (1u << 5u)) {
+			joyp &= ~(uint8_t)(gbc->keys.start << 3u);
+			joyp &= ~(uint8_t)(gbc->keys.select << 2u);
+			joyp &= ~(uint8_t)(gbc->keys.b << 1u);
+			joyp &= ~(uint8_t)(gbc->keys.a << 0u);
+		}
+		if (joyp & (1u << 4u)) {
+			joyp &= ~(uint8_t)(gbc->keys.dpad.down << 3u);
+			joyp &= ~(uint8_t)(gbc->keys.dpad.up << 2u);
+			joyp &= ~(uint8_t)(gbc->keys.dpad.left << 1u);
+			joyp &= ~(uint8_t)(gbc->keys.dpad.right << 0u);
+		}
+		gbc->memory.ioreg[addr - IOREG_START] = joyp;
+		printf("Testing joypad %02X\n", joyp);
+	} 
 	return gbc->memory.ioreg[addr - IOREG_START] | (uint8_t)~mask;
 }
 

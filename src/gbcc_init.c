@@ -11,7 +11,8 @@ static void gbcc_get_cartridge_hardware(struct gbc *gbc);
 static void gbcc_init_ram(struct gbc *gbc);
 static void gbcc_init_mode(struct gbc *gbc);
 static void gbcc_init_mmap(struct gbc *gbc);
-static void gbcc_init_registers(struct gbc *gbc);
+static void gbcc_init_ioreg(struct gbc *gbc);
+static void gbcc_init_input(struct gbc *gbc);
 
 void gbcc_initialise(struct gbc *gbc, const char *filename)
 {
@@ -34,7 +35,8 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbcc_parse_header(gbc);
 	gbcc_init_mode(gbc);
 	gbcc_init_mmap(gbc);
-	gbcc_init_registers(gbc);
+	gbcc_init_ioreg(gbc);
+	gbcc_init_input(gbc);
 }
 
 void gbcc_free(struct gbc *gbc)
@@ -294,9 +296,22 @@ static void gbcc_init_mmap(struct gbc *gbc)
 	gbc->memory.echo = gbc->memory.wram0;
 }
 
-static void gbcc_init_registers(struct gbc *gbc)
+static void gbcc_init_ioreg(struct gbc *gbc)
 {
 	for (uint16_t i = IOREG_START; i < IOREG_START + IOREG_SIZE; i++) {
 		gbcc_memory_write(gbc, i, 0);
 	}
+	gbc->memory.ioreg[JOYP - IOREG_START] = 0xFFu;
+}
+
+static void gbcc_init_input(struct gbc *gbc)
+{
+	gbc->keys.a = false;
+	gbc->keys.b = false;
+	gbc->keys.start = false;
+	gbc->keys.select = false;
+	gbc->keys.dpad.up = false;
+	gbc->keys.dpad.down = false;
+	gbc->keys.dpad.left = false;
+	gbc->keys.dpad.right = false;
 }

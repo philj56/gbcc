@@ -116,6 +116,20 @@ struct gbc {
 		uint8_t *emu_vram;	/* Actual location of VRAM */
 	} memory;
 
+	/* Current key states */
+	struct {
+		bool a;
+		bool b;
+		bool start;
+		bool select;
+		struct {
+			bool up;
+			bool down;
+			bool left;
+			bool right;
+		} dpad;
+	} keys;
+
 	/* Cartridge data & flags */
 	struct {
 		uint8_t *rom;

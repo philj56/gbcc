@@ -15,7 +15,7 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 {
 	gbc->clock += 4;
 	if (gbc->clock % 456 == 0) {
-		printf("LY: %u\n", gbcc_memory_read(gbc, LY));
+		//printf("LY: %u\n", gbcc_memory_read(gbc, LY));
 		gbc->memory.ioreg[LY - IOREG_START] += 1;
 	}
 	if ((gbc->clock % 456 == 4) && gbcc_memory_read(gbc, LY) == 144) { /* VBLANK */
@@ -89,7 +89,7 @@ void gbcc_execute_instruction(struct gbc *gbc)
 	gbc->opcode = gbcc_fetch_instruction(gbc);
 	gbcc_print_op(gbc);
 	gbcc_ops[gbc->opcode](gbc);
-	gbcc_print_registers(gbc);
+	//gbcc_print_registers(gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
 	/*if(gbc->reg.pc == 0x282a) {
 		FILE *f = fopen("tile0.bin", "wb");
