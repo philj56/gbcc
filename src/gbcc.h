@@ -114,6 +114,7 @@ struct gbc {
 		/* Emulator areas */
 		uint8_t *emu_wram;	/* Actual location of WRAM */
 		uint8_t *emu_vram;	/* Actual location of VRAM */
+		uint32_t screen[GBC_SCREEN_HEIGHT][GBC_SCREEN_WIDTH];
 	} memory;
 
 	/* Current key states */

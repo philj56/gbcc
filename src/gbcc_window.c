@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define BACKGROUND_MAP_START 0x9800u
 
 static int gbcc_window_thread_function(void *window);
 
@@ -116,10 +115,9 @@ static int gbcc_window_thread_function(void *window)
 		}
 		/* Do the actual drawing */
 		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-			win->buffer[i] = 0xFFFFFF;
+			win->buffer[i] = win->gbc->memory.screen[i / GBC_SCREEN_WIDTH][i % GBC_SCREEN_WIDTH];
 		}
 		/* Draw the background */
-		gbcc_window_draw_background(win);
 		if (SDL_UnlockMutex(win->mutex) < 0) {
 			fprintf(stderr, "Could not unlock mutex: %s\n", SDL_GetError());
 		}
@@ -154,58 +152,4 @@ static int gbcc_window_thread_function(void *window)
 		SDL_Delay(16);
 	}
 	return 0;
-}
-
-uint32_t n2c(struct gbc *gbc, uint8_t n)
-{
-	uint8_t palette = gbcc_memory_read(gbc, BGP);
-	//printf("palette: %02X\n", palette);
-	uint8_t colors[4] = {
-		(palette & 0x03u) >> 0u,
-		(palette & 0x0Cu) >> 2u,
-		(palette & 0x30u) >> 4u,
-		(palette & 0xC0u) >> 6u
-	};
-	switch (colors[n]) {
-		case 3:
-			return 0x000000u;
-		case 2:
-			return 0x555555u;
-		case 1:
-			return 0xAAAAAAu;
-		case 0:
-			return 0xFFFFFFu;
-		default:
-			return 0;
-	}
-}
-
-void gbcc_window_draw_background(struct gbcc_window *win)
-{
-	uint8_t scy = gbcc_memory_read(win->gbc, SCY);
-	uint8_t scx = gbcc_memory_read(win->gbc, SCX);
-	
-	uint8_t sty = scy / 8u;
-	uint8_t stx = scx / 8u;
-
-	for (uint8_t ty = 0; ty < GBC_SCREEN_HEIGHT / 8; ty++) {
-		for (uint8_t tx = 0; tx < GBC_SCREEN_WIDTH / 8; tx++) {
-			uint16_t base_addr = VRAM_START + gbcc_memory_read(win->gbc, BACKGROUND_MAP_START + 32 * ((sty + ty) % 32) + (stx + tx) % 32);
-			uint8_t y = 0;
-			for (uint8_t i = 0; i < 16; i++) {
-				uint8_t x = 0;
-				uint8_t byte = gbcc_memory_read(win->gbc, base_addr + i++); 
-				win->buffer[GBC_SCREEN_WIDTH * (y + 8 * ty) + (x++ + 8 * tx)] = n2c(win->gbc, (byte & 0xC0u) >> 6u);
-				win->buffer[GBC_SCREEN_WIDTH * (y + 8 * ty) + (x++ + 8 * tx)] = n2c(win->gbc, (byte & 0x30u) >> 4u);
-				win->buffer[GBC_SCREEN_WIDTH * (y + 8 * ty) + (x++ + 8 * tx)] = n2c(win->gbc, (byte & 0x0Cu) >> 2u);
-				win->buffer[GBC_SCREEN_WIDTH * (y + 8 * ty) + (x++ + 8 * tx)] = n2c(win->gbc, (byte & 0x03u) >> 0u);
-				byte = gbcc_memory_read(win->gbc, base_addr + i); 
-				win->buffer[GBC_SCREEN_WIDTH * (y + 8 * ty) + (x++ + 8 * tx)] = n2c(win->gbc, (byte & 0xC0u) >> 6u);
-				win->buffer[GBC_SCREEN_WIDTH * (y + 8 * ty) + (x++ + 8 * tx)] = n2c(win->gbc, (byte & 0x30u) >> 4u);
-				win->buffer[GBC_SCREEN_WIDTH * (y + 8 * ty) + (x++ + 8 * tx)] = n2c(win->gbc, (byte & 0x0Cu) >> 2u);
-				win->buffer[GBC_SCREEN_WIDTH * (y + 8 * ty) + (x++ + 8 * tx)] = n2c(win->gbc, (byte & 0x03u) >> 0u);
-				y++;
-			}
-		}
-	}
 }

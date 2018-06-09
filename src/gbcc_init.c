@@ -302,6 +302,7 @@ static void gbcc_init_ioreg(struct gbc *gbc)
 		gbcc_memory_write(gbc, i, 0);
 	}
 	gbc->memory.ioreg[JOYP - IOREG_START] = 0xFFu;
+	gbc->memory.ioreg[LY - IOREG_START] = 0x00u;
 }
 
 static void gbcc_init_input(struct gbc *gbc)

@@ -120,6 +120,13 @@
 #define GBC_SCREEN_HEIGHT 144	/* Screen height in pixels */
 #define GBC_SCREEN_SIZE (GBC_SCREEN_WIDTH * GBC_SCREEN_HEIGHT)	/* Total number of pixels */
 
+/* Miscellaneous */
+#define GBC_LCD_MODE_PERIOD 76 /* How long one "state unit" is in clocks */
+#define GBC_LCD_MODE_HBLANK 0
+#define GBC_LCD_MODE_VBLANK 1
+#define GBC_LCD_MODE_OAM_READ 2
+#define GBC_LCD_MODE_OAM_VRAM_READ 3
+
 
 enum MBC { NONE, MBC1, MBC2, MBC3, MBC4, MBC5, MMM01 };
 enum CART_MODE { GBC, DMG };

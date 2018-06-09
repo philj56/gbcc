@@ -4,27 +4,17 @@
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
 #include "gbcc_ops.h"
+#include "gbcc_video.h"
 #include <stdio.h>
 #include <sys/time.h>
 
-
-void gbcc_check_interrupts(struct gbc *gbc);
-void gbcc_execute_instruction(struct gbc *gbc);
+static void gbcc_check_interrupts(struct gbc *gbc);
+static void gbcc_execute_instruction(struct gbc *gbc);
 
 void gbcc_emulate_cycle(struct gbc *gbc)
 {
 	gbc->clock += 4;
-	if (gbc->clock % 456 == 0) {
-		//printf("LY: %u\n", gbcc_memory_read(gbc, LY));
-		gbc->memory.ioreg[LY - IOREG_START] += 1;
-	}
-	if ((gbc->clock % 456 == 4) && gbcc_memory_read(gbc, LY) == 144) { /* VBLANK */
-		gbcc_memory_write(gbc, IF, gbcc_memory_read(gbc, IF) | 1u);
-	} else if ((gbc->clock % 456 == 8) && gbcc_memory_read(gbc, LY) == 144) {
-		gbcc_memory_write(gbc, IF, gbcc_memory_read(gbc, IF) & 0xFEu);
-	} else if (gbcc_memory_read(gbc, LY) == 154 ) {
-		gbc->memory.ioreg[LY - IOREG_START] = 0;
-	}
+	gbcc_video_update(gbc);
 	if (gbc->instruction_timer == 0) {
 		gbcc_check_interrupts(gbc);
 	}
@@ -33,7 +23,7 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 	}
 	if (gbc->instruction_timer == 0) {
 		gbcc_execute_instruction(gbc);
-		//printf("pc: %04X\n", gbc->reg.pc);
+		printf("pc: %04X\n", gbc->reg.pc);
 	}
 	gbc->instruction_timer -= 4;
 }
@@ -111,3 +101,4 @@ void gbcc_add_instruction_cycles(struct gbc *gbc, uint8_t cycles)
 {
 	gbc->instruction_timer += cycles;
 }
+
