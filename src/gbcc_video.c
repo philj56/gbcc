@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_bit_utils.h"
 #include "gbcc_memory.h"
 #include "gbcc_video.h"
 #include <stdio.h>
@@ -43,9 +44,6 @@ void gbcc_draw_line(struct gbc *gbc)
 	uint8_t scx = gbcc_memory_read(gbc, SCX);
 	
 	uint8_t ly = gbcc_memory_read(gbc, LY);
-	if (ly >= GBC_SCREEN_HEIGHT) {
-		return;
-	}
 	uint8_t ty = ((scy + ly) / 8u) % 32u;
 	uint8_t line_offset = 2 * ((scy + ly) % 8);
 	uint8_t palette = gbcc_memory_read(gbc, BGP);
@@ -54,21 +52,10 @@ void gbcc_draw_line(struct gbc *gbc)
 		uint8_t tx = ((scx + x) / 8u) % 32u;
 		uint8_t xoff = (scx + x) % 8u;
 		uint8_t tile = gbcc_memory_read(gbc, BACKGROUND_MAP_START + 32 * ty + tx);
-		uint8_t byte = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset + (xoff >= 4)); 
-		switch (xoff / 2) {
-			case 0:
-				gbc->memory.screen[ly][x] = get_palette_colour(palette, (byte & 0xC0u) >> 6u);
-				break;
-			case 1:
-				gbc->memory.screen[ly][x] = get_palette_colour(palette, (byte & 0x30u) >> 4u);
-				break;
-			case 2:
-				gbc->memory.screen[ly][x] = get_palette_colour(palette, (byte & 0x0Cu) >> 2u);
-				break;
-			case 3:
-				gbc->memory.screen[ly][x] = get_palette_colour(palette, (byte & 0x03u) >> 0u);
-				break;
-		}
+		uint8_t lo = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset); 
+		uint8_t hi = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset + 1); 
+		uint8_t color = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
+		gbc->memory.screen[ly][x] = get_palette_colour(palette, color);
 	}
 }
 

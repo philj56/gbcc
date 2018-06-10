@@ -15,9 +15,9 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 {
 	gbc->clock += 4;
 	gbcc_video_update(gbc);
-	if (gbc->instruction_timer == 0) {
+	//if (gbc->instruction_timer == 0) {
 		gbcc_check_interrupts(gbc);
-	}
+	//}
 	if (gbc->halt.set || gbc->stop) {
 		return;
 	}
@@ -79,14 +79,7 @@ void gbcc_execute_instruction(struct gbc *gbc)
 	gbc->opcode = gbcc_fetch_instruction(gbc);
 	gbcc_print_op(gbc);
 	gbcc_ops[gbc->opcode](gbc);
-	//gbcc_print_registers(gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
-	/*if(gbc->reg.pc == 0x282a) {
-		FILE *f = fopen("tile0.bin", "wb");
-		fwrite(gbc->memory.emu_vram, VRAM_SIZE, 1, f);
-		fclose(f);
-		exit(0);
-	}*/
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)
