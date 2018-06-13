@@ -1,7 +1,7 @@
 ODIR=obj
 SRCDIR=src
 CC=clang
-CFLAGS=-Weverything -std=c11 -Wno-unused-parameter
+CFLAGS=-Weverything -std=c11 -Wno-unused-parameter -Wno-padded
 LIBS=-lSDL2 -lm
 
 _DEPS = gbcc.h gbcc_constants.h gbcc_cpu.h gbcc_ops.h gbcc_memory.h \

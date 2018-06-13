@@ -4,37 +4,64 @@
 /* Memory map */
 #define ROM0_START 0x0000u	/* Non-Switchable ROM Bank */
 #define ROM0_SIZE 0x4000u
+#define ROM0_END (ROM0_START + ROM0_SIZE)  
 #define ROMX_START 0x4000u	/* Switchable ROM Bank */
 #define ROMX_SIZE 0x4000u
+#define ROMX_END (ROMX_START + ROMX_SIZE)  
 #define VRAM_START 0x8000u	/* VRAM (Switchable in GBC mode) */
 #define VRAM_SIZE 0x2000u
+#define VRAM_END (VRAM_START + VRAM_SIZE)  
 #define SRAM_START 0xA000u	/* Cartridge RAM */
 #define SRAM_SIZE 0x2000u
+#define SRAM_END (SRAM_START + SRAM_SIZE)  
 #define WRAM0_START 0xC000u	/* Non-Switchable Work RAM */
 #define WRAM0_SIZE 0x1000u
+#define WRAM0_END (WRAM0_START + WRAM0_SIZE)  
 #define WRAMX_START 0xD000u	/* Work RAM (Switchable in GBC mode) */
 #define WRAMX_SIZE 0x1000u
+#define WRAMX_END (WRAMX_START + WRAMX_SIZE)  
 #define ECHO_START 0xE000u	/* Mirror of WRAM */
 #define ECHO_SIZE 0x1E00u
+#define ECHO_END (ECHO_START + ECHO_SIZE)  
 #define OAM_START 0xFE00u	/* Object Attribute Table */
 #define OAM_SIZE 0x00A0u
+#define OAM_END (OAM_START + OAM_SIZE)  
 #define UNUSED_START 0xFEA0u	/* Strange Unused Area */
 #define UNUSED_SIZE 0x0060u
+#define UNUSED_END (UNUSED_START + UNUSED_SIZE)  
 #define IOREG_START 0xFF00u	/* I/O Registers */
 #define IOREG_SIZE 0x0080u
+#define IOREG_END (IOREG_START + IOREG_SIZE)  
 #define HRAM_START 0xFF80u	/* Internal CPU RAM */
 #define HRAM_SIZE 0x007Fu
+#define HRAM_END (HRAM_START + HRAM_SIZE)  
 
 /* Cartridge header map */
 #define CART_HEADER_START 0x0100u
-#define CART_HEADER_SIZE 0x004Fu
+#define CART_HEADER_SIZE 0x0050u
+#define CART_HEADER_END (CART_HEADER_START + CART_HEADER_SIZE)  
 #define CART_LOGO_START 0x0104u
 #define CART_LOGO_SIZE 0x0030u
+#define CART_LOGO_END (CART_LOGO_START + CART_LOGO_SIZE)  
+#define CART_LOGO_GBC_CHECK_SIZE 0x0018u
+#define CART_LOGO_GBC_CHECK_END (CART_LOGO_START + CART_LOGO_GBC_CHECK_SIZE)
+#define CART_TITLE_START 0x0134u
+#define CART_TITLE_SIZE 0x010u
+#define CART_TITLE_END (CART_TITLE_START + CART_TITLE_SIZE)  
 #define CART_GBC_FLAG 0x0143u
+#define CART_NEW_LICENSEE_CODE_START 0x0144u
+#define CART_NEW_LICENSEE_CODE_SIZE 0x0002u
+#define CART_NEW_LICENSEE_CODE_END (CART_NEW_LICENSEE_CODE_START + CART_NEW_LICENSEE_CODE_SIZE)  
+#define CART_SGB_FLAG 0x0146u
 #define CART_TYPE 0x0147u
-#define CART_ROM_SIZE 0x0148u
-#define CART_RAM_SIZE 0x0149u
-#define CART_HEADER_CHECKSUM 0x014Du
+#define CART_ROM_SIZE_FLAG 0x0148u
+#define CART_RAM_SIZE_FLAG 0x0149u
+#define CART_DESTINATION_CODE 0x014Au
+#define CART_OLD_LICENSEE_CODE 0x014Bu
+#define CART_VERSION_NUMBER 0x014Cu
+#define CART_HEADER_CHECKSUM_START 0x0134u
+#define CART_HEADER_CHECKSUM_SIZE 0x0019u
+#define CART_HEADER_CHECKSUM_END (CART_HEADER_CHECKSUM_START + CART_HEADER_CHECKSUM_SIZE)
 
 /* Registers */
 /* Joypad */
@@ -49,6 +76,7 @@
 #define TIMA 0xFF05u	/* Timer Counter (R/W) */
 #define TMA 0xFF06u	/* Timer Modulo (R/W) */
 #define TAC 0xFF07u	/* Timer Control (R/W) */
+#define DIV_INC_CLOCKS 0x100u
 
 /* LCD */
 #define LCDC 0xFF40u	/* LCD Control (R/W) */
@@ -126,9 +154,11 @@
 #define GBC_LCD_MODE_VBLANK 1
 #define GBC_LCD_MODE_OAM_READ 2
 #define GBC_LCD_MODE_OAM_VRAM_READ 3
+#define DMA_TIMER 672 /* How long DMG DMA takes in clocks (Must be multiple of 4) */
 
 
 enum MBC { NONE, MBC1, MBC2, MBC3, MBC4, MBC5, MMM01 };
+enum BANK_MODE { ROM, RAM };
 enum CART_MODE { GBC, DMG };
 
 #endif /* GBC_CONSTANTS_H */

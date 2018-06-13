@@ -1,5 +1,7 @@
+#include "gbcc.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_cpu.h"
+#include "gbcc_debug.h"
 #include "gbcc_memory.h"
 #include "gbcc_ops.h"
 #include <stdint.h>
@@ -125,7 +127,7 @@ const uint8_t gbcc_op_sizes[0x100] = {
 
 void INVALID(struct gbc *gbc)
 {
-	printf("Invalid opcode: 0x%02X\n", gbc->opcode);
+	gbcc_log(GBCC_LOG_ERROR, "Invalid opcode: 0x%02X\n", gbc->opcode);
 }
 
 void NOP(struct gbc *gbc)
@@ -149,6 +151,7 @@ void HALT(struct gbc *gbc)
 	gbc->halt.skip = !gbc->ime && interrupt;
 }
 
+/* TODO: Make this past Blargg's test rom */
 void DAA(struct gbc *gbc)
 {
 	uint8_t *op = &(gbc->reg.a);
@@ -345,13 +348,16 @@ void PUSH_POP(struct gbc *gbc)
 	switch ((gbc->opcode % 0x10u) / 0x04u) {
 		case 0: /* POP */
 			*op = gbcc_memory_read(gbc, gbc->reg.sp++);
-			*op |= (uint16_t)gbcc_memory_read(gbc, gbc->reg.sp++) << 8u;
+			*op |= (uint16_t)(gbcc_memory_read(gbc, gbc->reg.sp++) << 8u) & 0xFF00u;
 			break;
 		case 1: /* PUSH */
 			gbcc_memory_write(gbc, --(gbc->reg.sp), high_byte(*op));
 			gbcc_memory_write(gbc, --(gbc->reg.sp), low_byte(*op));
 			break;
 	}
+
+	/* Lower 4 bits of AF are always 0 */
+	gbc->reg.af &= 0xFFF0u;
 }
 
 /* ALU */
@@ -615,12 +621,14 @@ void JP_COND(struct gbc *gbc)
 void JR(struct gbc *gbc)
 {
 	int8_t rel_addr = (int8_t)gbcc_fetch_instruction(gbc);
+	//gbc->reg.pc -= gbcc_op_sizes[gbc->opcode];
 	gbc->reg.pc += rel_addr;
 }
 
 void JR_COND(struct gbc *gbc)
 {
 	int8_t rel_addr = (int8_t)gbcc_fetch_instruction(gbc);
+	//gbc->reg.pc -= gbcc_op_sizes[gbc->opcode];
 	switch ((gbc->opcode - 0x20u) / 0x08u) {
 		case 0:	/* JR NZ */
 			if (!gbc->reg.zf) {
@@ -778,7 +786,6 @@ void RST(struct gbc *gbc)
 void PREFIX_CB(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
-	printf("%02X\n", gbc->opcode);
 	if (gbc->opcode < 0x40u) {
 		CB_SHIFT_OP(gbc);
 	} else {

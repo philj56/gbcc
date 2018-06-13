@@ -1,3 +1,5 @@
+#include "gbcc.h"
+#include "gbcc_debug.h"
 #include "gbcc_memory.h"
 #include "gbcc_window.h"
 #include <stdio.h>
@@ -18,7 +20,7 @@ void gbcc_window_initialise(struct gbc *gbc)
 
 	gbcc_window.mutex = SDL_CreateMutex();
 	if (gbcc_window.mutex == NULL) {
-		fprintf(stderr, "Could not create mutex: %s\n", SDL_GetError());
+		gbcc_log(GBCC_LOG_ERROR, "Could not create mutex: %s\n", SDL_GetError());
 		exit(1);
 	}
 
@@ -28,7 +30,7 @@ void gbcc_window_initialise(struct gbc *gbc)
 			(void *)(&gbcc_window));
 
 	if (gbcc_window_thread == NULL) {
-		fprintf(stderr, "Error creating rendering thread: %s\n", SDL_GetError());
+		gbcc_log(GBCC_LOG_ERROR, "Error creating rendering thread: %s\n", SDL_GetError());
 		exit(1);
 	}
 }
@@ -61,7 +63,7 @@ static int gbcc_window_thread_function(void *window)
 			);
 
 	if (win->window == NULL) {
-		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
+		gbcc_log(GBCC_LOG_ERROR, "Could not create window: %s\n", SDL_GetError());
 		SDL_DestroyMutex(win->mutex);
 		SDL_Quit();
 		exit(1);
@@ -74,7 +76,7 @@ static int gbcc_window_thread_function(void *window)
 			);
 
 	if (win->renderer == NULL) {
-		fprintf(stderr, "Could not create renderer: %s\n", SDL_GetError());
+		gbcc_log(GBCC_LOG_ERROR, "Could not create renderer: %s\n", SDL_GetError());
 		SDL_DestroyWindow(win->window);
 		SDL_DestroyMutex(win->mutex);
 		SDL_Quit();
@@ -89,7 +91,7 @@ static int gbcc_window_thread_function(void *window)
 			);
 
 	if (win->texture == NULL) {
-		fprintf(stderr, "Could not create texture: %s\n", SDL_GetError());
+		gbcc_log(GBCC_LOG_ERROR, "Could not create texture: %s\n", SDL_GetError());
 		SDL_DestroyRenderer(win->renderer);
 		SDL_DestroyWindow(win->window);
 		SDL_DestroyMutex(win->mutex);
@@ -111,7 +113,7 @@ static int gbcc_window_thread_function(void *window)
 	/* Main rendering loop */
 	while (!(win->quit)) {
 		if (SDL_LockMutex(win->mutex) < 0) {
-			fprintf(stderr, "Could not lock mutex: %s\n", SDL_GetError());
+			gbcc_log(GBCC_LOG_ERROR, "Could not lock mutex: %s\n", SDL_GetError());
 		}
 		/* Do the actual drawing */
 		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
@@ -119,7 +121,7 @@ static int gbcc_window_thread_function(void *window)
 		}
 		/* Draw the background */
 		if (SDL_UnlockMutex(win->mutex) < 0) {
-			fprintf(stderr, "Could not unlock mutex: %s\n", SDL_GetError());
+			gbcc_log(GBCC_LOG_ERROR, "Could not unlock mutex: %s\n", SDL_GetError());
 		}
 		err = SDL_UpdateTexture(
 				win->texture, 
@@ -128,13 +130,13 @@ static int gbcc_window_thread_function(void *window)
 				GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
 				);
 		if (err < 0) {
-			fprintf(stderr, "Error updating texture: %s\n", SDL_GetError());
+			gbcc_log(GBCC_LOG_ERROR, "Error updating texture: %s\n", SDL_GetError());
 			exit(1);
 		}
 
 		err = SDL_RenderClear(win->renderer);
 		if (err < 0) {
-			fprintf(stderr, "Error clearing renderer: %s\n", SDL_GetError());
+			gbcc_log(GBCC_LOG_ERROR, "Error clearing renderer: %s\n", SDL_GetError());
 			if (win->renderer == NULL) {
 				printf("NULL Renderer!\n");
 			}
@@ -143,7 +145,7 @@ static int gbcc_window_thread_function(void *window)
 
 		err = SDL_RenderCopy(win->renderer, win->texture, NULL, NULL);
 		if (err < 0) {
-			fprintf(stderr, "Error copying texture: %s\n", SDL_GetError());
+			gbcc_log(GBCC_LOG_ERROR, "Error copying texture: %s\n", SDL_GetError());
 			exit(1);
 		}
 

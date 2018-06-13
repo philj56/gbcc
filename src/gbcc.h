@@ -92,6 +92,10 @@ struct gbc {
 		bool no_interrupt;
 		uint8_t skip;
 	} halt;
+	struct {
+		uint16_t source;
+		uint16_t timer;
+	} dma;
 	bool stop;
 	uint16_t instruction_timer; /* uint16_t used over uint8_t for padding */
 	uint64_t clock;
@@ -137,11 +141,18 @@ struct gbc {
 		size_t rom_size;
 		uint8_t *ram;
 		size_t ram_size;
-		enum MBC mbc;
 		bool battery;
 		bool timer;
 		bool rumble;
 		bool padding; /* TODO: remove */
+		struct {
+			enum MBC type;
+			enum BANK_MODE bank_mode;
+			bool sram_enable;
+			uint8_t romx_bank;
+			uint8_t sram_bank;
+			bool padding;
+		} mbc;
 	} cart;
 };
 

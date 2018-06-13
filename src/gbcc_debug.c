@@ -1,3 +1,4 @@
+#include "gbcc.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
 #include "gbcc_ops.h"
@@ -71,22 +72,71 @@ static const char* const op_dissassemblies[0x100] = {
 };
 
 void gbcc_print_registers(struct gbc *gbc) {
-	printf("Registers:\n");
-	printf("\ta: %u\t\taf: %04X\n", gbc->reg.a, gbc->reg.af);
-	printf("\tb: %u\t\tbc: %04X\n", gbc->reg.b, gbc->reg.bc);
-	printf("\tc: %u\t\tde: %04X\n", gbc->reg.c, gbc->reg.de);
-	printf("\td: %u\t\thl: %04X\n", gbc->reg.d, gbc->reg.hl);
-	printf("\te: %u\t\tz: %u\n", gbc->reg.e, gbc->reg.zf);
-	printf("\th: %u\t\tn: %u\n", gbc->reg.h, gbc->reg.nf);
-	printf("\tl: %u\t\th: %u\n", gbc->reg.l, gbc->reg.hf);
-	printf("\tsp: %04X\tc: %u\n", gbc->reg.sp, gbc->reg.cf);
-	printf("\tpc: %04X\n", gbc->reg.pc);
+	gbcc_log(GBCC_LOG_DEBUG, "Registers:\n");
+	gbcc_log(GBCC_LOG_DEBUG, "\ta: %u\t\taf: %04X\n", gbc->reg.a, gbc->reg.af);
+	gbcc_log(GBCC_LOG_DEBUG, "\tb: %u\t\tbc: %04X\n", gbc->reg.b, gbc->reg.bc);
+	gbcc_log(GBCC_LOG_DEBUG, "\tc: %u\t\tde: %04X\n", gbc->reg.c, gbc->reg.de);
+	gbcc_log(GBCC_LOG_DEBUG, "\td: %u\t\thl: %04X\n", gbc->reg.d, gbc->reg.hl);
+	gbcc_log(GBCC_LOG_DEBUG, "\te: %u\t\tz: %u\n", gbc->reg.e, gbc->reg.zf);
+	gbcc_log(GBCC_LOG_DEBUG, "\th: %u\t\tn: %u\n", gbc->reg.h, gbc->reg.nf);
+	gbcc_log(GBCC_LOG_DEBUG, "\tl: %u\t\th: %u\n", gbc->reg.l, gbc->reg.hf);
+	gbcc_log(GBCC_LOG_DEBUG, "\tsp: %04X\tc: %u\n", gbc->reg.sp, gbc->reg.cf);
+	gbcc_log(GBCC_LOG_DEBUG, "\tpc: %04X\n", gbc->reg.pc);
 }
 
 void gbcc_print_op(struct gbc *gbc) {
-	printf("%02X", gbc->opcode);
+	gbcc_log(GBCC_LOG_DEBUG, "%02X", gbc->opcode);
 	for (uint8_t i = 0; i < gbcc_op_sizes[gbc->opcode] - 1; i++) {
-		printf("%02X", gbcc_memory_read(gbc, gbc->reg.pc + i));
+		gbcc_log_append(GBCC_LOG_DEBUG, "%02X", gbcc_memory_read(gbc, gbc->reg.pc + i));
 	}
-	printf("\t%s\n", op_dissassemblies[gbc->opcode]);
+	gbcc_log_append(GBCC_LOG_DEBUG, "\t%s\n", op_dissassemblies[gbc->opcode]);
+}
+
+/* TODO: Clean this up */
+#define RED   "\x1B[31m"
+//#define GRN   "\x1B[32m"
+#define YEL   "\x1B[33m"
+//#define BLU   "\x1B[34m"
+//#define MAG   "\x1B[35m"
+//#define CYN   "\x1B[36m"
+//#define WHT   "\x1B[37m"
+#define RESET "\x1B[0m"
+
+void gbcc_log(enum GBCC_LOG_LEVEL level, const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	switch (level) {
+		case GBCC_LOG_ERROR:
+			fprintf(stderr, "[" RED "ERROR" RESET "]: ");
+			vfprintf(stderr, fmt, args);
+			break;
+		case GBCC_LOG_DEBUG:
+			printf("[" YEL "DEBUG" RESET "]: ");
+			vprintf(fmt, args);
+			break;
+		case GBCC_LOG_INFO:
+			printf("[INFO]: ");
+			vprintf(fmt, args);
+			break;
+	}
+	va_end(args);
+}
+
+void gbcc_log_append(enum GBCC_LOG_LEVEL level, const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	switch (level) {
+		case GBCC_LOG_ERROR:
+			vfprintf(stderr, fmt, args);
+			break;
+		case GBCC_LOG_DEBUG:
+			vprintf(fmt, args);
+			break;
+		case GBCC_LOG_INFO:
+			vprintf(fmt, args);
+			break;
+	}
+	va_end(args);
 }

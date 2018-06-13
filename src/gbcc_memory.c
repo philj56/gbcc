@@ -1,3 +1,5 @@
+#include "gbcc.h"
+#include "gbcc_debug.h"
 #include "gbcc_mbc.h"
 #include "gbcc_memory.h"
 #include <stdio.h>
@@ -63,10 +65,13 @@ void gbcc_hram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
 uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr)
 {
-	if (addr < ROMX_START + ROMX_SIZE
-			|| (addr >= SRAM_START && addr < SRAM_START + SRAM_SIZE)) {
-		//printf("Reading from address %04X (ROM).\n", addr);
-		switch (gbc->cart.mbc) {
+	if (gbc->dma.timer > 0) {
+		if (!(addr >= HRAM_START && addr < IE)) {
+			return 0;
+		}
+	}
+	if (addr < ROMX_END || (addr >= SRAM_START && addr < SRAM_END)) {
+		switch (gbc->cart.mbc.type) {
 			case NONE:
 				return gbcc_mbc_none_read(gbc, addr);
 			case MBC1:
@@ -83,31 +88,31 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr)
 				return gbcc_mbc_mmm01_read(gbc, addr);
 		}
 	}
-	if (addr >= VRAM_START && addr < SRAM_START) {
+	if (addr >= VRAM_START && addr < VRAM_END) {
 		//printf("Reading from address %04X (VRAM).\n", addr);
 		return gbcc_vram_read(gbc, addr);
 	}
-	if (addr >= WRAM0_START && addr < ECHO_START) {
+	if (addr >= WRAM0_START && addr < WRAMX_END) {
 		//printf("Reading from address %04X (WRAM).\n", addr);
 		return gbcc_wram_read(gbc, addr);
 	}
-	if (addr >= ECHO_START && addr < OAM_START) {
+	if (addr >= ECHO_START && addr < ECHO_END) {
 		//printf("Reading from address %04X (ECHO).\n", addr);
 		return gbcc_echo_read(gbc, addr);
 	}
-	if (addr >= OAM_START && addr < UNUSED_START) {
+	if (addr >= OAM_START && addr < OAM_END) {
 		//printf("Reading from address %04X (OAM).\n", addr);
 		return gbcc_oam_read(gbc, addr);
 	}
-	if (addr >= UNUSED_START && addr < IOREG_START) {
+	if (addr >= UNUSED_START && addr < UNUSED_END) {
 		//printf("Reading from address %04X (UNUSED).\n", addr);
 		return gbcc_unused_read(gbc, addr);
 	}
-	if (addr >= IOREG_START && addr < HRAM_START) {
+	if (addr >= IOREG_START && addr < IOREG_END) {
 		//printf("Reading from address %04X (IOREG).\n", addr);
 		return gbcc_ioreg_read(gbc, addr);
 	}
-	if (addr >= HRAM_START && addr < IE) {
+	if (addr >= HRAM_START && addr < HRAM_END) {
 		//printf("Reading from address %04X (HRAM).\n", addr);
 		return gbcc_hram_read(gbc, addr);
 	}
@@ -115,17 +120,22 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr)
 		//printf("Reading from address %04X (IE).\n", addr);
 		return gbc->memory.iereg;
 	}
-	//printf("Reading from address %04X (UNKNOWN).\n", addr);
+	gbcc_log(GBCC_LOG_ERROR, "Reading from unknown memory address %04X.\n", addr);
 	return 0;
 }
 
 void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	//printf("Writing %02X to address %04X", val, addr);
-	if (addr < ROMX_START + ROMX_SIZE
-			|| (addr > SRAM_START && addr < SRAM_START + SRAM_SIZE)) {
-		switch (gbc->cart.mbc) {
+	if (gbc->dma.timer > 0) {
+		if (!(addr >= HRAM_START && addr < IE)) {
+			return;
+		}
+	}
+	//printf("Writing %02X to address %04X\n", val, addr);
+	if (addr < ROMX_END || (addr > SRAM_START && addr < SRAM_END)) {
+		switch (gbc->cart.mbc.type) {
 			case NONE:
+				gbcc_mbc_none_write(gbc, addr, val);
 				break;
 			case MBC1:
 				gbcc_mbc_mbc1_write(gbc, addr, val);
@@ -146,33 +156,34 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 				gbcc_mbc_mmm01_write(gbc, addr, val);
 				break;
 		}
-		//printf("(ROM).\n");
 		return;
 	}
-	if (addr >= VRAM_START && addr < SRAM_START) {
+	if (addr >= VRAM_START && addr < VRAM_END) {
 		gbcc_vram_write(gbc, addr, val);
 		//printf("(VRAM).");
-	} else if (addr >= WRAM0_START && addr < ECHO_START) {
+	} else if (addr >= WRAM0_START && addr < WRAMX_END) {
 		gbcc_wram_write(gbc, addr, val);
 		//printf("(WRAM).");
-	} else if (addr >= ECHO_START && addr < OAM_START) {
+	} else if (addr >= ECHO_START && addr < ECHO_END) {
 		gbcc_echo_write(gbc, addr, val);
 		//printf("(ECHO).");
-	} else if (addr >= OAM_START && addr < UNUSED_START) {
+	} else if (addr >= OAM_START && addr < OAM_END) {
 		gbcc_oam_write(gbc, addr, val);
 		//printf("(OAM).");
-	} else if (addr >= UNUSED_START && addr < IOREG_START) {
+	} else if (addr >= UNUSED_START && addr < UNUSED_END) {
 		gbcc_unused_write(gbc, addr, val);
 		//printf("(UNUSED).");
-	} else if (addr >= IOREG_START && addr < HRAM_START) {
+	} else if (addr >= IOREG_START && addr < IOREG_END) {
 		gbcc_ioreg_write(gbc, addr, val);
 		//printf("(IOREG).");
-	} else if (addr >= HRAM_START && addr < IE) {
+	} else if (addr >= HRAM_START && addr < HRAM_END) {
 		gbcc_hram_write(gbc, addr, val);
 		//printf("(HRAM).");
 	} else if (addr == IE) {
 		gbc->memory.iereg = val;
-		//printf("(IE).");
+		printf("(IE).");
+	} else {
+		gbcc_log(GBCC_LOG_ERROR, "Writing to unknown memory address %04X.\n", addr);
 	}
 	//printf("\n");
 }
@@ -268,7 +279,7 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr) {
 			joyp &= ~(uint8_t)(gbc->keys.dpad.right << 0u);
 		}
 		gbc->memory.ioreg[addr - IOREG_START] = joyp;
-		printf("Testing joypad %02X\n", joyp);
+		gbcc_log(GBCC_LOG_DEBUG, "Joypad returned %02X\n", joyp);
 	} 
 	return gbc->memory.ioreg[addr - IOREG_START] | (uint8_t)~mask;
 }
@@ -276,7 +287,19 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr) {
 void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	uint8_t tmp = gbc->memory.ioreg[addr - IOREG_START];
 	uint8_t mask = ioreg_write_masks[addr - IOREG_START];
-	gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
+	if (addr == SC) {
+		if (val & 0x80u) {
+			printf("%c", gbc->memory.ioreg[SB - IOREG_START]);
+		}
+	} else if (addr == DIV) {
+		gbc->memory.ioreg[addr - IOREG_START] = 0;
+	} else if (addr == DMA) {
+		gbc->dma.source = (uint16_t)(val << 8u);
+		gbc->dma.timer = DMA_TIMER;
+		gbcc_log(GBCC_LOG_DEBUG, "DMA requested from 0x%04X\n", gbc->dma.source);
+	} else {
+		gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
+	}
 }
 
 uint8_t gbcc_hram_read(struct gbc *gbc, uint16_t addr) {
