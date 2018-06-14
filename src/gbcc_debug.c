@@ -77,17 +77,17 @@ void gbcc_print_registers(struct gbc *gbc) {
 	gbcc_log(GBCC_LOG_DEBUG, "\tb: %u\t\tbc: %04X\n", gbc->reg.b, gbc->reg.bc);
 	gbcc_log(GBCC_LOG_DEBUG, "\tc: %u\t\tde: %04X\n", gbc->reg.c, gbc->reg.de);
 	gbcc_log(GBCC_LOG_DEBUG, "\td: %u\t\thl: %04X\n", gbc->reg.d, gbc->reg.hl);
-	gbcc_log(GBCC_LOG_DEBUG, "\te: %u\t\tz: %u\n", gbc->reg.e, gbc->reg.zf);
-	gbcc_log(GBCC_LOG_DEBUG, "\th: %u\t\tn: %u\n", gbc->reg.h, gbc->reg.nf);
-	gbcc_log(GBCC_LOG_DEBUG, "\tl: %u\t\th: %u\n", gbc->reg.l, gbc->reg.hf);
-	gbcc_log(GBCC_LOG_DEBUG, "\tsp: %04X\tc: %u\n", gbc->reg.sp, gbc->reg.cf);
+	gbcc_log(GBCC_LOG_DEBUG, "\te: %u\t\tz: %u\n", gbc->reg.e, !!(gbc->reg.f & ZF));
+	gbcc_log(GBCC_LOG_DEBUG, "\th: %u\t\tn: %u\n", gbc->reg.h, !!(gbc->reg.f & NF));
+	gbcc_log(GBCC_LOG_DEBUG, "\tl: %u\t\th: %u\n", gbc->reg.l, !!(gbc->reg.f & HF));
+	gbcc_log(GBCC_LOG_DEBUG, "\tsp: %04X\tc: %u\n", gbc->reg.sp, !!(gbc->reg.f & CF));
 	gbcc_log(GBCC_LOG_DEBUG, "\tpc: %04X\n", gbc->reg.pc);
 }
 
 void gbcc_print_op(struct gbc *gbc) {
 	gbcc_log(GBCC_LOG_DEBUG, "%02X", gbc->opcode);
 	for (uint8_t i = 0; i < gbcc_op_sizes[gbc->opcode] - 1; i++) {
-		gbcc_log_append(GBCC_LOG_DEBUG, "%02X", gbcc_memory_read(gbc, gbc->reg.pc + i));
+		gbcc_log_append(GBCC_LOG_DEBUG, "%02X", gbcc_memory_read(gbc, gbc->reg.pc + i, true));
 	}
 	gbcc_log_append(GBCC_LOG_DEBUG, "\t%s\n", op_dissassemblies[gbc->opcode]);
 }

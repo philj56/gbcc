@@ -1,32 +1,28 @@
 #include "gbcc.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
-#include "gbcc_input.h"
 #include "gbcc_window.h"
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
-static bool printscr = false;
+static size_t offset = 0;
 static clock_t timer_start;
-static clock_t timer_end;
 static struct gbc gbc;
 
-_Noreturn static void print(int sig);
-void print(int sig)
+static void print_speed(int sig);
+void print_speed(int sig)
 {
 	(void) sig;
-	printscr = true;
-	timer_end = clock();
-	fprintf(stderr, "Speed: %f Hz\n", (double)gbc.clock / ((double)(timer_end - timer_start) / CLOCKS_PER_SEC));
-	exit(0);
-}
-
-void cleanup(void)
-{
+	double speed = (double)(gbc.clock - offset) / ((double)(clock() - timer_start) / CLOCKS_PER_SEC);
+	fprintf(stderr, "Speed: %.0fHz (%.0f%%)\n", speed, 100 * speed / GBC_CLOCK_FREQ);
+	timer_start = clock();
+	offset = gbc.clock;
+	if (signal(SIGUSR1, print_speed) == SIG_ERR) {
+		printf("Can't catch SIGUSR1!\n");
+	}
 }
 
 int main(int argc, char **argv)
@@ -36,7 +32,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (signal(SIGUSR1, print) == SIG_ERR) {
+	if (signal(SIGUSR1, print_speed) == SIG_ERR) {
 		printf("Can't catch SIGUSR1!\n");
 	}
 
@@ -48,17 +44,7 @@ int main(int argc, char **argv)
 	bool loop = true;
 	timer_start = clock();
 	while (loop) {
-		gbcc_input_process_all(&gbc);
-		if (printscr && fgetc(stdin) == 'r') {
-			printscr = false;
-		}
-		do {
-			gbcc_emulate_cycle(&gbc);
-		} while (gbc.instruction_timer > 0);
-		if (true || printscr && gbc.instruction_timer == 0) {
-			gbcc_print_registers(&gbc);
-			//loop = false;
-		}
+		gbcc_emulate_cycle(&gbc);
 	}
 	
 	//gbcc_free(&gbc);

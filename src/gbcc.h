@@ -16,29 +16,11 @@ struct gbc {
 		union {
 			struct {
 				#ifdef LITTLE_ENDIAN
-				union {
-					struct {
-						uint8_t zf : 1;
-						uint8_t nf : 1;
-						uint8_t hf : 1;
-						uint8_t cf : 1;
-						uint8_t    : 4;
-					};
-					uint8_t f;
-				};
+				uint8_t f;
 				uint8_t a;
 				#else
 				uint8_t a;
-				union {
-					struct {
-						uint8_t zf : 1;
-						uint8_t nf : 1;
-						uint8_t hf : 1;
-						uint8_t cf : 1;
-						uint8_t    : 4;
-					};
-					uint8_t f;
-				};
+				uint8_t f;
 				#endif
 			};
 			uint16_t af;

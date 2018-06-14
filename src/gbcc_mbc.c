@@ -7,10 +7,10 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr) {
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
 	}
-	if (addr >= ROMX_START && addr < ROMX_START + ROMX_SIZE) {
+	if (addr >= ROMX_START && addr < ROMX_END) {
 		return gbc->memory.romx[addr - ROMX_START];
 	}
-	if (addr >= SRAM_START && addr < SRAM_START + SRAM_SIZE) {
+	if (addr >= SRAM_START && addr < SRAM_END) {
 		return gbc->memory.sram[addr - SRAM_START];
 	}
 	gbcc_log(GBCC_LOG_ERROR, "Reading memory address 0x%04X out of bounds.\n", addr);
@@ -19,15 +19,10 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr) {
 
 void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	if (addr == DMA) {
-		gbc->dma.source = (uint16_t)(val << 8u);
-		gbc->dma.timer = DMA_TIMER;
-		gbcc_log(GBCC_LOG_DEBUG, "DMA requested from 0x%04X\n", gbc->dma.source);
-	}
-	if (addr >= SRAM_START && addr < SRAM_START + SRAM_SIZE) {
+	if (addr >= SRAM_START && addr < SRAM_END) {
 		gbc->memory.sram[addr - SRAM_START] = val;
 	} else {
-		gbcc_log(GBCC_LOG_ERROR, "Writing memory address 0x%04X out of bounds.\n", addr);
+		gbcc_log(GBCC_LOG_ERROR, "Writing memory address 0x%04X out of bounds.", addr);
 	}
 }
 
@@ -35,10 +30,10 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr) {
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
 	}
-	if (addr >= ROMX_START && addr < ROMX_START + ROMX_SIZE) {
+	if (addr >= ROMX_START && addr < ROMX_END) {
 		return gbc->memory.romx[addr - ROMX_START];
 	}
-	if (addr >= SRAM_START && addr < SRAM_START + SRAM_SIZE) {
+	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.mbc.sram_enable) {
 			gbcc_log(GBCC_LOG_DEBUG, "SRAM enabled!\n");
 			return gbc->memory.sram[addr - SRAM_START];
@@ -50,7 +45,7 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr) {
 }
 
 void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
-	if (addr >= SRAM_START && addr < SRAM_START + SRAM_SIZE) {
+	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.mbc.sram_enable) {
 			gbcc_log(GBCC_LOG_DEBUG, "Writing value 0x%02X to 0x%04X\n", val, addr);
 			gbc->memory.sram[addr - SRAM_START] = val;

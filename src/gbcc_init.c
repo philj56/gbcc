@@ -142,7 +142,7 @@ void gbcc_parse_header(struct gbc *gbc)
 	gbcc_verify_cartridge(gbc);
 	gbcc_print_title(gbc);
 	gbcc_print_licensee_code(gbc);
-	gbcc_init_mode(gbc);
+	//gbcc_init_mode(gbc);
 	gbcc_get_cartridge_hardware(gbc);
 	gbcc_init_ram(gbc);
 	gbcc_print_destination_code(gbc);
@@ -368,6 +368,10 @@ void gbcc_init_ram(struct gbc *gbc)
 			exit(1);
 	}
 
+	/*if (gbc->cart.mbc.type == NONE) {
+		gbc->cart.ram_size = 0x0200u;
+	}*/
+
 	if (gbc->cart.ram_size > 0) {
 		gbcc_log(GBCC_LOG_INFO, "\tCartridge RAM: %lu bytes\n", gbc->cart.ram_size);
 		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
@@ -397,10 +401,16 @@ void gbcc_print_destination_code(struct gbc *gbc)
 void gbcc_init_registers(struct gbc *gbc) {
 	switch (gbc->mode) {
 		case DMG:
-			gbc->reg.af = 0x1180u;
+			/*gbc->reg.af = 0x1180u;
 			gbc->reg.bc = 0x0000u;
 			gbc->reg.de = 0x0008u;
 			gbc->reg.hl = 0x007Cu;
+			gbc->reg.sp = 0xFFFEu;
+			gbc->reg.pc = 0x0100u;*/
+			gbc->reg.af = 0x01B0u;
+			gbc->reg.bc = 0x0013u;
+			gbc->reg.de = 0x00D8u;
+			gbc->reg.hl = 0x014Du;
 			gbc->reg.sp = 0xFFFEu;
 			gbc->reg.pc = 0x0100u;
 			break;

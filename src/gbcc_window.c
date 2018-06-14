@@ -1,5 +1,6 @@
 #include "gbcc.h"
 #include "gbcc_debug.h"
+#include "gbcc_input.h"
 #include "gbcc_memory.h"
 #include "gbcc_window.h"
 #include <stdio.h>
@@ -57,8 +58,8 @@ static int gbcc_window_thread_function(void *window)
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
-			4 * GBC_SCREEN_WIDTH,      // width, in pixels
-			4 * GBC_SCREEN_HEIGHT,     // height, in pixels
+			GBC_SCREEN_WIDTH,      // width, in pixels
+			GBC_SCREEN_HEIGHT,     // height, in pixels
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags - see below
 			);
 
@@ -112,6 +113,7 @@ static int gbcc_window_thread_function(void *window)
 
 	/* Main rendering loop */
 	while (!(win->quit)) {
+		gbcc_input_process_all(win->gbc);
 		if (SDL_LockMutex(win->mutex) < 0) {
 			gbcc_log(GBCC_LOG_ERROR, "Could not lock mutex: %s\n", SDL_GetError());
 		}

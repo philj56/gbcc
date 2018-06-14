@@ -1,6 +1,12 @@
 #ifndef GBC_CONSTANTS_H
 #define GBC_CONSTANTS_H
 
+/* Flags register */
+#define ZF 0x80u
+#define NF 0x40u
+#define HF 0x20u
+#define CF 0x10u
+
 /* Memory map */
 #define ROM0_START 0x0000u	/* Non-Switchable ROM Bank */
 #define ROM0_SIZE 0x4000u

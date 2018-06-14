@@ -14,7 +14,7 @@ static const SDL_Keycode keymap[8] = {
 };
 
 // Returns key that changed, or -1 for a non-emulated key
-int gbcc_input_process(const SDL_Event *e);
+static int gbcc_input_process(const SDL_Event *e);
 
 void gbcc_input_process_all(struct gbc *gbc)
 {
@@ -27,6 +27,8 @@ void gbcc_input_process_all(struct gbc *gbc)
 		}
 		if (e.type == SDL_KEYDOWN) {
 			val = true;
+			gbc->halt.set = false;
+			gbc->stop = false;
 		} else {
 			val = false;
 		}

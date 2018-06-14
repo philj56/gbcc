@@ -63,13 +63,13 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_hram_read(struct gbc *gbc, uint16_t addr);
 void gbcc_hram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
-uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr, bool override)
 {
-	if (gbc->dma.timer > 0) {
-		if (!(addr >= HRAM_START && addr < IE)) {
-			return 0;
+	/*if (!override && gbc->dma.timer > 0) {
+		if (!(addr >= HRAM_START && addr < HRAM_END)) {
+			return 0xFFu;
 		}
-	}
+	}*/
 	if (addr < ROMX_END || (addr >= SRAM_START && addr < SRAM_END)) {
 		switch (gbc->cart.mbc.type) {
 			case NONE:
@@ -124,13 +124,13 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr)
 	return 0;
 }
 
-void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 {
-	if (gbc->dma.timer > 0) {
-		if (!(addr >= HRAM_START && addr < IE)) {
+	/*if (!override && gbc->dma.timer > 0) {
+		if (!(addr >= HRAM_START && addr < HRAM_END)) {
 			return;
 		}
-	}
+	}*/
 	//printf("Writing %02X to address %04X\n", val, addr);
 	if (addr < ROMX_END || (addr > SRAM_START && addr < SRAM_END)) {
 		switch (gbc->cart.mbc.type) {
@@ -181,7 +181,7 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		//printf("(HRAM).");
 	} else if (addr == IE) {
 		gbc->memory.iereg = val;
-		printf("(IE).");
+		//printf("(IE).");
 	} else {
 		gbcc_log(GBCC_LOG_ERROR, "Writing to unknown memory address %04X.\n", addr);
 	}
@@ -189,40 +189,26 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 }
 
 uint8_t gbcc_vram_read(struct gbc *gbc, uint16_t addr) {
-	uint16_t offset = 0;
-	if ((gbc->mode == GBC) && (gbcc_ioreg_read(gbc, VBK) & 1u)) {
-		offset = VRAM_SIZE;
-	}
-	return gbc->memory.emu_vram[addr - VRAM_START + offset];
+	return gbc->memory.vram[addr - VRAM_START];
 }
 
 void gbcc_vram_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
-	uint16_t offset = 0;
-	if ((gbc->mode == GBC) && (gbcc_ioreg_read(gbc, VBK) & 1u)) {
-		offset = VRAM_SIZE;
-	}
-	gbc->memory.emu_vram[addr - VRAM_START + offset] = val;
+	gbc->memory.vram[addr - VRAM_START] = val;
 }
 
 uint8_t gbcc_wram_read(struct gbc *gbc, uint16_t addr) {
 	if (addr < WRAMX_START) {
-		return gbc->memory.emu_wram[addr - WRAM0_START];
+		return gbc->memory.wram0[addr - WRAM0_START];
 	}
-	uint16_t offset = gbcc_ioreg_read(gbc, SVBK) & 0x07u;
-	offset += !offset;
-	offset *= WRAMX_SIZE;
-	return gbc->memory.emu_wram[addr - WRAMX_START + offset];
+	return gbc->memory.wramx[addr - WRAMX_START];
 }
 
 void gbcc_wram_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	if (addr < WRAMX_START) {
-		gbc->memory.emu_wram[addr - WRAM0_START] = val;
+		gbc->memory.wram0[addr - WRAM0_START] = val;
+	} else {
+		gbc->memory.wramx[addr - WRAMX_START] = val;
 	}
-	uint16_t offset = gbcc_ioreg_read(gbc, SVBK) & 0x07u;
-	offset += !offset;
-	offset *= WRAMX_SIZE;
-	//printf("addr: %04X\n", addr - WRAMX_START + offset);
-	gbc->memory.emu_wram[addr - WRAMX_START + offset] = val;
 }
 
 uint8_t gbcc_echo_read(struct gbc *gbc, uint16_t addr) {
@@ -265,19 +251,20 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr) {
 	uint8_t mask = ioreg_read_masks[addr - IOREG_START];
 	/* Only update the keys when we actually want to read from them */
 	if (addr == JOYP) {
-		uint8_t joyp = gbc->memory.ioreg[addr - IOREG_START] | 0x0Eu;
-		if (joyp & (1u << 5u)) {
+		uint8_t joyp = gbc->memory.ioreg[addr - IOREG_START];
+		if (gbc->memory.ioreg[addr - IOREG_START] & (1u << 5u)) {
 			joyp &= ~(uint8_t)(gbc->keys.start << 3u);
 			joyp &= ~(uint8_t)(gbc->keys.select << 2u);
 			joyp &= ~(uint8_t)(gbc->keys.b << 1u);
 			joyp &= ~(uint8_t)(gbc->keys.a << 0u);
 		}
-		if (joyp & (1u << 4u)) {
+		if (gbc->memory.ioreg[addr - IOREG_START] & (1u << 4u)) {
 			joyp &= ~(uint8_t)(gbc->keys.dpad.down << 3u);
 			joyp &= ~(uint8_t)(gbc->keys.dpad.up << 2u);
 			joyp &= ~(uint8_t)(gbc->keys.dpad.left << 1u);
 			joyp &= ~(uint8_t)(gbc->keys.dpad.right << 0u);
 		}
+		return joyp;
 		gbc->memory.ioreg[addr - IOREG_START] = joyp;
 		gbcc_log(GBCC_LOG_DEBUG, "Joypad returned %02X\n", joyp);
 	} 
@@ -289,14 +276,22 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	uint8_t mask = ioreg_write_masks[addr - IOREG_START];
 	if (addr == SC) {
 		if (val & 0x80u) {
-			printf("%c", gbc->memory.ioreg[SB - IOREG_START]);
+			fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
 		}
 	} else if (addr == DIV) {
 		gbc->memory.ioreg[addr - IOREG_START] = 0;
 	} else if (addr == DMA) {
-		gbc->dma.source = (uint16_t)(val << 8u);
+		gbc->dma.source = (uint16_t)(((uint16_t)val) << 8u);
 		gbc->dma.timer = DMA_TIMER;
 		gbcc_log(GBCC_LOG_DEBUG, "DMA requested from 0x%04X\n", gbc->dma.source);
+	} else if (addr == JOYP) {
+		if (val & (1u << 5u)) {
+			gbc->memory.ioreg[addr - IOREG_START] |= 0x10u;
+			gbc->memory.ioreg[addr - IOREG_START] &= ~0x20u;
+		} else if (val & (1u << 4u)) {
+			gbc->memory.ioreg[addr - IOREG_START] |= 0x20u;
+			gbc->memory.ioreg[addr - IOREG_START] &= ~0x10u;
+		}
 	} else {
 		gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
 	}
