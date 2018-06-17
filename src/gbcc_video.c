@@ -91,6 +91,7 @@ void gbcc_draw_background_line(struct gbc *gbc)
 		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 		uint8_t lo;
 		uint8_t hi;
+		/* TODO: Put this somewhere better */
 		if (check_bit(lcdc, 4)) {
 			lo = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset, true);
 			hi = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset + 1, true);
@@ -116,28 +117,32 @@ void gbcc_draw_window_line(struct gbc *gbc)
 	}
 
 	uint8_t ty = ((wy + ly) / 8u) % 32u;
-	uint16_t line_offset = 2 * ((wy + ly) % 8) + VRAM_START;
+	uint16_t line_offset = 2 * ((wy + ly) % 8);
 	uint16_t map = check_bit(lcdc, 6) ? BACKGROUND_MAP_BANK_2 : BACKGROUND_MAP_BANK_1;
 
-	if (check_bit(lcdc, 0)) {
-		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			if (x < wx) {
-				continue;
-			}
-			uint8_t tx = ((wx + x) / 8u) % 32u;
-			uint8_t xoff = (wx + x) % 8u;
-			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
-			uint8_t lo = gbcc_memory_read(gbc, 16 * tile + line_offset, true);
-			uint8_t hi = gbcc_memory_read(gbc, 16 * tile + line_offset + 1, true);
-			uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			gbc->memory.screen[ly][x] = get_palette_colour(palette, colour);
-		}
-	} else {
-		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			gbc->memory.screen[ly][x] = 0xc4cfa1u;
-		}
+	if (!check_bit(lcdc, 5)) {
+		return;
 	}
-
+	for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
+		if (x < wx) {
+			continue;
+		}
+		uint8_t tx = ((wx + x) / 8u) % 32u;
+		uint8_t xoff = (wx + x) % 8u;
+		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
+		uint8_t lo;
+		uint8_t hi;
+		/* TODO: Put this somewhere better */
+		if (check_bit(lcdc, 4)) {
+			lo = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset, true);
+			hi = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset + 1, true);
+		} else {
+			lo = gbcc_memory_read(gbc, 0x9000u + 16 * (int8_t)tile + line_offset, true);
+			hi = gbcc_memory_read(gbc, 0x9000u + 16 * (int8_t)tile + line_offset + 1, true);
+		}
+		uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
+		gbc->memory.screen[ly][x] = get_palette_colour(palette, colour);
+	}
 }
 
 void gbcc_draw_sprite_line(struct gbc *gbc)
