@@ -336,6 +336,10 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 			gbc->cart.battery = true;
 			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5 + Rumble + RAM + Battery\n");
 			break;
+		case 0xFCu:
+			gbc->cart.mbc.type = MBC1;
+			gbcc_log(GBCC_LOG_INFO, "\tHardware: IDK game boy camera I don't know what I'm doing\n");
+			break;
 		default:
 			gbcc_log(GBCC_LOG_ERROR, "Unrecognised hardware %02X\n", gbc->cart.rom[CART_TYPE]);
 			/* TODO: Handle Pocket Camera, TAMA5, HuC3 & HuC1 */
@@ -363,6 +367,9 @@ void gbcc_init_ram(struct gbc *gbc)
 			break;
 		case 0x03u:
 			gbc->cart.ram_size = 0x8000u;
+			break;
+		case 0x04u:
+			gbc->cart.ram_size = 0xFFFFu;
 			break;
 		default:
 			gbcc_log(GBCC_LOG_ERROR, "Unknown ram size flag: %u\n", ram_size_flag);
