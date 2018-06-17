@@ -155,7 +155,7 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 	uint8_t size = 1 + check_bit(lcdc, 2); /* 1 or 2 8x8 tiles */
 	if (size > 1) {
 		gbcc_log(GBCC_LOG_ERROR, "Size > 1 not implemented\n");
-		exit(1);
+		//exit(1);
 	}
 	for (size_t s = 0; s < NUM_SPRITES; s += size) {
 		/* FIXME: 9 probably shouldn't be here */

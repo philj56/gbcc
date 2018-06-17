@@ -163,7 +163,7 @@
 #define DMA_TIMER 672 /* How long DMG DMA takes in clocks (Must be multiple of 4) */
 
 
-enum MBC { NONE, MBC1, MBC2, MBC3, MBC4, MBC5, MMM01 };
+enum MBC { NONE, MBC1, MBC2, MBC3, MBC4, MBC5, MMM01, CAMERA };
 enum BANK_MODE { ROM, RAM };
 enum CART_MODE { GBC, DMG };
 
