@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_bit_utils.h"
 #include "gbcc_constants.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
@@ -37,7 +38,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->cart.mbc.sram_enable = false;
 	gbc->cart.mbc.romx_bank = 0x01u;
 	gbc->cart.mbc.sram_bank = 0x00u;
-	gbc->cart.mbc.bank_mode = 0x00u;
+	gbc->cart.mbc.bank_mode = ROM;
 	gbc->cart.battery = false;
 	gbc->cart.timer = false;
 	gbc->cart.rumble = false;
@@ -142,7 +143,7 @@ void gbcc_parse_header(struct gbc *gbc)
 	gbcc_verify_cartridge(gbc);
 	gbcc_print_title(gbc);
 	gbcc_print_licensee_code(gbc);
-	//gbcc_init_mode(gbc);
+	gbcc_init_mode(gbc);
 	gbcc_get_cartridge_hardware(gbc);
 	gbcc_init_ram(gbc);
 	gbcc_print_destination_code(gbc);
@@ -163,7 +164,7 @@ void gbcc_verify_cartridge(struct gbc *gbc)
 	for (size_t i = CART_HEADER_CHECKSUM_START; i < CART_HEADER_CHECKSUM_START + CART_HEADER_CHECKSUM_SIZE + 1; i++) {
 		sum += gbc->cart.rom[i];
 	}
-	sum = (sum + 25u) & 0x00FFu;
+	sum = low_byte(sum + 25u);
 	if (sum) {
 		gbcc_log(GBCC_LOG_ERROR, "Cartridge checksum failed with value %04X.\n", sum);
 		exit(1);
@@ -401,16 +402,10 @@ void gbcc_print_destination_code(struct gbc *gbc)
 void gbcc_init_registers(struct gbc *gbc) {
 	switch (gbc->mode) {
 		case DMG:
-			/*gbc->reg.af = 0x1180u;
+			gbc->reg.af = 0x1180u;
 			gbc->reg.bc = 0x0000u;
 			gbc->reg.de = 0x0008u;
 			gbc->reg.hl = 0x007Cu;
-			gbc->reg.sp = 0xFFFEu;
-			gbc->reg.pc = 0x0100u;*/
-			gbc->reg.af = 0x01B0u;
-			gbc->reg.bc = 0x0013u;
-			gbc->reg.de = 0x00D8u;
-			gbc->reg.hl = 0x014Du;
 			gbc->reg.sp = 0xFFFEu;
 			gbc->reg.pc = 0x0100u;
 			break;
@@ -464,10 +459,14 @@ void gbcc_init_mmap(struct gbc *gbc)
 
 void gbcc_init_ioreg(struct gbc *gbc)
 {
-	/* Values taken from the pandocs */
+	/* Values taken from the pandocs and mooneye tests*/
+	gbc->memory.ioreg[JOYP - IOREG_START] = 0xCFu;
+	gbc->memory.ioreg[SC - IOREG_START] = 0x7Eu;
+	gbc->memory.ioreg[DIV - IOREG_START] = 0x18u;
 	gbc->memory.ioreg[TIMA - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[TMA - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[TAC - IOREG_START] = 0x00u;
+	gbc->memory.ioreg[IF - IOREG_START] = 0x01u;
 	gbc->memory.ioreg[NR10 - IOREG_START] = 0x80u;
 	gbc->memory.ioreg[NR11 - IOREG_START] = 0xBFu;
 	gbc->memory.ioreg[NR12 - IOREG_START] = 0xF3u;
@@ -482,13 +481,13 @@ void gbcc_init_ioreg(struct gbc *gbc)
 	gbc->memory.ioreg[NR41 - IOREG_START] = 0xFFu;
 	gbc->memory.ioreg[NR42 - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[NR43 - IOREG_START] = 0x00u;
-	gbc->memory.ioreg[NR30 - IOREG_START] = 0xBFu;
 	gbc->memory.ioreg[NR50 - IOREG_START] = 0x77u;
 	gbc->memory.ioreg[NR51 - IOREG_START] = 0xF3u;
 	gbc->memory.ioreg[NR52 - IOREG_START] = 0xF1u;
 	gbc->memory.ioreg[LCDC - IOREG_START] = 0x91u;
 	gbc->memory.ioreg[SCY - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[SCX - IOREG_START] = 0x00u;
+	gbc->memory.ioreg[LY - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[LYC - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[BGP - IOREG_START] = 0xFCu;
 	gbc->memory.ioreg[OBP0 - IOREG_START] = 0xFFu;
@@ -496,10 +495,6 @@ void gbcc_init_ioreg(struct gbc *gbc)
 	gbc->memory.ioreg[WY - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[WX - IOREG_START] = 0x00u;
 	gbc->memory.iereg = 0x00u;
-	
-	/* Other */
-	gbc->memory.ioreg[JOYP - IOREG_START] = 0xFFu;
-	gbc->memory.ioreg[LY - IOREG_START] = 0x00u;
 }
 
 void gbcc_init_input(struct gbc *gbc)

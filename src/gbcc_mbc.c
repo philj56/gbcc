@@ -19,10 +19,14 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr) {
 
 void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
+	if (gbc->cart.ram_size == 0) {
+		gbcc_log(GBCC_LOG_ERROR, "Trying to write to SRAM when there isn't any!\n", addr);
+		return;
+	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		gbc->memory.sram[addr - SRAM_START] = val;
 	} else {
-		gbcc_log(GBCC_LOG_ERROR, "Writing memory address 0x%04X out of bounds.", addr);
+		gbcc_log(GBCC_LOG_ERROR, "Writing memory address 0x%04X out of bounds.\n", addr);
 	}
 }
 
