@@ -68,9 +68,9 @@ void gbcc_draw_background_line(struct gbc *gbc)
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t palette = gbcc_memory_read(gbc, BGP, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
-	
+
 	uint8_t ty = ((scy + ly) / 8u) % 32u;
-	uint16_t line_offset = 2 * ((scy + ly) % 8) + VRAM_START; /* 2 bytes per line */
+	uint16_t line_offset = 2 * ((scy + ly) % 8); /* 2 bytes per line */
 	uint16_t map;
 	if (check_bit(lcdc, 3)) {
 		map = BACKGROUND_MAP_BANK_2;
@@ -84,12 +84,20 @@ void gbcc_draw_background_line(struct gbc *gbc)
 		}
 		return;
 	}
+
 	for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
 		uint8_t tx = ((scx + x) / 8u) % 32u;
 		uint8_t xoff = (scx + x) % 8u;
 		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
-		uint8_t lo = gbcc_memory_read(gbc, 16 * tile + line_offset, true); 
-		uint8_t hi = gbcc_memory_read(gbc, 16 * tile + line_offset + 1, true); 
+		uint8_t lo;
+		uint8_t hi;
+		if (check_bit(lcdc, 4)) {
+			lo = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset, true);
+			hi = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset + 1, true);
+		} else {
+			lo = gbcc_memory_read(gbc, 0x9000u + 16 * (int8_t)tile + line_offset, true);
+			hi = gbcc_memory_read(gbc, 0x9000u + 16 * (int8_t)tile + line_offset + 1, true);
+		}
 		uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 		gbc->memory.screen[ly][x] = get_palette_colour(palette, colour);
 	}
@@ -106,7 +114,7 @@ void gbcc_draw_window_line(struct gbc *gbc)
 	if (ly < wy || !check_bit(lcdc, 5)) {
 		return;
 	}
-	
+
 	uint8_t ty = ((wy + ly) / 8u) % 32u;
 	uint16_t line_offset = 2 * ((wy + ly) % 8) + VRAM_START;
 	uint16_t map = check_bit(lcdc, 6) ? BACKGROUND_MAP_BANK_2 : BACKGROUND_MAP_BANK_1;
@@ -119,8 +127,8 @@ void gbcc_draw_window_line(struct gbc *gbc)
 			uint8_t tx = ((wx + x) / 8u) % 32u;
 			uint8_t xoff = (wx + x) % 8u;
 			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
-			uint8_t lo = gbcc_memory_read(gbc, 16 * tile + line_offset, true); 
-			uint8_t hi = gbcc_memory_read(gbc, 16 * tile + line_offset + 1, true); 
+			uint8_t lo = gbcc_memory_read(gbc, 16 * tile + line_offset, true);
+			uint8_t hi = gbcc_memory_read(gbc, 16 * tile + line_offset + 1, true);
 			uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 			gbc->memory.screen[ly][x] = get_palette_colour(palette, colour);
 		}
@@ -154,7 +162,7 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		if (sy < ly || sy >= (ly + size * 8u)) {
 			continue;
 		}
-		uint8_t palette; 
+		uint8_t palette;
 		if (check_bit(attr, 4)) {
 			palette = gbcc_memory_read(gbc, OBP1, true);
 		} else {
