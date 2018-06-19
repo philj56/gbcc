@@ -21,6 +21,7 @@ void gbcc_video_update(struct gbc *gbc)
 {
 	uint8_t mode = gbcc_get_video_mode(gbc);
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
+	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
 	uint16_t clock = gbc->clock % 456;
 
 	if (clock == 0) {
@@ -36,6 +37,18 @@ void gbcc_video_update(struct gbc *gbc)
 			gbcc_draw_line(gbc);
 			gbcc_set_video_mode(gbc, GBC_LCD_MODE_HBLANK);
 		}
+	}
+	/* LCD STAT Interrupt */
+	if (ly == gbcc_memory_read(gbc, LYC, true)) {
+		gbcc_memory_set_bit(gbc, STAT, 2, true);
+	} else {
+		gbcc_memory_clear_bit(gbc, STAT, 2, true);
+	}
+	if ((check_bit(stat, 2) && check_bit(stat, 6))
+			|| (mode == GBC_LCD_MODE_HBLANK && check_bit(stat, 3))
+			|| (mode == GBC_LCD_MODE_OAM_READ && check_bit(stat, 5))
+			|| (mode == GBC_LCD_MODE_VBLANK && check_bit(stat, 4))) {
+		gbcc_memory_set_bit(gbc, IF, 1, true);
 	}
 	/* VBLANK interrupt flag */
 	if (ly == 144) {
@@ -89,16 +102,15 @@ void gbcc_draw_background_line(struct gbc *gbc)
 		uint8_t tx = ((scx + x) / 8u) % 32u;
 		uint8_t xoff = (scx + x) % 8u;
 		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
-		uint8_t lo;
-		uint8_t hi;
+		uint16_t tile_addr;
 		/* TODO: Put this somewhere better */
 		if (check_bit(lcdc, 4)) {
-			lo = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset, true);
-			hi = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset + 1, true);
+			tile_addr = VRAM_START + 16 * tile;
 		} else {
-			lo = gbcc_memory_read(gbc, 0x9000u + 16 * (int8_t)tile + line_offset, true);
-			hi = gbcc_memory_read(gbc, 0x9000u + 16 * (int8_t)tile + line_offset + 1, true);
+			tile_addr = 0x9000u + 16 * (int8_t)tile;
 		}
+		uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
+		uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 		uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 		gbc->memory.screen[ly][x] = get_palette_colour(palette, colour);
 	}
@@ -107,7 +119,7 @@ void gbcc_draw_background_line(struct gbc *gbc)
 void gbcc_draw_window_line(struct gbc *gbc)
 {
 	uint8_t wy = gbcc_memory_read(gbc, WY, true);
-	uint8_t wx = gbcc_memory_read(gbc, WX, true);
+	uint8_t wx = gbcc_memory_read(gbc, WX, true) - 7u;
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t palette = gbcc_memory_read(gbc, BGP, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
@@ -116,30 +128,31 @@ void gbcc_draw_window_line(struct gbc *gbc)
 		return;
 	}
 
-	uint8_t ty = ((wy + ly) / 8u) % 32u;
-	uint16_t line_offset = 2 * ((wy + ly) % 8);
-	uint16_t map = check_bit(lcdc, 6) ? BACKGROUND_MAP_BANK_2 : BACKGROUND_MAP_BANK_1;
-
-	if (!check_bit(lcdc, 5)) {
-		return;
+	uint8_t ty = ((ly - wy) / 8u) % 32u;
+	uint16_t line_offset = 2 * ((ly - wy) % 8);
+	uint16_t map;
+	if (check_bit(lcdc, 6)) {
+		map = BACKGROUND_MAP_BANK_2;
+	} else {
+		map = BACKGROUND_MAP_BANK_1;
 	}
+
 	for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
 		if (x < wx) {
 			continue;
 		}
-		uint8_t tx = ((wx + x) / 8u) % 32u;
-		uint8_t xoff = (wx + x) % 8u;
+		uint8_t tx = ((x - wx) / 8u) % 32u;
+		uint8_t xoff = (x - wx) % 8u;
 		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
-		uint8_t lo;
-		uint8_t hi;
+		uint16_t tile_addr;
 		/* TODO: Put this somewhere better */
 		if (check_bit(lcdc, 4)) {
-			lo = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset, true);
-			hi = gbcc_memory_read(gbc, VRAM_START + 16 * tile + line_offset + 1, true);
+			tile_addr = VRAM_START + 16 * tile;
 		} else {
-			lo = gbcc_memory_read(gbc, 0x9000u + 16 * (int8_t)tile + line_offset, true);
-			hi = gbcc_memory_read(gbc, 0x9000u + 16 * (int8_t)tile + line_offset + 1, true);
+			tile_addr = 0x9000u + 16 * (int8_t)tile;
 		}
+		uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
+		uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 		uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 		gbc->memory.screen[ly][x] = get_palette_colour(palette, colour);
 	}
@@ -149,6 +162,7 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 {
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
+	uint32_t bg0 = get_palette_colour(gbcc_memory_read(gbc, BGP, true), 0);
 	if (!check_bit(lcdc, 1)) {
 		return;
 	}
@@ -159,10 +173,10 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 	}
 	for (size_t s = 0; s < NUM_SPRITES; s += size) {
 		/* FIXME: 9 probably shouldn't be here */
-		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4 * s, true) - 9u;
-		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4 * s + 1, true) - 8u;
-		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4 * s + 2, true);
-		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4 * s + 3, true);
+		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4u * s, true) - 9u;
+		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4u * s + 1u, true) - 8u;
+		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4u * s + 2u, true);
+		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4u * s + 3u, true);
 		uint16_t tile_offset = VRAM_START + 16 * tile;
 		if (sy < ly || sy >= (ly + size * 8u)) {
 			continue;
@@ -191,8 +205,14 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 			}
 			/* Check for X-flip */
 			if (check_bit(attr, 5) && (7 + sx - x) < GBC_SCREEN_WIDTH) {
+				if (check_bit(attr, 7) && gbc->memory.screen[ly][7 + sx - x] != bg0) {
+					continue;
+				}
 				gbc->memory.screen[ly][7 + sx - x] = get_palette_colour(palette, colour);
 			} else if ((x + sx) < GBC_SCREEN_WIDTH) {
+				if (check_bit(attr, 7) && gbc->memory.screen[ly][x + sx] != bg0) {
+					continue;
+				}
 				gbc->memory.screen[ly][x + sx] = get_palette_colour(palette, colour);
 			}
 		}

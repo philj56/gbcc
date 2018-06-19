@@ -19,7 +19,7 @@ static const uint8_t nintendo_logo[CART_LOGO_SIZE] = {
 static void gbcc_load_rom(struct gbc *gbc, const char *filename);
 static void gbcc_parse_header(struct gbc *gbc);
 static void gbcc_verify_cartridge(struct gbc *gbc);
-static void gbcc_print_title(struct gbc *gbc);
+static void gbcc_load_title(struct gbc *gbc);
 static void gbcc_init_mode(struct gbc *gbc);
 static void gbcc_print_licensee_code(struct gbc *gbc);
 static void gbcc_get_cartridge_hardware(struct gbc *gbc);
@@ -52,7 +52,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->dma.timer = 0;
 	gbc->stop = false;
 	gbc->instruction_timer = 0;
-	gbc->clock = 0;
+	gbc->clock = GBC_LCD_MODE_PERIOD;
 	gbcc_load_rom(gbc, filename);
 	gbcc_parse_header(gbc);
 	gbcc_init_mmap(gbc);
@@ -141,7 +141,7 @@ void gbcc_parse_header(struct gbc *gbc)
 {
 	gbcc_log(GBCC_LOG_INFO, "Parsing header...\n");
 	gbcc_verify_cartridge(gbc);
-	gbcc_print_title(gbc);
+	gbcc_load_title(gbc);
 	gbcc_print_licensee_code(gbc);
 	gbcc_init_mode(gbc);
 	gbcc_get_cartridge_hardware(gbc);
@@ -172,13 +172,12 @@ void gbcc_verify_cartridge(struct gbc *gbc)
 	gbcc_log(GBCC_LOG_INFO, "\tCartridge checksum passed.\n");
 }
 
-void gbcc_print_title(struct gbc *gbc)
+void gbcc_load_title(struct gbc *gbc)
 {
-	unsigned char title[CART_TITLE_SIZE];
 	for (size_t i = CART_TITLE_START; i < CART_TITLE_END; i++) {
-		title[i - CART_TITLE_START] = gbc->cart.rom[i];
+		gbc->cart.title[i - CART_TITLE_START] = gbc->cart.rom[i];
 	}
-	gbcc_log(GBCC_LOG_INFO, "\tTitle: %s\n", title);
+	gbcc_log(GBCC_LOG_INFO, "\tTitle: %s\n", gbc->cart.title);
 }
 
 void gbcc_print_licensee_code(struct gbc *gbc)
@@ -402,10 +401,18 @@ void gbcc_print_destination_code(struct gbc *gbc)
 void gbcc_init_registers(struct gbc *gbc) {
 	switch (gbc->mode) {
 		case DMG:
+			/*
 			gbc->reg.af = 0x1180u;
 			gbc->reg.bc = 0x0000u;
 			gbc->reg.de = 0x0008u;
 			gbc->reg.hl = 0x007Cu;
+			gbc->reg.sp = 0xFFFEu;
+			gbc->reg.pc = 0x0100u;
+			*/
+			gbc->reg.af = 0x0100u;
+			gbc->reg.bc = 0xFF13u;
+			gbc->reg.de = 0x00C1u;
+			gbc->reg.hl = 0x8403u;
 			gbc->reg.sp = 0xFFFEu;
 			gbc->reg.pc = 0x0100u;
 			break;

@@ -79,7 +79,8 @@ struct gbc {
 		uint16_t timer;
 	} dma;
 	bool stop;
-	uint16_t instruction_timer; /* uint16_t used over uint8_t for padding */
+	uint8_t instruction_timer;
+	uint8_t div_timer;
 	uint64_t clock;
 
 	/* Memory map */
@@ -135,6 +136,7 @@ struct gbc {
 			uint8_t sram_bank;
 			bool padding;
 		} mbc;
+		char title[CART_TITLE_SIZE];
 	} cart;
 };
 

@@ -1,5 +1,6 @@
 #include "gbcc.h"
 #include "gbcc_input.h"
+#include "gbcc_save.h"
 #include "gbcc_window.h"
 
 static const SDL_Keycode keymap[8] = {
@@ -20,6 +21,13 @@ void gbcc_input_process_all(struct gbc *gbc)
 {
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0) {
+		if (e.type == SDL_WINDOWEVENT) {
+			if (e.window.event == SDL_WINDOWEVENT_CLOSE) {
+				printf("Window Closed\n");
+				/* TODO: Move this somewhere more sensible */
+				gbcc_save(gbc);
+			}
+		}
 		int key = gbcc_input_process(&e);
 		bool val;
 		if (key < 0) {

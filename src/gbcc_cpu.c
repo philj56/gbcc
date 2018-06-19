@@ -22,9 +22,6 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 		gbc->dma.timer -= 4;
 		if (low_byte(gbc->dma.source) < OAM_SIZE) {
 			gbcc_memory_copy(gbc, gbc->dma.source, OAM_START + low_byte(gbc->dma.source), true);
-//			uint8_t byte = gbcc_memory_read(gbc, gbc->dma.source, true);
-//			gbcc_memory_write(gbc, OAM_START + (gbc->dma.source & 0xFFu), byte, true);
-//			gbcc_log(GBCC_LOG_DEBUG, "DMA copied 0x%02X from 0x%04X to 0x%04X\n", byte, gbc->dma.source, OAM_START + (gbc->dma.source & 0xFFu));
 			gbc->dma.source++;
 		}
 	}
@@ -46,8 +43,10 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 
 void gbcc_update_timers(struct gbc *gbc)
 {
-	if (!(gbc->clock % DIV_INC_CLOCKS)) {
+	gbc->div_timer += 4u;
+	if (gbc->div_timer == 64u) {
 		gbcc_memory_increment(gbc, DIV, true);
+		gbc->div_timer = 0;
 	}
 	if (check_bit(gbcc_memory_read(gbc, TAC, true), 2)) {
 		uint8_t speed = gbcc_memory_read(gbc, TAC, true) & 0x03u;

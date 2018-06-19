@@ -1,6 +1,7 @@
 #include "gbcc.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
+#include "gbcc_save.h"
 #include "gbcc_window.h"
 #include <signal.h>
 #include <stdbool.h>
@@ -40,6 +41,7 @@ int main(int argc, char **argv)
 
 	gbcc_initialise(&gbc, argv[1]);
 	gbcc_window_initialise(&gbc);
+	gbcc_load(&gbc);
 
 	bool loop = true;
 	timer_start = clock();

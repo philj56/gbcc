@@ -44,7 +44,7 @@ void gbcc_window_quit()
 	SDL_DestroyTexture(gbcc_window.texture);
 	SDL_DestroyRenderer(gbcc_window.renderer);
 	SDL_DestroyWindow(gbcc_window.window);
-	SDL_Quit();
+	atexit(SDL_Quit);
 }
 
 static int gbcc_window_thread_function(void *window)
@@ -155,5 +155,6 @@ static int gbcc_window_thread_function(void *window)
 
 		SDL_Delay(16);
 	}
+	printf("QUIT SDL\n");
 	return 0;
 }

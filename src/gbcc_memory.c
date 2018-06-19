@@ -153,7 +153,7 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool overrid
 		}
 	}*/
 	//printf("Writing %02X to address %04X\n", val, addr);
-	if (addr < ROMX_END || (addr > SRAM_START && addr < SRAM_END)) {
+	if (addr < ROMX_END || (addr >= SRAM_START && addr < SRAM_END)) {
 		switch (gbc->cart.mbc.type) {
 			case NONE:
 				gbcc_mbc_none_write(gbc, addr, val);
@@ -318,6 +318,7 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		}
 	} else if (addr == DIV) {
 		gbc->memory.ioreg[addr - IOREG_START] = 0;
+		gbc->div_timer = 0;
 	} else if (addr == DMA) {
 		gbc->dma.source = (uint16_t)(((uint16_t)val) << 8u);
 		gbc->dma.timer = DMA_TIMER;
