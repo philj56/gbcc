@@ -7,6 +7,9 @@
 
 void gbcc_save(struct gbc *gbc)
 {
+	if (gbc->cart.ram_size == 0) {
+		return;
+	}
 	char fname[MAX_NAME_LEN];
 	FILE *sav;
 	snprintf(fname, MAX_NAME_LEN, "%s.sav", gbc->cart.title);
