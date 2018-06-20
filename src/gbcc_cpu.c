@@ -45,6 +45,7 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 
 void gbcc_realtime_sync(struct gbc *gbc)
 {
+	/* TODO: This should really be done better, synced to audio or something */
 	gbc->real_time.old = gbc->real_time.current;
 	timespec_get(&gbc->real_time.current, TIME_UTC);
 	struct timespec req;

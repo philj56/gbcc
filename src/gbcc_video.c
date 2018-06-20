@@ -167,20 +167,28 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		return;
 	}
 	uint8_t size = 1 + check_bit(lcdc, 2); /* 1 or 2 8x8 tiles */
-	if (size > 1) {
+	/*if (size > 1) {
 		gbcc_log(GBCC_LOG_ERROR, "Size > 1 not implemented\n");
 		exit(1);
-	}
-	for (size_t s = 0; s < NUM_SPRITES; s += size) {
+	}*/
+	for (size_t s = 0; s < NUM_SPRITES; s++) {
 		/* FIXME: 9 probably shouldn't be here */
 		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4u * s, true) - 9u;
 		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4u * s + 1u, true) - 8u;
 		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4u * s + 2u, true);
 		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4u * s + 3u, true);
-		uint16_t tile_offset = VRAM_START + 16 * tile;
-		if (sy < ly || sy >= (ly + size * 8u)) {
+		if (sy < ly - 9u || sy >= (ly - 9u + size * 8u)) {
 			continue;
 		}
+		if (size == 2) {
+			if (sy >= ly -1u) {
+				tile &= 0xFEu;
+			} else {
+				tile |= 0x01u;
+				sy += 9u;
+			}
+		}
+		uint16_t tile_offset = VRAM_START + 16 * tile;
 		uint8_t palette;
 		if (check_bit(attr, 4)) {
 			palette = gbcc_memory_read(gbc, OBP1, true);
