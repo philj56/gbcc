@@ -82,6 +82,10 @@ struct gbc {
 	uint8_t instruction_timer;
 	uint8_t div_timer;
 	uint64_t clock;
+	struct {
+		struct timespec current;
+		struct timespec old;
+	} real_time;
 
 	/* Memory map */
 	struct {

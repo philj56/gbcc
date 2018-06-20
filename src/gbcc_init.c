@@ -5,7 +5,7 @@
 #include "gbcc_memory.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/time.h>
+#include <time.h>
 
 static const uint8_t nintendo_logo[CART_LOGO_SIZE] = {
 	0xCEu, 0xEDu, 0x66u, 0x66u, 0xCCu, 0x0Du, 0x00u, 0x0Bu,
@@ -53,6 +53,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->stop = false;
 	gbc->instruction_timer = 0;
 	gbc->clock = GBC_LCD_MODE_PERIOD;
+	timespec_get(&gbc->real_time.current, TIME_UTC);
 	gbcc_load_rom(gbc, filename);
 	gbcc_parse_header(gbc);
 	gbcc_init_mmap(gbc);
@@ -175,7 +176,7 @@ void gbcc_verify_cartridge(struct gbc *gbc)
 void gbcc_load_title(struct gbc *gbc)
 {
 	for (size_t i = CART_TITLE_START; i < CART_TITLE_END; i++) {
-		gbc->cart.title[i - CART_TITLE_START] = gbc->cart.rom[i];
+		gbc->cart.title[i - CART_TITLE_START] = (char)gbc->cart.rom[i];
 	}
 	gbcc_log(GBCC_LOG_INFO, "\tTitle: %s\n", gbc->cart.title);
 }

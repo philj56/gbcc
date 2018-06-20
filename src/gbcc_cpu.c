@@ -7,9 +7,11 @@
 #include "gbcc_video.h"
 #include <stdio.h>
 #include <sys/time.h>
+#include <time.h>
 
 /* TODO: Proper memory accesses with DMA */
 
+static void gbcc_realtime_sync(struct gbc *gbc);
 static void gbcc_update_timers(struct gbc *gbc);
 static void gbcc_check_interrupts(struct gbc *gbc);
 static void gbcc_execute_instruction(struct gbc *gbc);
@@ -39,6 +41,19 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 		//gbcc_log(GBCC_LOG_DEBUG, "pc: %04X\n", gbc->reg.pc);
 	}
 	gbc->instruction_timer -= 4;
+}
+
+void gbcc_realtime_sync(struct gbc *gbc)
+{
+	gbc->real_time.old = gbc->real_time.current;
+	timespec_get(&gbc->real_time.current, TIME_UTC);
+	struct timespec req;
+	req.tv_sec = 0;
+	req.tv_nsec = gbc->real_time.current.tv_nsec - gbc->real_time.old.tv_nsec;
+	if (req.tv_nsec > 0 && req.tv_nsec < 16000000) {
+		req.tv_nsec = 16000000 - req.tv_nsec;
+		nanosleep(&req, NULL);
+	}
 }
 
 void gbcc_update_timers(struct gbc *gbc)
@@ -91,6 +106,8 @@ void gbcc_check_interrupts(struct gbc *gbc)
 			addr = INT_VBLANK;
 			gbcc_log(GBCC_LOG_DEBUG, "VBLANK interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
+			/* Sync to video for now */
+			gbcc_realtime_sync(gbc);
 		} else if (interrupt & bit(1)) {
 			addr = INT_LCDSTAT;
 			gbcc_log(GBCC_LOG_DEBUG, "LCDSTAT interrupt\n");

@@ -14,6 +14,7 @@ static clock_t timer_start;
 static struct gbc gbc;
 
 static void print_speed(int sig);
+static void quit(int sig);
 void print_speed(int sig)
 {
 	(void) sig;
@@ -26,6 +27,13 @@ void print_speed(int sig)
 	}
 }
 
+void quit(int sig)
+{
+	(void) sig;
+	gbcc_save(&gbc);
+	exit(1);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc == 1) {
@@ -35,6 +43,9 @@ int main(int argc, char **argv)
 
 	if (signal(SIGUSR1, print_speed) == SIG_ERR) {
 		printf("Can't catch SIGUSR1!\n");
+	}
+	if (signal(SIGINT, quit) == SIG_ERR) {
+		printf("Can't catch SIGINT!\n");
 	}
 
 //	struct gbc gbc;

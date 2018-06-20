@@ -37,5 +37,5 @@ bool check_bit(uint8_t byte, uint8_t b)
 
 uint8_t bit(uint8_t b)
 {
-	return (1u << b);
+	return (uint8_t)(1u << b);
 }

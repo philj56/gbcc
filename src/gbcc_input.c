@@ -25,7 +25,7 @@ void gbcc_input_process_all(struct gbc *gbc)
 			if (e.window.event == SDL_WINDOWEVENT_CLOSE) {
 				printf("Window Closed\n");
 				/* TODO: Move this somewhere more sensible */
-				gbcc_save(gbc);
+				//gbcc_save(gbc);
 			}
 		}
 		int key = gbcc_input_process(&e);
