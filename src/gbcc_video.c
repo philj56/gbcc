@@ -171,23 +171,31 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		gbcc_log(GBCC_LOG_ERROR, "Size > 1 not implemented\n");
 		exit(1);
 	}*/
-	for (size_t s = 0; s < NUM_SPRITES; s++) {
+	for (size_t s = NUM_SPRITES-1; s < NUM_SPRITES; s--) {
 		/* FIXME: 9 probably shouldn't be here */
 		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4u * s, true) - 9u;
 		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4u * s + 1u, true) - 8u;
 		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4u * s + 2u, true);
 		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4u * s + 3u, true);
-		if (sy < ly - 9u || sy >= (ly - 9u + size * 8u)) {
+		if (sy < ly - 9u * (size - 1) || sy >= (ly - 9u * (size - 1) + size * 8u)) {
 			continue;
 		}
-		if (size == 2) {
+		/*if (size == 2) {
 			if (sy >= ly -1u) {
-				tile &= 0xFEu;
+				if (check_bit(attr, 6)) {
+					tile |= 0x01u;
+				} else {
+					tile &= 0xFEu;
+				}
 			} else {
-				tile |= 0x01u;
+				if (check_bit(attr, 6)) {
+					tile &= 0xFEu;
+				} else {
+					tile |= 0x01u;
+				}
 				sy += 9u;
 			}
-		}
+		}*/
 		uint16_t tile_offset = VRAM_START + 16 * tile;
 		uint8_t palette;
 		if (check_bit(attr, 4)) {
