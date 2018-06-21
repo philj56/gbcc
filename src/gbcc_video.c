@@ -181,7 +181,7 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4u * s + 1u, true);
 		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4u * s + 2u, true);
 		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4u * s + 3u, true);
-		if (ly < sy - 8u * size || ly >= sy) {
+		if (ly < sy - 16u || ly >= sy) {
 			continue;
 		}
 		if (size > 1) {
@@ -202,6 +202,12 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 					tile |= 0x01u;
 				}
 			}
+		} else {
+			if (ly < sy - 8u) {
+				sy -= 8u;
+			} else {
+				continue;
+			}
 		}
 		uint16_t tile_offset = VRAM_START + 16 * tile;
 		uint8_t palette;
@@ -214,8 +220,8 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		uint8_t hi;
 		/* Check for Y-flip */
 		if (check_bit(attr, 6)) {
-			lo = gbcc_memory_read(gbc, tile_offset + 2 * (sy - ly), true);
-			hi = gbcc_memory_read(gbc, tile_offset + 2 * (sy - ly) + 1, true);
+			lo = gbcc_memory_read(gbc, tile_offset + 2 * (sy - ly - 1), true);
+			hi = gbcc_memory_read(gbc, tile_offset + 2 * (sy - ly - 1) + 1, true);
 		} else {
 			lo = gbcc_memory_read(gbc, tile_offset + 2 * (8 - (sy - ly)), true);
 			hi = gbcc_memory_read(gbc, tile_offset + 2 * (8 - (sy - ly)) + 1, true);
