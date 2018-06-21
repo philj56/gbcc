@@ -515,4 +515,5 @@ void gbcc_init_input(struct gbc *gbc)
 	gbc->keys.dpad.down = false;
 	gbc->keys.dpad.left = false;
 	gbc->keys.dpad.right = false;
+	gbc->keys.turbo = false;
 }

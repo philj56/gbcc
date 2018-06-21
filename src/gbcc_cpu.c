@@ -47,6 +47,9 @@ void gbcc_realtime_sync(struct gbc *gbc)
 {
 	/* TODO: This should really be done better, synced to audio or something */
 	gbc->real_time.old = gbc->real_time.current;
+	if (gbc->keys.turbo) {
+		return;
+	}
 	timespec_get(&gbc->real_time.current, TIME_UTC);
 	struct timespec req;
 	req.tv_sec = 0;
@@ -146,7 +149,7 @@ void gbcc_check_interrupts(struct gbc *gbc)
 void gbcc_execute_instruction(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
-	gbcc_print_op(gbc);
+	//gbcc_print_op(gbc);
 	gbcc_ops[gbc->opcode](gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
 }

@@ -3,7 +3,7 @@
 #include "gbcc_save.h"
 #include "gbcc_window.h"
 
-static const SDL_Keycode keymap[8] = {
+static const SDL_Keycode keymap[9] = {
 	SDLK_z,		/* A */
 	SDLK_x, 	/* B */
 	SDLK_RETURN,	/* Start */
@@ -11,7 +11,8 @@ static const SDL_Keycode keymap[8] = {
 	SDLK_UP,	/* DPAD up */
 	SDLK_DOWN,	/* DPAD down */
 	SDLK_LEFT,	/* DPAD left */
-	SDLK_RIGHT	/* DPAD right */
+	SDLK_RIGHT,	/* DPAD right */
+	SDLK_RSHIFT 	/* Turbo */
 };
 
 // Returns key that changed, or -1 for a non-emulated key
@@ -65,6 +66,9 @@ void gbcc_input_process_all(struct gbc *gbc)
 			case 7:
 				gbc->keys.dpad.right = val;
 				break;
+			case 8:
+				gbc->keys.turbo ^= val;
+				break;
 		}
 	}
 }
@@ -74,7 +78,7 @@ int gbcc_input_process(const SDL_Event *e)
 	if (e->type == SDL_QUIT) {
 		exit(0);
 	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < 9; i++) {
 			if (e->key.keysym.sym == keymap[i]) {
 				return i;
 			}

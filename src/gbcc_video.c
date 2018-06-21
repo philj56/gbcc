@@ -83,7 +83,7 @@ void gbcc_draw_background_line(struct gbc *gbc)
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 
 	uint8_t ty = ((scy + ly) / 8u) % 32u;
-	uint16_t line_offset = 2 * ((scy + ly) % 8); /* 2 bytes per line */
+	uint16_t line_offset = 2 * ((scy + ly) % 8u); /* 2 bytes per line */
 	uint16_t map;
 	if (check_bit(lcdc, 3)) {
 		map = BACKGROUND_MAP_BANK_2;
@@ -160,6 +160,10 @@ void gbcc_draw_window_line(struct gbc *gbc)
 
 void gbcc_draw_sprite_line(struct gbc *gbc)
 {
+	/* 
+	 * FIXME: Possible off-by-one error in y - check Link's awakening,
+	 * when at top of screen.
+	 */
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 	uint32_t bg0 = get_palette_colour(gbcc_memory_read(gbc, BGP, true), 0);
@@ -167,35 +171,38 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		return;
 	}
 	uint8_t size = 1 + check_bit(lcdc, 2); /* 1 or 2 8x8 tiles */
-	/*if (size > 1) {
-		gbcc_log(GBCC_LOG_ERROR, "Size > 1 not implemented\n");
-		exit(1);
-	}*/
 	for (size_t s = NUM_SPRITES-1; s < NUM_SPRITES; s--) {
-		/* FIXME: 9 probably shouldn't be here */
-		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4u * s, true) - 9u;
-		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4u * s + 1u, true) - 8u;
+		/* 
+		 * Together SY & SX define the bottom right corner of the
+		 * sprite. X=1, Y=1 is the top left corner, so each of these
+		 * are offset by 1 for array values.
+		 */
+		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4u * s, true);
+		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4u * s + 1u, true);
 		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4u * s + 2u, true);
 		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4u * s + 3u, true);
-		if (sy < ly - 9u * (size - 1) || sy >= (ly - 9u * (size - 1) + size * 8u)) {
+		if (ly < sy - 8u * size || ly >= sy) {
 			continue;
 		}
-		/*if (size == 2) {
-			if (sy >= ly -1u) {
+		if (size > 1) {
+			/* Check for Y-flip, and swap top & bottom tiles correspondingly */
+			if (ly < sy - 8u) {
+				/* We are drawing the top tile */
 				if (check_bit(attr, 6)) {
 					tile |= 0x01u;
 				} else {
 					tile &= 0xFEu;
 				}
+				sy -= 8u;
 			} else {
+				/* We are drawing the bottom tile */
 				if (check_bit(attr, 6)) {
 					tile &= 0xFEu;
 				} else {
 					tile |= 0x01u;
 				}
-				sy += 9u;
 			}
-		}*/
+		}
 		uint16_t tile_offset = VRAM_START + 16 * tile;
 		uint8_t palette;
 		if (check_bit(attr, 4)) {
@@ -207,11 +214,11 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		uint8_t hi;
 		/* Check for Y-flip */
 		if (check_bit(attr, 6)) {
-			lo = gbcc_memory_read(gbc, tile_offset + 2 * ((sy - ly)), true);
-			hi = gbcc_memory_read(gbc, tile_offset + 2 * ((sy - ly)) + 1, true);
+			lo = gbcc_memory_read(gbc, tile_offset + 2 * (sy - ly), true);
+			hi = gbcc_memory_read(gbc, tile_offset + 2 * (sy - ly) + 1, true);
 		} else {
-			lo = gbcc_memory_read(gbc, tile_offset + 2 * (7 - (sy - ly)), true);
-			hi = gbcc_memory_read(gbc, tile_offset + 2 * (7 - (sy - ly)) + 1, true);
+			lo = gbcc_memory_read(gbc, tile_offset + 2 * (8 - (sy - ly)), true);
+			hi = gbcc_memory_read(gbc, tile_offset + 2 * (8 - (sy - ly)) + 1, true);
 		}
 		for (uint8_t x = 0; x < 8; x++) {
 			uint8_t colour = (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
@@ -220,16 +227,17 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 				continue;
 			}
 			/* Check for X-flip */
-			if (check_bit(attr, 5) && (7 + sx - x) < GBC_SCREEN_WIDTH) {
-				if (check_bit(attr, 7) && gbc->memory.screen[ly][7 + sx - x] != bg0) {
+			uint8_t screen_x;
+			if (check_bit(attr, 5)) {
+				screen_x = sx - x - 1;
+			} else {
+				screen_x = sx + x - 8;
+			}
+			if (screen_x < GBC_SCREEN_WIDTH) {
+				if (check_bit(attr, 7) && gbc->memory.screen[ly][screen_x] != bg0) {
 					continue;
 				}
-				gbc->memory.screen[ly][7 + sx - x] = get_palette_colour(palette, colour);
-			} else if ((x + sx) < GBC_SCREEN_WIDTH) {
-				if (check_bit(attr, 7) && gbc->memory.screen[ly][x + sx] != bg0) {
-					continue;
-				}
-				gbc->memory.screen[ly][x + sx] = get_palette_colour(palette, colour);
+				gbc->memory.screen[ly][screen_x] = get_palette_colour(palette, colour);
 			}
 		}
 	}

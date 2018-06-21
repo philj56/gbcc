@@ -120,6 +120,7 @@ struct gbc {
 			bool left;
 			bool right;
 		} dpad;
+		bool turbo;
 	} keys;
 
 	/* Cartridge data & flags */
