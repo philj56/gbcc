@@ -111,7 +111,7 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 		fclose(rom);
 		exit(1);
 	}
-	gbcc_log(GBCC_LOG_INFO, "\tCartridge size: %lu bytes\n", gbc->cart.rom_size);
+	gbcc_log(GBCC_LOG_INFO, "\tCartridge size: 0x%X bytes\n", gbc->cart.rom_size);
 
 	gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
 	if (gbc->cart.rom == NULL) {

@@ -64,8 +64,14 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	} else if (addr < 0x6000u) {
 		if (gbc->cart.mbc.bank_mode == ROM) {
 			gbc->cart.mbc.romx_bank &= ~0x60u;
-			gbc->cart.mbc.romx_bank |= (val & 0x03u) << 5u;
+			gbc->cart.mbc.romx_bank |= (val & 0x03u) << 4u;
 			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
+			if (gbc->memory.romx - gbc->cart.rom > gbc->cart.rom_size) {
+				/* FIXME: This shouldn't be necessary I think */
+				gbcc_log(GBCC_LOG_ERROR, "Invalid rom bank 0x%X.\n", gbc->cart.mbc.romx_bank);
+				gbc->cart.mbc.romx_bank &= ~0x60u;
+				gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
+			}
 		} else {
 			gbc->cart.mbc.sram_bank = val & 0x03u;
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
@@ -73,14 +79,14 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	} else if (addr < 0x8000u) {
 		if (val & 0x01u) {
 			gbc->cart.mbc.bank_mode = RAM;
-			gbc->cart.mbc.sram_bank = (gbc->cart.mbc.romx_bank & 0x60u) >> 5u; /* TODO: Are these upper 2 bits remembered? */
+			gbc->cart.mbc.sram_bank = (gbc->cart.mbc.romx_bank & 0x60u) >> 4u; /* TODO: Are these upper 2 bits remembered? */
 			gbc->cart.mbc.romx_bank &= ~0x60u; /* TODO: Are these upper 2 bits remembered? */
 			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 		} else {
 			gbcc_log(GBCC_LOG_DEBUG, "Switching mode\n");
 			gbc->cart.mbc.bank_mode = ROM;
-			gbc->cart.mbc.romx_bank = (uint8_t)(gbc->cart.mbc.sram_bank << 5u); /* TODO: Are these upper 2 bits remembered? */
+			gbc->cart.mbc.romx_bank = (uint8_t)(gbc->cart.mbc.sram_bank << 4u); /* TODO: Are these upper 2 bits remembered? */
 			gbc->cart.mbc.sram_bank = 0x00u; /* TODO: Are these upper 2 bits remembered? */
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 		}

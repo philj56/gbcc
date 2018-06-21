@@ -143,8 +143,8 @@ void gbcc_draw_window_line(struct gbc *gbc)
 		if (x < wx - 7) {
 			continue;
 		}
-		uint8_t tx = ((x - wx) / 8u) % 32u;
-		uint8_t xoff = (x - wx) % 8u;
+		uint8_t tx = ((x - wx + 7) / 8u) % 32u;
+		uint8_t xoff = (x - wx + 7) % 8u;
 		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 		uint16_t tile_addr;
 		/* TODO: Put this somewhere better */
