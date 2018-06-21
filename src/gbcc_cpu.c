@@ -108,25 +108,25 @@ void gbcc_check_interrupts(struct gbc *gbc)
 
 		if (interrupt & bit(0)) {
 			addr = INT_VBLANK;
-			gbcc_log(GBCC_LOG_DEBUG, "VBLANK interrupt\n");
+			//gbcc_log(GBCC_LOG_DEBUG, "VBLANK interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
 			/* Sync to video for now */
 			gbcc_realtime_sync(gbc);
 		} else if (interrupt & bit(1)) {
 			addr = INT_LCDSTAT;
-			gbcc_log(GBCC_LOG_DEBUG, "LCDSTAT interrupt\n");
+			//gbcc_log(GBCC_LOG_DEBUG, "LCDSTAT interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 1, true);
 		} else if (interrupt & bit(2)) {
 			addr = INT_TIMER;
-			gbcc_log(GBCC_LOG_DEBUG, "TIMER interrupt\n");
+			//gbcc_log(GBCC_LOG_DEBUG, "TIMER interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 2, true);
 		} else if (interrupt & bit(3)) {
 			addr = INT_SERIAL;
-			gbcc_log(GBCC_LOG_DEBUG, "SERIAL interrupt\n");
+			//gbcc_log(GBCC_LOG_DEBUG, "SERIAL interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 3, true);
 		} else if (interrupt & bit(4)) {
 			addr = INT_JOYPAD;
-			gbcc_log(GBCC_LOG_DEBUG, "JOYPAD interrupt\n");
+			//gbcc_log(GBCC_LOG_DEBUG, "JOYPAD interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 4, true);
 		} else {
 			gbcc_log(GBCC_LOG_ERROR, "False interrupt\n");

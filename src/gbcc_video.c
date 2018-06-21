@@ -39,10 +39,12 @@ void gbcc_video_update(struct gbc *gbc)
 		}
 	}
 	/* LCD STAT Interrupt */
-	if (ly == gbcc_memory_read(gbc, LYC, true)) {
-		gbcc_memory_set_bit(gbc, STAT, 2, true);
-	} else {
-		gbcc_memory_clear_bit(gbc, STAT, 2, true);
+	if (ly != 0 && ly == gbcc_memory_read(gbc, LYC, true)) {
+		if (clock == 4) {
+			gbcc_memory_set_bit(gbc, STAT, 2, true);
+		} else if (clock == 8) {
+			gbcc_memory_clear_bit(gbc, STAT, 2, true);
+		}
 	}
 	if ((check_bit(stat, 2) && check_bit(stat, 6))
 			|| (mode == GBC_LCD_MODE_HBLANK && check_bit(stat, 3))
@@ -119,7 +121,7 @@ void gbcc_draw_background_line(struct gbc *gbc)
 void gbcc_draw_window_line(struct gbc *gbc)
 {
 	uint8_t wy = gbcc_memory_read(gbc, WY, true);
-	uint8_t wx = gbcc_memory_read(gbc, WX, true) - 7u;
+	uint8_t wx = gbcc_memory_read(gbc, WX, true);
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t palette = gbcc_memory_read(gbc, BGP, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
@@ -137,8 +139,8 @@ void gbcc_draw_window_line(struct gbc *gbc)
 		map = BACKGROUND_MAP_BANK_1;
 	}
 
-	for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-		if (x < wx) {
+	for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
+		if (x < wx - 7) {
 			continue;
 		}
 		uint8_t tx = ((x - wx) / 8u) % 32u;
@@ -176,13 +178,16 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		 * Together SY & SX define the bottom right corner of the
 		 * sprite. X=1, Y=1 is the top left corner, so each of these
 		 * are offset by 1 for array values.
+		 * TODO: Is this off-by-one true?
 		 */
 		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4u * s, true);
 		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4u * s + 1u, true);
 		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4u * s + 2u, true);
 		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4u * s + 3u, true);
-		if (ly < sy - 16u || ly >= sy) {
+		if (ly < sy - 16 || ly >= sy) {
+			//if (!(sy < 16u && ly < sy)) {
 			continue;
+			//}
 		}
 		if (size > 1) {
 			/* Check for Y-flip, and swap top & bottom tiles correspondingly */
@@ -203,6 +208,10 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 				}
 			}
 		} else {
+			/* 
+			 * 8x8 sprites draw as if they were the top tile of an
+			 * 8x16 sprite.
+			 */
 			if (ly < sy - 8u) {
 				sy -= 8u;
 			} else {

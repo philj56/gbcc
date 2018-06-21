@@ -39,7 +39,6 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr) {
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.mbc.sram_enable) {
-			gbcc_log(GBCC_LOG_DEBUG, "SRAM enabled!\n");
 			return gbc->memory.sram[addr - SRAM_START];
 		}
 		gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
@@ -51,7 +50,6 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr) {
 void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.mbc.sram_enable) {
-			gbcc_log(GBCC_LOG_DEBUG, "Writing value 0x%02X to 0x%04X\n", val, addr);
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
 			gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
@@ -105,7 +103,6 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr) {
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.mbc.sram_enable) {
-			gbcc_log(GBCC_LOG_DEBUG, "SRAM enabled!\n");
 			return gbc->memory.sram[addr - SRAM_START];
 		}
 		gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
@@ -116,7 +113,6 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr) {
 void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.mbc.sram_enable) {
-			gbcc_log(GBCC_LOG_DEBUG, "Writing value 0x%02X to 0x%04X\n", val, addr);
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
 			gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
