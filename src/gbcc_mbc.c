@@ -66,6 +66,10 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 			gbc->cart.mbc.romx_bank &= ~0x60u;
 			gbc->cart.mbc.romx_bank |= val & 0x60u;
 			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
+			if (gbc->memory.romx - gbc->cart.rom > gbc->cart.rom_size) {
+				gbc->cart.mbc.romx_bank &= ~0x60u;
+				gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
+			}
 		} else {
 			gbc->cart.mbc.sram_bank = val & 0x03u;
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
