@@ -125,6 +125,7 @@ struct gbc {
 
 	/* Cartridge data & flags */
 	struct {
+		const char *filename;
 		uint8_t *rom;
 		size_t rom_size;
 		uint8_t *ram;

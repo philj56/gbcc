@@ -32,6 +32,7 @@ static void gbcc_init_input(struct gbc *gbc);
 
 void gbcc_initialise(struct gbc *gbc, const char *filename)
 {
+	gbc->cart.filename = filename;
 	gbc->cart.rom = NULL;
 	gbc->cart.ram = NULL;
 	gbc->cart.mbc.type = NONE;
@@ -410,10 +411,10 @@ void gbcc_init_registers(struct gbc *gbc) {
 			gbc->reg.sp = 0xFFFEu;
 			gbc->reg.pc = 0x0100u;
 			*/
-			gbc->reg.af = 0x0100u;
-			gbc->reg.bc = 0xFF13u;
-			gbc->reg.de = 0x00C1u;
-			gbc->reg.hl = 0x8403u;
+			gbc->reg.af = 0x01B0u;
+			gbc->reg.bc = 0x0013u;
+			gbc->reg.de = 0x00D8u;
+			gbc->reg.hl = 0x014Du;
 			gbc->reg.sp = 0xFFFEu;
 			gbc->reg.pc = 0x0100u;
 			break;

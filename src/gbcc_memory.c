@@ -81,7 +81,7 @@ void gbcc_memory_set_bit(struct gbc *gbc, uint16_t addr, uint8_t b, bool overrid
 
 void gbcc_memory_clear_bit(struct gbc *gbc, uint16_t addr, uint8_t b, bool override)
 {
-	gbcc_memory_write(gbc, addr, gbcc_memory_read(gbc, addr, override) & ~bit(b), override);
+	gbcc_memory_write(gbc, addr, gbcc_memory_read(gbc, addr, override) & (uint8_t)~bit(b), override);
 }
 
 uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr, bool override)
@@ -110,35 +110,27 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr, bool override)
 		}
 	}
 	if (addr >= VRAM_START && addr < VRAM_END) {
-		//printf("Reading from address %04X (VRAM).\n", addr);
 		return gbcc_vram_read(gbc, addr, override);
 	}
 	if (addr >= WRAM0_START && addr < WRAMX_END) {
-		//printf("Reading from address %04X (WRAM).\n", addr);
 		return gbcc_wram_read(gbc, addr, override);
 	}
 	if (addr >= ECHO_START && addr < ECHO_END) {
-		//printf("Reading from address %04X (ECHO).\n", addr);
 		return gbcc_echo_read(gbc, addr, override);
 	}
 	if (addr >= OAM_START && addr < OAM_END) {
-		//printf("Reading from address %04X (OAM).\n", addr);
 		return gbcc_oam_read(gbc, addr, override);
 	}
 	if (addr >= UNUSED_START && addr < UNUSED_END) {
-		//printf("Reading from address %04X (UNUSED).\n", addr);
 		return gbcc_unused_read(gbc, addr, override);
 	}
 	if (addr >= IOREG_START && addr < IOREG_END) {
-		//printf("Reading from address %04X (IOREG).\n", addr);
 		return gbcc_ioreg_read(gbc, addr, override);
 	}
 	if (addr >= HRAM_START && addr < HRAM_END) {
-		//printf("Reading from address %04X (HRAM).\n", addr);
 		return gbcc_hram_read(gbc, addr, override);
 	}
 	if (addr == IE) {
-		//printf("Reading from address %04X (IE).\n", addr);
 		return gbc->memory.iereg;
 	}
 	gbcc_log(GBCC_LOG_ERROR, "Reading from unknown memory address %04X.\n", addr);
