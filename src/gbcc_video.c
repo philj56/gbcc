@@ -109,7 +109,7 @@ void gbcc_draw_background_line(struct gbc *gbc)
 		if (check_bit(lcdc, 4)) {
 			tile_addr = VRAM_START + 16 * tile;
 		} else {
-			tile_addr = 0x9000u + 16 * (int8_t)tile;
+			tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
 		}
 		uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 		uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
@@ -143,15 +143,15 @@ void gbcc_draw_window_line(struct gbc *gbc)
 		if (x < wx - 7) {
 			continue;
 		}
-		uint8_t tx = ((x - wx + 7) / 8u) % 32u;
-		uint8_t xoff = (x - wx + 7) % 8u;
+		uint8_t tx = ((x - wx + 7) / 8) % 32;
+		uint8_t xoff = (x - wx + 7) % 8;
 		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 		uint16_t tile_addr;
 		/* TODO: Put this somewhere better */
 		if (check_bit(lcdc, 4)) {
 			tile_addr = VRAM_START + 16 * tile;
 		} else {
-			tile_addr = 0x9000u + 16 * (int8_t)tile;
+			tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
 		}
 		uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 		uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
@@ -180,10 +180,10 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		 * are offset by 1 for array values.
 		 * TODO: Is this off-by-one true?
 		 */
-		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4u * s, true);
-		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4u * s + 1u, true);
-		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4u * s + 2u, true);
-		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4u * s + 3u, true);
+		uint8_t sy = gbcc_memory_read(gbc, (uint16_t)(OAM_START + 4 * s), true);
+		uint8_t sx = gbcc_memory_read(gbc, (uint16_t)(OAM_START + 4 * s + 1), true);
+		uint8_t tile = gbcc_memory_read(gbc, (uint16_t)(OAM_START + 4 * s + 2), true);
+		uint8_t attr = gbcc_memory_read(gbc, (uint16_t)(OAM_START + 4 * s + 3), true);
 		if (ly < sy - 16 || ly >= sy) {
 			//if (!(sy < 16u && ly < sy)) {
 			continue;

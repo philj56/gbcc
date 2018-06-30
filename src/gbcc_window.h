@@ -7,6 +7,7 @@
 
 struct gbcc_window {
 	struct gbc *gbc;
+	SDL_Thread *thread;
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
@@ -16,9 +17,7 @@ struct gbcc_window {
 	char padding[7]; /* TODO: remove */
 };
 
-void gbcc_window_initialise(struct gbc *gbc);
-void gbcc_window_quit(void);
-void gbcc_window_draw_background(struct gbcc_window *win);
-
+struct gbcc_window *gbcc_window_initialise(struct gbc *gbc);
+void gbcc_window_destroy(struct gbcc_window *win);
 
 #endif /* GBCC_WINDOW_H */

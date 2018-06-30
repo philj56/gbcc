@@ -55,6 +55,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->instruction_timer = 0;
 	gbc->clock = GBC_LCD_MODE_PERIOD;
 	timespec_get(&gbc->real_time.current, TIME_UTC);
+	gbc->quit = false;
 	gbcc_load_rom(gbc, filename);
 	gbcc_parse_header(gbc);
 	gbcc_init_mmap(gbc);
@@ -82,21 +83,21 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	if (rom == NULL)
 	{
 		gbcc_log(GBCC_LOG_ERROR, "Error opening file: %s\n", filename);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fseek(rom, CART_ROM_SIZE_FLAG, SEEK_SET);
 	if (ferror(rom)) {
 		gbcc_log(GBCC_LOG_ERROR, "Error seeking in file: %s\n", filename);
 		fclose(rom);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	read = fread(&rom_size_flag, 1, 1, rom);
 	if (read == 0) {
 		gbcc_log(GBCC_LOG_ERROR, "Error reading ROM size from: %s\n", filename);
 		fclose(rom);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (rom_size_flag < 0x08u) {
@@ -110,7 +111,7 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	} else {
 		gbcc_log(GBCC_LOG_ERROR, "Unknown ROM size flag: %u\n", rom_size_flag);
 		fclose(rom);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	gbcc_log(GBCC_LOG_INFO, "\tCartridge size: 0x%X bytes\n", gbc->cart.rom_size);
 
@@ -118,21 +119,21 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	if (gbc->cart.rom == NULL) {
 		gbcc_log(GBCC_LOG_ERROR, "Error allocating ROM.\n");
 		fclose(rom);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 
 	if (fseek(rom, 0, SEEK_SET) != 0) {
 		gbcc_log(GBCC_LOG_ERROR, "Error seeking in file: %s\n", filename);
 		fclose(rom);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
 	if (read == 0) {
 		gbcc_log(GBCC_LOG_ERROR, "Error reading from file: %s\n", filename);
 		fclose(rom);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	fclose(rom);
@@ -158,7 +159,7 @@ void gbcc_verify_cartridge(struct gbc *gbc)
 	for (size_t i = CART_LOGO_START; i < CART_LOGO_GBC_CHECK_END; i++) {
 		if (gbc->cart.rom[i] != nintendo_logo[i - CART_LOGO_START]) {
 			gbcc_log(GBCC_LOG_ERROR, "Cartridge logo check failed on byte %04X\n", i);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 	gbcc_log(GBCC_LOG_INFO, "\tCartridge logo check passed.\n");
@@ -169,7 +170,7 @@ void gbcc_verify_cartridge(struct gbc *gbc)
 	sum = low_byte(sum + 25u);
 	if (sum) {
 		gbcc_log(GBCC_LOG_ERROR, "Cartridge checksum failed with value %04X.\n", sum);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}	
 	gbcc_log(GBCC_LOG_INFO, "\tCartridge checksum passed.\n");
 }
@@ -367,7 +368,7 @@ void gbcc_init_ram(struct gbc *gbc)
 			break;
 		default:
 			gbcc_log(GBCC_LOG_ERROR, "Unknown ram size flag: %u\n", ram_size_flag);
-			exit(1);
+			exit(EXIT_FAILURE);
 	}
 
 	/*if (gbc->cart.mbc.type == NONE) {
@@ -379,7 +380,7 @@ void gbcc_init_ram(struct gbc *gbc)
 		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
 		if (gbc->cart.ram == NULL) {
 			gbcc_log(GBCC_LOG_ERROR, "Error allocating RAM.\n");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 }
@@ -396,7 +397,7 @@ void gbcc_print_destination_code(struct gbc *gbc)
 			break;
 		default:
 			gbcc_log(GBCC_LOG_ERROR, "Unrecognised region code: 0x%02X\n", dest_code);
-			exit(1);
+			exit(EXIT_FAILURE);
 	}
 }
 
@@ -448,13 +449,13 @@ void gbcc_init_mmap(struct gbc *gbc)
 	gbc->memory.emu_wram = (uint8_t *) calloc(WRAM0_SIZE * wram_mult, 1);
 	if (gbc->memory.emu_wram == NULL) {
 		gbcc_log(GBCC_LOG_ERROR, "Error allocating WRAM.\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	gbc->memory.emu_vram = (uint8_t *) calloc(VRAM_SIZE * vram_mult, 1);
 	if (gbc->memory.emu_vram == NULL) {
 		gbcc_log(GBCC_LOG_ERROR, "Error allocating VRAM.\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	gbc->memory.rom0 = gbc->cart.rom;

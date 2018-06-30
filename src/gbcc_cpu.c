@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_audio.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
@@ -8,8 +9,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
-
-/* TODO: Proper memory accesses with DMA */
 
 static void gbcc_realtime_sync(struct gbc *gbc);
 static void gbcc_update_timers(struct gbc *gbc);
@@ -31,6 +30,7 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 	//if (gbc->instruction_timer == 0) {
 	gbcc_check_interrupts(gbc);
 	gbcc_video_update(gbc);
+	gbcc_audio_update(gbc);
 	//}
 	if (gbc->halt.set || gbc->stop) {
 		return;
@@ -52,8 +52,14 @@ void gbcc_realtime_sync(struct gbc *gbc)
 	}
 	timespec_get(&gbc->real_time.current, TIME_UTC);
 	struct timespec req;
-	req.tv_sec = 0;
-	req.tv_nsec = gbc->real_time.current.tv_nsec - gbc->real_time.old.tv_nsec;
+	req.tv_sec = gbc->real_time.current.tv_sec - gbc->real_time.old.tv_sec;
+	if (req.tv_sec > 0) {
+		req.tv_sec = 0;
+		req.tv_nsec = 1e9;
+		req.tv_nsec -= gbc->real_time.current.tv_nsec - gbc->real_time.old.tv_nsec;
+	} else {
+		req.tv_nsec = gbc->real_time.current.tv_nsec - gbc->real_time.old.tv_nsec;
+	}
 	if (req.tv_nsec > 0 && req.tv_nsec < 16000000) {
 		req.tv_nsec = 16000000 - req.tv_nsec;
 		nanosleep(&req, NULL);
@@ -111,7 +117,7 @@ void gbcc_check_interrupts(struct gbc *gbc)
 			//gbcc_log(GBCC_LOG_DEBUG, "VBLANK interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
 			/* Sync to video for now */
-			gbcc_realtime_sync(gbc);
+			//gbcc_realtime_sync(gbc);
 		} else if (interrupt & bit(1)) {
 			addr = INT_LCDSTAT;
 			//gbcc_log(GBCC_LOG_DEBUG, "LCDSTAT interrupt\n");

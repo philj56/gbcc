@@ -16,20 +16,13 @@ static const SDL_Keycode keymap[9] = {
 };
 
 // Returns key that changed, or -1 for a non-emulated key
-static int gbcc_input_process(const SDL_Event *e);
+static int gbcc_input_process(struct gbc *gbc, const SDL_Event *e);
 
 void gbcc_input_process_all(struct gbc *gbc)
 {
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0) {
-		if (e.type == SDL_WINDOWEVENT) {
-			if (e.window.event == SDL_WINDOWEVENT_CLOSE) {
-				printf("Window Closed\n");
-				/* TODO: Move this somewhere more sensible */
-				gbcc_save(gbc);
-			}
-		}
-		int key = gbcc_input_process(&e);
+		int key = gbcc_input_process(gbc, &e);
 		bool val;
 		if (key < 0) {
 			continue;
@@ -73,10 +66,10 @@ void gbcc_input_process_all(struct gbc *gbc)
 	}
 }
 
-int gbcc_input_process(const SDL_Event *e)
+int gbcc_input_process(struct gbc *gbc, const SDL_Event *e)
 {
 	if (e->type == SDL_QUIT) {
-		exit(0);
+		gbc->quit = true;
 	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
 		for (int i = 0; i < 9; i++) {
 			if (e->key.keysym.sym == keymap[i]) {
@@ -85,17 +78,4 @@ int gbcc_input_process(const SDL_Event *e)
 		}
 	}
 	return -1;
-}
-
-int gbcc_input_wait()
-{
-	SDL_Event e;
-	int key;
-
-	SDL_WaitEvent(&e);
-	while ((key = gbcc_input_process(&e)) < 0 || e.type != SDL_KEYDOWN)
-	{
-		SDL_WaitEvent(&e);
-	}
-	return key;
 }

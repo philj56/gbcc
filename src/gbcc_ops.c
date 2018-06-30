@@ -281,7 +281,7 @@ void LD_A(struct gbc *gbc)
 			op = gbc->reg.hl--;
 			break;
 		default:
-			//TODO: Error handling
+			gbcc_log(GBCC_LOG_ERROR, "Error in instruction LD_A.\n");
 			return;
 	}
 	switch((gbc->opcode % 0x10u) / 0x08u) {
@@ -317,7 +317,7 @@ void LD_OFFSET(struct gbc *gbc) {
 			op = gbc->reg.c;
 			break;
 		default:
-			//TODO: Error handling
+			gbcc_log(GBCC_LOG_ERROR, "Error in instruction LD_OFFSET.\n");
 			return;
 	}
 	switch ((gbc->opcode - 0xE0u) / 0x10u) {
@@ -371,7 +371,7 @@ void PUSH_POP(struct gbc *gbc)
 			op = &(gbc->reg.af);
 			break;
 		default:
-			/* TODO: Handle this error */
+			gbcc_log(GBCC_LOG_ERROR, "Error in instruction PUSH_POP.\n");
 			return;
 	}
 	switch ((gbc->opcode % 0x10u) / 0x04u) {

@@ -3,48 +3,47 @@
 #include "gbcc_input.h"
 #include "gbcc_memory.h"
 #include "gbcc_window.h"
+#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-
 static int gbcc_window_thread_function(void *window);
 
-static SDL_Thread *gbcc_window_thread;
-static struct gbcc_window gbcc_window;
-
-void gbcc_window_initialise(struct gbc *gbc)
+struct gbcc_window *gbcc_window_initialise(struct gbc *gbc)
 {
 	SDL_Init(0);
 
-	gbcc_window.gbc = gbc;
-	gbcc_window.quit = false;
+	struct gbcc_window *win = malloc(sizeof(struct gbcc_window));
+	win->gbc = gbc;
+	win->quit = false;
 
-	gbcc_window.mutex = SDL_CreateMutex();
-	if (gbcc_window.mutex == NULL) {
+	SDL_InitSubSystem(SDL_INIT_VIDEO);
+	win->mutex = SDL_CreateMutex();
+	if (win->mutex == NULL) {
 		gbcc_log(GBCC_LOG_ERROR, "Could not create mutex: %s\n", SDL_GetError());
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
-	gbcc_window_thread = SDL_CreateThread(
+	win->thread = SDL_CreateThread(
 			gbcc_window_thread_function, 
 			"RenderingThread", 
-			(void *)(&gbcc_window));
+			(void *)(win));
 
-	if (gbcc_window_thread == NULL) {
+	if (win->thread == NULL) {
 		gbcc_log(GBCC_LOG_ERROR, "Error creating rendering thread: %s\n", SDL_GetError());
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
+	return win;
 }
 
-void gbcc_window_quit()
+void gbcc_window_destroy(struct gbcc_window *win)
 {
-	gbcc_window.quit = true;
-	SDL_WaitThread(gbcc_window_thread, NULL);
-	SDL_DestroyMutex(gbcc_window.mutex);
-	SDL_DestroyTexture(gbcc_window.texture);
-	SDL_DestroyRenderer(gbcc_window.renderer);
-	SDL_DestroyWindow(gbcc_window.window);
-	atexit(SDL_Quit);
+	win->quit = true;
+	SDL_WaitThread(win->thread, NULL);
+	SDL_DestroyMutex(win->mutex);
+	SDL_DestroyTexture(win->texture);
+	SDL_DestroyRenderer(win->renderer);
+	SDL_DestroyWindow(win->window);
 }
 
 static int gbcc_window_thread_function(void *window)
@@ -52,7 +51,6 @@ static int gbcc_window_thread_function(void *window)
 	int err;
 	struct gbcc_window *win = (struct gbcc_window *)window;
 
-	SDL_InitSubSystem(SDL_INIT_VIDEO);
 
 	win->window = SDL_CreateWindow(
 			"GBCC",                    // window title
@@ -67,7 +65,7 @@ static int gbcc_window_thread_function(void *window)
 		gbcc_log(GBCC_LOG_ERROR, "Could not create window: %s\n", SDL_GetError());
 		SDL_DestroyMutex(win->mutex);
 		SDL_Quit();
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	win->renderer = SDL_CreateRenderer(
@@ -81,7 +79,7 @@ static int gbcc_window_thread_function(void *window)
 		SDL_DestroyWindow(win->window);
 		SDL_DestroyMutex(win->mutex);
 		SDL_Quit();
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	win->texture = SDL_CreateTexture(
@@ -97,7 +95,7 @@ static int gbcc_window_thread_function(void *window)
 		SDL_DestroyWindow(win->window);
 		SDL_DestroyMutex(win->mutex);
 		SDL_Quit();
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	SDL_RenderSetLogicalSize(
@@ -109,7 +107,7 @@ static int gbcc_window_thread_function(void *window)
 		win->buffer[i] = 0;
 	}
 
-	atexit(gbcc_window_quit);
+	//atexit(gbcc_window_quit);
 
 	/* Main rendering loop */
 	while (!(win->quit)) {
@@ -133,7 +131,7 @@ static int gbcc_window_thread_function(void *window)
 				);
 		if (err < 0) {
 			gbcc_log(GBCC_LOG_ERROR, "Error updating texture: %s\n", SDL_GetError());
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		err = SDL_RenderClear(win->renderer);
@@ -142,13 +140,13 @@ static int gbcc_window_thread_function(void *window)
 			if (win->renderer == NULL) {
 				printf("NULL Renderer!\n");
 			}
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		err = SDL_RenderCopy(win->renderer, win->texture, NULL, NULL);
 		if (err < 0) {
 			gbcc_log(GBCC_LOG_ERROR, "Error copying texture: %s\n", SDL_GetError());
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		SDL_RenderPresent(win->renderer);

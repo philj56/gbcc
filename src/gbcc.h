@@ -8,7 +8,9 @@
 #include <time.h>
 
 /* TODO: Find a better way to do this */
+#ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN
+#endif
 
 struct gbc {
 	/* Registers */
@@ -86,6 +88,7 @@ struct gbc {
 		struct timespec current;
 		struct timespec old;
 	} real_time;
+	bool quit;
 
 	/* Memory map */
 	struct {

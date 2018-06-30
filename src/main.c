@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_audio.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
 #include "gbcc_save.h"
@@ -9,41 +10,26 @@
 #include <stdlib.h>
 #include <time.h>
 
-static size_t offset = 0;
-static clock_t timer_start;
 static struct gbc gbc;
+static struct gbcc_window *window;
 
-static void print_speed(int sig);
 static void quit(int sig);
-void print_speed(int sig)
-{
-	(void) sig;
-	double speed = (double)(gbc.clock - offset) / ((double)(clock() - timer_start) / CLOCKS_PER_SEC);
-	fprintf(stderr, "Speed: %.0fHz (%.0f%%)\n", speed, 100 * speed / GBC_CLOCK_FREQ);
-	timer_start = clock();
-	offset = gbc.clock;
-	if (signal(SIGUSR1, print_speed) == SIG_ERR) {
-		printf("Can't catch SIGUSR1!\n");
-	}
-}
 
-void quit(int sig)
+__attribute__((noreturn))
+void quit(int sig) 
 {
 	(void) sig;
 	gbcc_save(&gbc);
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv)
 {
 	if (argc == 1) {
 		printf("Usage: %s rom_file\n", argv[0]);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
-	if (signal(SIGUSR1, print_speed) == SIG_ERR) {
-		printf("Can't catch SIGUSR1!\n");
-	}
 	if (signal(SIGINT, quit) == SIG_ERR) {
 		printf("Can't catch SIGINT!\n");
 	}
@@ -51,16 +37,14 @@ int main(int argc, char **argv)
 //	struct gbc gbc;
 
 	gbcc_initialise(&gbc, argv[1]);
-	gbcc_window_initialise(&gbc);
+	window = gbcc_window_initialise(&gbc);
+	gbcc_audio_initialise();
 	gbcc_load(&gbc);
 
-	bool loop = true;
-	timer_start = clock();
-	while (loop) {
+	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);
 	}
+	gbcc_save(&gbc);
 	
-	//gbcc_free(&gbc);
-	printf("END\n");
 	return 0;
 }
