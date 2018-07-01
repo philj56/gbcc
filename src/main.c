@@ -36,10 +36,12 @@ int main(int argc, char **argv)
 
 //	struct gbc gbc;
 
+	gbc.initialised = false;
 	gbcc_initialise(&gbc, argv[1]);
 	window = gbcc_window_initialise(&gbc);
 	gbcc_audio_initialise();
 	gbcc_load(&gbc);
+	gbc.initialised = true;
 
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);

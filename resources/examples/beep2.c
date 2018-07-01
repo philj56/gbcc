@@ -4,7 +4,7 @@
 
 const int AMPLITUDE = 32767 / 4;
 const int SAMPLE_RATE = 48000;
-const int BUFSIZE = 256;
+const int BUFSIZE = 750;
 const int note = -1;
 const int delay = 50;
 
@@ -35,13 +35,13 @@ int main()
 	SDL_InitSubSystem(SDL_INIT_AUDIO);
 	SDL_PauseAudio(0);
 	for (int note = 0; note < 18; note++) {
-		for (size_t i = 0; i < 1; i++) {
+		for (size_t i = 0; i < 64; i++) {
 			beep(262*pow(1.066, note), delay, buffer, BUFSIZE);
-			beep(330*pow(1.066, note), delay, buffer, BUFSIZE);
+		/*	beep(330*pow(1.066, note), delay, buffer, BUFSIZE);
 			beep(392*pow(1.066, note), delay, buffer, BUFSIZE);
 			beep(523*pow(1.066, note), delay, buffer, BUFSIZE);
 			beep(392*pow(1.066, note), delay, buffer, BUFSIZE);
-			beep(330*pow(1.066, note), delay, buffer, BUFSIZE);
+			beep(330*pow(1.066, note), delay, buffer, BUFSIZE);*/
 		}
 		beep(262*pow(1.066, note), 2*delay, buffer, BUFSIZE);
 	}

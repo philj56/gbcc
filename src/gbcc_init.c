@@ -3,6 +3,7 @@
 #include "gbcc_constants.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
+#include "gbcc_save.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

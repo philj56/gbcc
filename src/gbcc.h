@@ -89,6 +89,7 @@ struct gbc {
 		struct timespec old;
 	} real_time;
 	bool quit;
+	bool initialised;
 
 	/* Memory map */
 	struct {
