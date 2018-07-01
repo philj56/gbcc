@@ -14,6 +14,7 @@
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
 #define BUFSIZE 1024 /* samples */
 #define AUDIO_FMT Uint16
+#define SLEEP_TIME (NANOSECOND / 120)
 
 struct channel {
 	AUDIO_FMT buffer[BUFSIZE];
@@ -90,6 +91,8 @@ void gbcc_audio_update(struct gbc *gbc)
 		uint64_t diff = time_diff(&gbcc_audio.cur_time, &gbcc_audio.start_time);
 		while (diff < (NANOSECOND * gbcc_audio.sample) / SAMPLE_RATE) {
 			//printf("%lu, %lu, %lu, %lu\n", diff, (NANOSECOND * gbcc_audio.sample) / SAMPLE_RATE, gbcc_audio.start_time.tv_sec, gbcc_audio.start_time.tv_nsec);
+			const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
+			nanosleep(&time, NULL);
 			clock_gettime(CLOCK_REALTIME, &gbcc_audio.cur_time);
 			diff = time_diff(&gbcc_audio.cur_time, &gbcc_audio.start_time);
 		}
@@ -172,17 +175,17 @@ void ch4_update(struct gbc *gbc)
 uint64_t time_diff(const struct timespec * const cur,
 		const struct timespec * const old)
 {
-	uint64_t sec = cur->tv_sec - old->tv_sec;
+	uint64_t sec = (uint64_t)(cur->tv_sec - old->tv_sec);
 	uint64_t nsec;
 	if (sec == 0) {
-		nsec = cur->tv_nsec - old->tv_nsec;
+		nsec = (uint64_t)(cur->tv_nsec - old->tv_nsec);
 		return nsec;
 	}
 	nsec = NANOSECOND * sec;
 	if (old->tv_nsec > cur->tv_nsec) {
-		nsec -= old->tv_nsec - cur->tv_nsec;
+		nsec -= (uint64_t)(old->tv_nsec - cur->tv_nsec);
 	} else {
-		nsec += cur->tv_nsec - old->tv_nsec;
+		nsec += (uint64_t)(cur->tv_nsec - old->tv_nsec);
 	}
 	return nsec;
 }
