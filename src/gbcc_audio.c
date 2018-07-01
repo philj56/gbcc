@@ -76,19 +76,16 @@ void gbcc_audio_initialise(void)
 
 void gbcc_audio_update(struct gbc *gbc)
 {
-	if (gbcc_audio.start_time.tv_sec == 0) {
-		clock_gettime(CLOCK_REALTIME, &gbcc_audio.start_time);
-		//gbcc_audio.start_time.tv_nsec = 0;
-	}
 	if (gbc->keys.turbo) {
-		clock_gettime(CLOCK_REALTIME, &gbcc_audio.start_time);
-		//gbcc_audio.start_time.tv_nsec = 0;
+		gbcc_audio.start_time.tv_sec = 0;
 		gbcc_audio.sample = 0;
 		return;
 	}
+	if (gbcc_audio.start_time.tv_sec == 0) {
+		clock_gettime(CLOCK_REALTIME, &gbcc_audio.start_time);
+	}
 	uint64_t clocks = gbc->clock - gbcc_audio.clock;
 	if (clocks > CLOCKS_PER_SAMPLE) {
-		const struct timespec time = {.tv_sec = 0, .tv_nsec = 20833};
 		clock_gettime(CLOCK_REALTIME, &gbcc_audio.cur_time);
 		uint64_t diff = time_diff(&gbcc_audio.cur_time, &gbcc_audio.start_time);
 		while (diff < (NANOSECOND * gbcc_audio.sample) / SAMPLE_RATE) {
