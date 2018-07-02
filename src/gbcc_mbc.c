@@ -20,7 +20,7 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr) {
 void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	if (gbc->cart.ram_size == 0) {
-		gbcc_log(GBCC_LOG_ERROR, "Trying to write to SRAM when there isn't any!\n", addr);
+		gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
 		return;
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
@@ -38,6 +38,10 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr) {
 		return gbc->memory.romx[addr - ROMX_START];
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
+		if (gbc->cart.ram_size == 0) {
+			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
+			return 0xFFu;
+		}
 		if (gbc->cart.mbc.sram_enable) {
 			return gbc->memory.sram[addr - SRAM_START];
 		}
@@ -49,7 +53,9 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr) {
 
 void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	if (addr >= SRAM_START && addr < SRAM_END) {
-		if (gbc->cart.mbc.sram_enable) {
+		if (gbc->cart.ram_size == 0) {
+			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
+		} else if (gbc->cart.mbc.sram_enable) {
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
 			gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
@@ -105,6 +111,10 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr) {
 		return gbc->memory.romx[addr - ROMX_START];
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
+		if (gbc->cart.ram_size == 0) {
+			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
+			return 0xFFu;
+		}
 		if (gbc->cart.mbc.sram_enable) {
 			return gbc->memory.sram[addr - SRAM_START];
 		}
@@ -115,7 +125,9 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr) {
 }
 void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	if (addr >= SRAM_START && addr < SRAM_END) {
-		if (gbc->cart.mbc.sram_enable) {
+		if (gbc->cart.ram_size == 0) {
+			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
+		} else if (gbc->cart.mbc.sram_enable) {
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
 			gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
