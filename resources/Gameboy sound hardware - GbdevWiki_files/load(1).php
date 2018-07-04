@@ -1,0 +1,2 @@
+.rotate{-webkit-transform:rotate(-90deg);-moz-transform:rotate(-90deg);-o-transform:rotate(-90deg)}.smaller{font-size:75%}.passed{color:#0c0}.failed{color:#c00}.toptable td{vertical-align:top }
+/* cache key: gbdevwiki-gbdevwiki_:resourceloader:filter:minify-css:7:b6b3a10d980bfddd87bcce98de690a41 */

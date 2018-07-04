@@ -71,9 +71,9 @@ int gbcc_input_process(struct gbc *gbc, const SDL_Event *e)
 	if (e->type == SDL_QUIT) {
 		gbc->quit = true;
 	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
-		for (int i = 0; i < 9; i++) {
+		for (size_t i = 0; i < sizeof(keymap) / sizeof(keymap[0]); i++) {
 			if (e->key.keysym.sym == keymap[i]) {
-				return i;
+				return (int)i;
 			}
 		}
 	}

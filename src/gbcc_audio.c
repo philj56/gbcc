@@ -17,15 +17,36 @@
 #define SLEEP_TIME (NANOSECOND / SAMPLE_RATE)
 #define SEQUENCER_CLOCKS 8192
 
+struct timer {
+	uint16_t period;
+	uint16_t counter;
+};
+struct duty {
+	struct timer freq_timer;
+	struct timer duty_timer;
+	uint8_t cycle;
+	uint16_t freq;
+};
+
+struct sweep {
+	uint16_t freq;
+	struct timer timer;
+	uint8_t shift;
+	int8_t dir;
+};
+
+struct envelope {
+	struct timer timer;
+	uint8_t volume;
+};
+
 struct channel {
 	AUDIO_FMT buffer[BUFSIZE];
-	uint64_t freq;
 	uint8_t counter;
-	uint8_t volume;
-	struct {
-		uint8_t period;
-		int8_t dir;
-	} envelope;
+	bool state;
+	bool enabled;
+	struct envelope envelope;
+	struct duty duty;
 };
 
 struct apu {
@@ -41,18 +62,22 @@ struct apu {
 	struct channel ch2; 	/* Tone */
 	struct channel ch3; 	/* Wave Output */
 	struct channel ch4; 	/* Noise */
-	uint64_t clock;
-	struct {
-		uint64_t freq;
-		uint8_t period;
-		uint8_t shift;
-		int8_t dir;
-		int8_t counter;
-	} sweep;
+	struct sweep sweep;
+	struct timer sequencer_timer;
 };
 
 static struct apu apu;
+static const uint8_t duty_table[4] = {
+	0x01, 	/* 00000001b */
+	0x81, 	/* 10000001b */
+	0x87, 	/* 10000111b */
+	0x7E 	/* 01111110b */
+};
 
+static bool timer_clock(struct timer *timer);
+static void timer_reset(struct timer *timer);
+static bool duty_clock(struct duty *duty);
+static void envelope_clock(struct envelope *envelope, uint8_t nrx2);
 static void sequencer_clock(struct gbc *gbc);
 static void ch1_update(struct gbc *gbc);
 static void ch2_update(struct gbc *gbc);
@@ -78,6 +103,22 @@ void gbcc_audio_initialise(void)
 	apu.index = 0;
 	apu.start_time.tv_sec = 0;
 	apu.start_time.tv_nsec = 0;
+	apu.sequencer_timer.period = 8;
+	timer_reset(&apu.sequencer_timer);
+	apu.ch1.duty.duty_timer.period = 8;
+	apu.ch2.duty.duty_timer.period = 8;
+	timer_reset(&apu.ch1.duty.duty_timer);
+	timer_reset(&apu.ch2.duty.duty_timer);
+	apu.ch1.envelope.timer.period = 8;
+	apu.ch2.envelope.timer.period = 8;
+	timer_reset(&apu.ch1.envelope.timer);
+	timer_reset(&apu.ch2.envelope.timer);
+	apu.sweep.timer.period = 8;
+	timer_reset(&apu.sweep.timer);
+	apu.ch1.enabled = false;
+	apu.ch2.enabled = false;
+	apu.ch3.enabled = false;
+	apu.ch4.enabled = false;
 
 	apu.device = SDL_OpenAudioDevice(NULL, 0, &want, &apu.audiospec, 0);
 	if (apu.device == 0) {
@@ -87,7 +128,7 @@ void gbcc_audio_initialise(void)
 	if (want.format != apu.audiospec.format) {
 		gbcc_log(GBCC_LOG_ERROR, "Failed to get the desired AudioSpec.\n");
 		exit(EXIT_FAILURE);
-	} 
+	}
 	SDL_PauseAudioDevice(apu.device, 0);
 }
 
@@ -101,21 +142,29 @@ void gbcc_audio_update(struct gbc *gbc)
 	if (apu.start_time.tv_sec == 0) {
 		clock_gettime(CLOCK_REALTIME, &apu.start_time);
 	}
+	/* Duty */
+	apu.ch1.duty.cycle = (gbcc_memory_read(gbc, NR11, true) & 0xC0u) >> 6u;
+	apu.ch1.duty.freq = gbcc_memory_read(gbc, NR13, true);
+	apu.ch1.duty.freq |= (gbcc_memory_read(gbc, NR14, true) & 0x07u) << 8u;
+	apu.ch1.state = duty_clock(&apu.ch1.duty);
+
+	apu.ch2.duty.cycle = (gbcc_memory_read(gbc, NR21, true) & 0xC0u) >> 6u;
+	apu.ch2.duty.freq = gbcc_memory_read(gbc, NR23, true);
+	apu.ch2.duty.freq |= (gbcc_memory_read(gbc, NR24, true) & 0x07u) << 8u;
+	apu.ch2.state = duty_clock(&apu.ch2.duty);
 	uint64_t clocks = gbc->clock - apu.sample_clock;
 	if (!(gbc->clock % SEQUENCER_CLOCKS)) {
 		sequencer_clock(gbc);
 	}
-	if (clocks > CLOCKS_PER_SAMPLE) {
+	if (clocks >= CLOCKS_PER_SAMPLE) {
 		clock_gettime(CLOCK_REALTIME, &apu.cur_time);
 		uint64_t diff = time_diff(&apu.cur_time, &apu.start_time);
 		while (diff < (NANOSECOND * apu.sample) / SAMPLE_RATE) {
-			//printf("%lu, %lu, %lu, %lu\n", diff, (NANOSECOND * apu.sample) / SAMPLE_RATE, apu.start_time.tv_sec, apu.start_time.tv_nsec);
 			const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
 			nanosleep(&time, NULL);
 			clock_gettime(CLOCK_REALTIME, &apu.cur_time);
 			diff = time_diff(&apu.cur_time, &apu.start_time);
 		}
-		//printf("\n");
 		apu.sample_clock = gbc->clock;
 		ch1_update(gbc);
 		ch2_update(gbc);
@@ -137,119 +186,158 @@ void gbcc_audio_update(struct gbc *gbc)
 	}
 }
 
+bool timer_clock(struct timer *timer)
+{
+	if (--timer->counter == 0) {
+		timer_reset(timer);
+		return true;
+	}
+	return false;
+}
+
+void timer_reset(struct timer *timer)
+{
+	timer->counter = timer->period;
+}
+
+bool duty_clock(struct duty *duty)
+{
+	duty->freq_timer.period = 2048u - duty->freq;
+	if (timer_clock(&duty->freq_timer)) {
+		timer_clock(&duty->duty_timer);
+	}
+	return duty_table[duty->cycle] & bit(8-duty->duty_timer.counter);
+}
+
+void envelope_clock(struct envelope *envelope, uint8_t nrx2)
+{
+	envelope->timer.period = nrx2 & 0x07u;
+	int dir = nrx2 & 0x08u ? 1 : -1;
+	if (envelope->timer.period == 0) {
+		envelope->timer.period = 8;
+	}
+	if (timer_clock(&envelope->timer)) {
+		envelope->volume += dir;
+		if (envelope->volume == 0x10u || envelope->volume == 0xFFu) {
+			envelope->volume -= dir;
+		}
+	}
+}
+
 void sequencer_clock(struct gbc *gbc)
 {
-	apu.ch1.freq = gbcc_memory_read(gbc, NR13, true);
-	apu.ch1.freq |= (gbcc_memory_read(gbc, NR14, true) & 0x07u) << 8u;
-	apu.ch1.freq = 131072/(2048-apu.ch1.freq);
-	apu.ch2.freq = gbcc_memory_read(gbc, NR23, true);
-	apu.ch2.freq |= (gbcc_memory_read(gbc, NR24, true) & 0x07u) << 8u;
-	apu.ch2.freq = 131072/(2048-apu.ch2.freq);
-
-	/* Length counters */
-	if (apu.clock & 0x01u) {
+	/* Length counters every other clock */
+	if (!(apu.sequencer_timer.counter & 0x01u)) {
 		if (gbcc_memory_read(gbc, NR14, true) & bit(6)) {
 			apu.ch1.counter--;
 			if (apu.ch1.counter == 0) {
-				apu.ch1.volume = 0;
+				apu.ch1.enabled = false;
 			}
 		}
 		if (gbcc_memory_read(gbc, NR24, true) & bit(6)) {
 			apu.ch2.counter--;
 			if (apu.ch2.counter == 0) {
-				apu.ch2.volume = 0;
+				apu.ch2.enabled = false;
 			}
 		}
 		if (gbcc_memory_read(gbc, NR34, true) & bit(6)) {
 			apu.ch3.counter--;
 			if (apu.ch3.counter == 0) {
-				apu.ch3.volume = 0;
+				apu.ch3.enabled = false;
 			}
 		}
 		if (gbcc_memory_read(gbc, NR44, true) & bit(6)) {
 			apu.ch4.counter--;
 			if (apu.ch4.counter == 0) {
-				apu.ch4.volume = 0;
+				apu.ch4.enabled = false;
 			}
 		}
 	}
-	
-	/* Sweep */
-	if (apu.clock % 0x08u == 2u || apu.clock % 0x08u == 6u) {
-		apu.sweep.period = (gbcc_memory_read(gbc, NR10, true) & 0x70u) >> 4u;
+
+	/* Sweep on clocks 2 & 6 */
+	if (apu.sequencer_timer.counter == 2u || apu.sequencer_timer.counter == 6u) {
+		apu.sweep.timer.period = (gbcc_memory_read(gbc, NR10, true) & 0x70u) >> 4u;
 		apu.sweep.dir = gbcc_memory_read(gbc, NR10, true) & 0x07u ? 1 : -1;
-		apu.sweep.counter++;
-		if (apu.sweep.counter == apu.sweep.period) {
-			apu.sweep.counter = 0;
+		if (apu.sweep.timer.period == 0) {
+			apu.sweep.timer.period = 8;
+		}
+		if (timer_clock(&apu.sweep.timer)) {
 			uint64_t freq = apu.sweep.freq >> apu.sweep.shift;
 			freq = apu.sweep.freq + apu.sweep.dir * freq;
 			if (apu.sweep.shift != 0 && freq < 2047) {
 				apu.sweep.freq = freq;
-				apu.ch1.freq = freq;
+				apu.ch1.duty.freq = freq;
 			}
 		}
 	}
-	
+
 	/* Envelope */
-	if (apu.clock & 0x07u) {
-		apu.ch1.envelope.period = gbcc_memory_read(gbc, NR12, true) & 0x07u;
-		apu.ch2.envelope.period = gbcc_memory_read(gbc, NR22, true) & 0x07u;
-		apu.ch1.envelope.dir = gbcc_memory_read(gbc, NR12, true) & 0x08u ? 1 : -1;
-		apu.ch2.envelope.dir = gbcc_memory_read(gbc, NR22, true) & 0x08u ? 1 : -1;
-		if (apu.ch1.envelope.period == 0) {
-			apu.ch1.volume = (gbcc_memory_read(gbc, NR12, true) & 0xF0u) >> 4u;
-		} else if (!(apu.clock % (apu.ch1.envelope.period * 0x07u))) {
-			apu.ch1.volume += apu.ch1.envelope.dir;
-			if (apu.ch1.volume == 0x10u || apu.ch1.volume == 0xFFu) {
-				apu.ch1.volume -= apu.ch1.envelope.dir;
-			}
-		}
-		if (apu.ch2.envelope.period == 0) {
-			apu.ch2.volume = (gbcc_memory_read(gbc, NR22, true) & 0xF0u) >> 4u;
-		} else if (!(apu.clock % (apu.ch2.envelope.period * 0x07u))) {
-			apu.ch2.volume += apu.ch2.envelope.dir;
-			if (apu.ch2.volume == 0x10u || apu.ch2.volume == 0xFFu) {
-				apu.ch2.volume -= apu.ch2.envelope.dir;
-			}
-		}
+	if (apu.sequencer_timer.counter == 7u) {
+		envelope_clock(&apu.ch1.envelope, gbcc_memory_read(gbc, NR12, true));
+		envelope_clock(&apu.ch2.envelope, gbcc_memory_read(gbc, NR22, true));
 	}
 
 	/* Restart sounds */
 	if (gbcc_memory_read(gbc, NR14, true) & bit(7)) {
-		apu.ch1.volume = (gbcc_memory_read(gbc, NR12, true) & 0xF0u) >> 4u;
+		apu.ch1.enabled = true;
+		if (apu.ch1.counter == 0) {
+			apu.ch1.counter = 64;
+		}
+		timer_reset(&apu.ch1.duty.freq_timer);
+		timer_reset(&apu.ch1.envelope.timer);
+		apu.ch1.envelope.volume = (gbcc_memory_read(gbc, NR12, true) & 0xF0u) >> 4u;
 		gbcc_memory_clear_bit(gbc, NR14, 7, true);
+		printf("%u, %u\n", apu.ch1.envelope.timer.period, apu.ch1.envelope.timer.counter);
 	}
 	if (gbcc_memory_read(gbc, NR24, true) & bit(7)) {
-		apu.ch2.volume = (gbcc_memory_read(gbc, NR22, true) & 0xF0u) >> 4u;
+		apu.ch2.enabled = true;
+		if (apu.ch2.counter == 0) {
+			apu.ch2.counter = 64;
+		}
+		timer_reset(&apu.ch2.duty.freq_timer);
+		timer_reset(&apu.ch2.envelope.timer);
+		apu.ch2.envelope.volume = (gbcc_memory_read(gbc, NR22, true) & 0xF0u) >> 4u;
 		gbcc_memory_clear_bit(gbc, NR24, 7, true);
 	}
 
-	apu.clock++;
+	timer_clock(&apu.sequencer_timer);
 }
 
 void ch1_update(struct gbc *gbc)
 {
-	uint8_t volume = apu.ch1.volume;
-	uint64_t freq = apu.ch1.freq;
-	unsigned long time = (unsigned long)lround(2 * apu.sample * (double)freq / SAMPLE_RATE);
-	apu.ch1.buffer[apu.index] = (AUDIO_FMT)(volume * BASE_AMPLITUDE * (time & 1u));
+	if (!apu.ch1.enabled) {
+		apu.ch1.buffer[apu.index] = 0;
+		return;
+	}
+	uint8_t volume = apu.ch1.envelope.volume;
+	apu.ch1.buffer[apu.index] = (AUDIO_FMT)(apu.ch1.state * volume * BASE_AMPLITUDE);
 }
 
 void ch2_update(struct gbc *gbc)
 {
-	uint8_t volume = apu.ch2.volume;
-	uint64_t freq = apu.ch2.freq;
-	unsigned long time = (unsigned long)lround(2 * apu.sample * (double)freq / SAMPLE_RATE);
-	apu.ch2.buffer[apu.index] = (AUDIO_FMT)(volume * BASE_AMPLITUDE * (time & 1u));
+	if (!apu.ch2.enabled) {
+		apu.ch2.buffer[apu.index] = 0;
+		return;
+	}
+	uint8_t volume = apu.ch2.envelope.volume;
+	apu.ch2.buffer[apu.index] = (AUDIO_FMT)(apu.ch2.state * volume * BASE_AMPLITUDE);
 }
 
 void ch3_update(struct gbc *gbc)
 {
+	if (!apu.ch3.enabled) {
+		apu.ch3.buffer[apu.index] = 0;
+		return;
+	}
 	apu.ch3.buffer[apu.index] = 0;
 }
 
 void ch4_update(struct gbc *gbc)
 {
+	if (!apu.ch4.enabled) {
+		apu.ch4.buffer[apu.index] = 0;
+		return;
+	}
 	apu.ch4.buffer[apu.index] = 0;
 }
 

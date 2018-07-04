@@ -160,6 +160,7 @@ void INVALID(struct gbc *gbc)
 
 void NOP(struct gbc *gbc)
 {
+	(void) gbc;
 }
 
 void STOP(struct gbc *gbc)
