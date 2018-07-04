@@ -38,6 +38,7 @@ struct sweep {
 struct envelope {
 	struct timer timer;
 	uint8_t volume;
+	bool enabled;
 };
 
 struct channel {
@@ -211,6 +212,9 @@ bool duty_clock(struct duty *duty)
 
 void envelope_clock(struct envelope *envelope, uint8_t nrx2)
 {
+	if (!envelope->enabled) {
+		return;
+	}
 	envelope->timer.period = nrx2 & 0x07u;
 	int dir = nrx2 & 0x08u ? 1 : -1;
 	if (envelope->timer.period == 0) {
@@ -220,12 +224,24 @@ void envelope_clock(struct envelope *envelope, uint8_t nrx2)
 		envelope->volume += dir;
 		if (envelope->volume == 0x10u || envelope->volume == 0xFFu) {
 			envelope->volume -= dir;
+			envelope->enabled = false;
 		}
 	}
 }
 
 void sequencer_clock(struct gbc *gbc)
 {
+	/* DAC */
+	if (!(gbcc_memory_read(gbc, NR12, true) & 0xF7u)) {
+		apu.ch1.enabled = false;
+	}
+	if (!(gbcc_memory_read(gbc, NR22, true) & 0xF7u)) {
+		apu.ch2.enabled = false;
+	}
+	if (!(gbcc_memory_read(gbc, NR42, true) & 0xF7u)) {
+		apu.ch4.enabled = false;
+	}
+
 	/* Length counters every other clock */
 	if (!(apu.sequencer_timer.counter & 0x01u)) {
 		if (gbcc_memory_read(gbc, NR14, true) & bit(6)) {
@@ -285,9 +301,9 @@ void sequencer_clock(struct gbc *gbc)
 		}
 		timer_reset(&apu.ch1.duty.freq_timer);
 		timer_reset(&apu.ch1.envelope.timer);
+		apu.ch1.envelope.enabled = true;
 		apu.ch1.envelope.volume = (gbcc_memory_read(gbc, NR12, true) & 0xF0u) >> 4u;
 		gbcc_memory_clear_bit(gbc, NR14, 7, true);
-		printf("%u, %u\n", apu.ch1.envelope.timer.period, apu.ch1.envelope.timer.counter);
 	}
 	if (gbcc_memory_read(gbc, NR24, true) & bit(7)) {
 		apu.ch2.enabled = true;
@@ -296,6 +312,7 @@ void sequencer_clock(struct gbc *gbc)
 		}
 		timer_reset(&apu.ch2.duty.freq_timer);
 		timer_reset(&apu.ch2.envelope.timer);
+		apu.ch2.envelope.enabled = true;
 		apu.ch2.envelope.volume = (gbcc_memory_read(gbc, NR22, true) & 0xF0u) >> 4u;
 		gbcc_memory_clear_bit(gbc, NR24, 7, true);
 	}
