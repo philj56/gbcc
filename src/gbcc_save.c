@@ -59,6 +59,72 @@ void gbcc_load(struct gbc *gbc)
 	fclose(sav);
 }
 
+/* FIXME: This should really be done better */
+void gbcc_save_state(struct gbc *gbc)
+{
+	const char *fname = "test.sav";
+	unsigned int wram_mult;
+	unsigned int vram_mult;
+	
+	switch (gbc->mode) {
+		case DMG:
+			wram_mult = 2;
+			vram_mult = 1;
+			break;
+		case GBC:
+			wram_mult = 8;
+			vram_mult = 2;
+			break;
+	}
+	FILE *state = fopen(fname, "wbe");
+	fwrite(gbc, sizeof(struct gbc), 1, state);
+	fwrite(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, state);
+	fwrite(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, state);
+	fclose(state);
+}
+
+void gbcc_load_state(struct gbc *gbc)
+{
+	const char *fname = "test.sav";
+	unsigned int wram_mult;
+	unsigned int vram_mult;
+	uint8_t *emu_wram = gbc->memory.emu_wram;
+	uint8_t *emu_vram = gbc->memory.emu_vram;
+	uint8_t *rom = gbc->cart.rom;
+	uint8_t *ram = gbc->cart.ram;
+	char *name = gbc->cart.filename;
+	
+	switch (gbc->mode) {
+		case DMG:
+			wram_mult = 2;
+			vram_mult = 1;
+			break;
+		case GBC:
+			wram_mult = 8;
+			vram_mult = 2;
+			break;
+	}
+	FILE *state = fopen(fname, "rbe");
+	fread(gbc, sizeof(struct gbc), 1, state);
+	gbc->memory.emu_wram = emu_wram;
+	gbc->memory.emu_vram = emu_vram;
+	fread(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, state);
+	fread(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, state);
+	fclose(state);
+
+	gbc->cart.rom = rom;
+	gbc->cart.ram = ram;
+	gbc->cart.filename = name;
+
+	gbc->memory.romx = gbc->cart.rom + (gbc->memory.romx - gbc->memory.rom0);
+	gbc->memory.rom0 = gbc->cart.rom;
+	gbc->memory.vram = gbc->memory.emu_vram;
+	gbc->memory.sram = gbc->cart.ram;
+	gbc->memory.wramx = gbc->memory.emu_wram + (gbc->memory.wramx - gbc->memory.wram0);
+	gbc->memory.wram0 = gbc->memory.emu_wram;
+	gbc->memory.echo = gbc->memory.wram0;
+}
+
 void strip_ext(char *fname)
 {
 	char *end = fname + strlen(fname);

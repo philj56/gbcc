@@ -90,6 +90,8 @@ struct gbc {
 	} real_time;
 	bool quit;
 	bool initialised;
+	bool save_state;
+	bool load_state;
 
 	/* Memory map */
 	struct {
