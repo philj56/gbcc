@@ -40,6 +40,14 @@ struct noise {
 	uint16_t lfsr;
 };
 
+struct wave {
+	struct timer timer;
+	uint16_t addr;
+	uint8_t buffer;
+	uint8_t nibble;
+	uint8_t shift;
+};
+
 struct envelope {
 	struct timer timer;
 	uint8_t volume;
@@ -70,6 +78,7 @@ struct apu {
 	struct channel ch4; 	/* Noise */
 	struct sweep sweep;
 	struct noise noise;
+	struct wave wave;
 	struct timer sequencer_timer;
 };
 
@@ -79,16 +88,6 @@ static const uint8_t duty_table[4] = {
 	0x81, 	/* 10000001b */
 	0x87, 	/* 10000111b */
 	0x7E 	/* 01111110b */
-};
-static const uint8_t lfsr_divisors[8] = {
-	0x08u,
-	0x10u,
-	0x20u,
-	0x30u,
-	0x40u,
-	0x50u,
-	0x60u,
-	0x70u
 };
 
 static bool timer_clock(struct timer *timer);
@@ -136,6 +135,9 @@ void gbcc_audio_initialise(void)
 	timer_reset(&apu.sweep.timer);
 	apu.noise.timer.period = 8;
 	timer_reset(&apu.noise.timer);
+	apu.wave.timer.period = 8;
+	timer_reset(&apu.wave.timer);
+	apu.wave.addr = WAVE_START;
 	apu.ch1.enabled = false;
 	apu.ch2.enabled = false;
 	apu.ch3.enabled = false;
@@ -189,6 +191,22 @@ void gbcc_audio_update(struct gbc *gbc)
 			apu.noise.lfsr |= tmp * bit(6);
 		}
 		apu.ch4.state = !(apu.noise.lfsr & bit(0));
+	}
+
+	/* Wave */
+	apu.wave.timer.period = gbcc_memory_read(gbc, NR33, true);
+	apu.wave.timer.period |= (gbcc_memory_read(gbc, NR34, true) & 0x07u) << 8u;
+	apu.wave.timer.period = (2048u - apu.wave.timer.period) / 2;
+	if (timer_clock(&apu.wave.timer)) {
+		apu.wave.shift = (gbcc_memory_read(gbc, NR32, true) & 0x60u) >> 5u;
+		apu.wave.addr += apu.wave.nibble;
+		apu.wave.nibble = !apu.wave.nibble;
+		if (apu.wave.addr > WAVE_END) {
+			apu.wave.addr = WAVE_START;
+		}
+		apu.wave.buffer = gbcc_memory_read(gbc, apu.wave.addr, true);
+		apu.wave.buffer &= 0x0Fu << (4u * apu.wave.nibble);
+		apu.wave.buffer >>= 4u * apu.wave.nibble;
 	}
 
 	uint64_t clocks = gbc->clock - apu.sample_clock;
@@ -355,6 +373,15 @@ void sequencer_clock(struct gbc *gbc)
 		apu.ch2.envelope.volume = (gbcc_memory_read(gbc, NR22, true) & 0xF0u) >> 4u;
 		gbcc_memory_clear_bit(gbc, NR24, 7, true);
 	}
+	if (gbcc_memory_read(gbc, NR34, true) & bit(7)) {
+		apu.ch3.enabled = true;
+		if (apu.ch3.counter == 0) {
+			apu.ch3.counter = 64;
+		}
+		timer_reset(&apu.wave.timer);
+		apu.wave.addr = WAVE_START;
+		gbcc_memory_clear_bit(gbc, NR34, 7, true);
+	}
 	if (gbcc_memory_read(gbc, NR44, true) & bit(7)) {
 		apu.ch4.enabled = true;
 		if (apu.ch4.counter == 0) {
@@ -393,11 +420,11 @@ void ch2_update(struct gbc *gbc)
 
 void ch3_update(struct gbc *gbc)
 {
-	if (!apu.ch3.enabled) {
+	if (!apu.ch3.enabled || apu.wave.shift == 0) {
 		apu.ch3.buffer[apu.index] = 0;
 		return;
 	}
-	apu.ch3.buffer[apu.index] = 0;
+	apu.ch3.buffer[apu.index] = (AUDIO_FMT)((apu.wave.buffer >> (apu.wave.shift - 1)) * BASE_AMPLITUDE);
 }
 
 void ch4_update(struct gbc *gbc)

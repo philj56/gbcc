@@ -130,6 +130,9 @@
 #define NR50 0xFF24u	/* Channel Control / On/Off / Volume (R/W) */
 #define NR51 0xFF25u	/* Selection of Sound Output Terminal (R/W) */
 #define NR52 0xFF26u	/* Sound On / Off (0-3 R, 7 R/W) */
+#define WAVE_START 0xFF30u 	/* Wave pattern RAM */
+#define WAVE_SIZE 0x0Fu
+#define WAVE_END (WAVE_START + WAVE_SIZE)
 
 /* Interrupts */
 #define IE 0xFFFFu	/* Interrupt Enable (0-4 R/W, 5-7 R) */
