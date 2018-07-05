@@ -9,7 +9,7 @@
 
 /* 4 channels, with volume 0x00-0x0F each */
 #define NANOSECOND 1000000000lu
-#define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F)
+#define BASE_AMPLITUDE (UINT16_MAX / 8 / 0x0F)
 #define SAMPLE_RATE 48000
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
 #define BUFSIZE 512 /* samples */
@@ -33,6 +33,11 @@ struct sweep {
 	struct timer timer;
 	uint8_t shift;
 	int8_t dir;
+};
+
+struct noise {
+	struct timer timer;
+	uint16_t lfsr;
 };
 
 struct envelope {
@@ -64,6 +69,7 @@ struct apu {
 	struct channel ch3; 	/* Wave Output */
 	struct channel ch4; 	/* Noise */
 	struct sweep sweep;
+	struct noise noise;
 	struct timer sequencer_timer;
 };
 
@@ -73,6 +79,16 @@ static const uint8_t duty_table[4] = {
 	0x81, 	/* 10000001b */
 	0x87, 	/* 10000111b */
 	0x7E 	/* 01111110b */
+};
+static const uint8_t lfsr_divisors[8] = {
+	0x08u,
+	0x10u,
+	0x20u,
+	0x30u,
+	0x40u,
+	0x50u,
+	0x60u,
+	0x70u
 };
 
 static bool timer_clock(struct timer *timer);
@@ -112,10 +128,14 @@ void gbcc_audio_initialise(void)
 	timer_reset(&apu.ch2.duty.duty_timer);
 	apu.ch1.envelope.timer.period = 8;
 	apu.ch2.envelope.timer.period = 8;
+	apu.ch4.envelope.timer.period = 8;
 	timer_reset(&apu.ch1.envelope.timer);
 	timer_reset(&apu.ch2.envelope.timer);
+	timer_reset(&apu.ch4.envelope.timer);
 	apu.sweep.timer.period = 8;
 	timer_reset(&apu.sweep.timer);
+	apu.noise.timer.period = 8;
+	timer_reset(&apu.noise.timer);
 	apu.ch1.enabled = false;
 	apu.ch2.enabled = false;
 	apu.ch3.enabled = false;
@@ -143,6 +163,7 @@ void gbcc_audio_update(struct gbc *gbc)
 	if (apu.start_time.tv_sec == 0) {
 		clock_gettime(CLOCK_REALTIME, &apu.start_time);
 	}
+
 	/* Duty */
 	apu.ch1.duty.cycle = (gbcc_memory_read(gbc, NR11, true) & 0xC0u) >> 6u;
 	apu.ch1.duty.freq = gbcc_memory_read(gbc, NR13, true);
@@ -153,6 +174,23 @@ void gbcc_audio_update(struct gbc *gbc)
 	apu.ch2.duty.freq = gbcc_memory_read(gbc, NR23, true);
 	apu.ch2.duty.freq |= (gbcc_memory_read(gbc, NR24, true) & 0x07u) << 8u;
 	apu.ch2.state = duty_clock(&apu.ch2.duty);
+
+	/* Noise */
+	apu.noise.timer.period = 0x10u * (gbcc_memory_read(gbc, NR43, true) & 0x07u);
+	if (apu.noise.timer.period == 0) {
+		apu.noise.timer.period = 0x08u;
+	}
+	apu.noise.timer.period <<= (gbcc_memory_read(gbc, NR43, true) & 0xF0u) >> 4u;
+	if (timer_clock(&apu.noise.timer)) {
+		uint8_t tmp = check_bit(apu.noise.lfsr, 0) ^ check_bit(apu.noise.lfsr, 1);
+		apu.noise.lfsr >>= 1;
+		apu.noise.lfsr |= tmp * (1u << 14u);
+		if (check_bit(gbcc_memory_read(gbc, NR43, true), 3)) {
+			apu.noise.lfsr |= tmp * bit(6);
+		}
+		apu.ch4.state = !(apu.noise.lfsr & bit(0));
+	}
+
 	uint64_t clocks = gbc->clock - apu.sample_clock;
 	if (!(gbc->clock % SEQUENCER_CLOCKS)) {
 		sequencer_clock(gbc);
@@ -291,6 +329,7 @@ void sequencer_clock(struct gbc *gbc)
 	if (apu.sequencer_timer.counter == 7u) {
 		envelope_clock(&apu.ch1.envelope, gbcc_memory_read(gbc, NR12, true));
 		envelope_clock(&apu.ch2.envelope, gbcc_memory_read(gbc, NR22, true));
+		envelope_clock(&apu.ch4.envelope, gbcc_memory_read(gbc, NR42, true));
 	}
 
 	/* Restart sounds */
@@ -315,6 +354,18 @@ void sequencer_clock(struct gbc *gbc)
 		apu.ch2.envelope.enabled = true;
 		apu.ch2.envelope.volume = (gbcc_memory_read(gbc, NR22, true) & 0xF0u) >> 4u;
 		gbcc_memory_clear_bit(gbc, NR24, 7, true);
+	}
+	if (gbcc_memory_read(gbc, NR44, true) & bit(7)) {
+		apu.ch4.enabled = true;
+		if (apu.ch4.counter == 0) {
+			apu.ch4.counter = 64;
+		}
+		timer_reset(&apu.noise.timer);
+		timer_reset(&apu.ch4.envelope.timer);
+		apu.ch4.envelope.enabled = true;
+		apu.ch4.envelope.volume = (gbcc_memory_read(gbc, NR42, true) & 0xF0u) >> 4u;
+		apu.noise.lfsr = 0xFFu;
+		gbcc_memory_clear_bit(gbc, NR44, 7, true);
 	}
 
 	timer_clock(&apu.sequencer_timer);
@@ -355,7 +406,8 @@ void ch4_update(struct gbc *gbc)
 		apu.ch4.buffer[apu.index] = 0;
 		return;
 	}
-	apu.ch4.buffer[apu.index] = 0;
+	uint8_t volume = apu.ch4.envelope.volume;
+	apu.ch4.buffer[apu.index] = (AUDIO_FMT)(apu.ch4.state * volume * BASE_AMPLITUDE);
 }
 
 uint64_t time_diff(const struct timespec * const cur,
