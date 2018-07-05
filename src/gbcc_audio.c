@@ -167,14 +167,8 @@ void gbcc_audio_update(struct gbc *gbc)
 	}
 
 	/* Duty */
-	apu.ch1.duty.cycle = (gbcc_memory_read(gbc, NR11, true) & 0xC0u) >> 6u;
-	apu.ch1.duty.freq = gbcc_memory_read(gbc, NR13, true);
-	apu.ch1.duty.freq |= (gbcc_memory_read(gbc, NR14, true) & 0x07u) << 8u;
 	apu.ch1.state = duty_clock(&apu.ch1.duty);
 
-	apu.ch2.duty.cycle = (gbcc_memory_read(gbc, NR21, true) & 0xC0u) >> 6u;
-	apu.ch2.duty.freq = gbcc_memory_read(gbc, NR23, true);
-	apu.ch2.duty.freq |= (gbcc_memory_read(gbc, NR24, true) & 0x07u) << 8u;
 	apu.ch2.state = duty_clock(&apu.ch2.duty);
 
 	/* Noise */
@@ -329,16 +323,17 @@ void sequencer_clock(struct gbc *gbc)
 	/* Sweep on clocks 2 & 6 */
 	if (apu.sequencer_timer.counter == 2u || apu.sequencer_timer.counter == 6u) {
 		apu.sweep.timer.period = (gbcc_memory_read(gbc, NR10, true) & 0x70u) >> 4u;
-		apu.sweep.dir = gbcc_memory_read(gbc, NR10, true) & 0x07u ? 1 : -1;
+		apu.sweep.dir = gbcc_memory_read(gbc, NR10, true) & 0x08u ? -1 : 1;
+		apu.sweep.shift = gbcc_memory_read(gbc, NR10, true) & 0x07u;
 		if (apu.sweep.timer.period == 0) {
 			apu.sweep.timer.period = 8;
 		}
 		if (timer_clock(&apu.sweep.timer)) {
-			uint64_t freq = apu.sweep.freq >> apu.sweep.shift;
+			uint16_t freq = apu.sweep.freq >> apu.sweep.shift;
 			freq = apu.sweep.freq + apu.sweep.dir * freq;
-			if (apu.sweep.shift != 0 && freq < 2047) {
+			if (apu.sweep.shift != 0 && freq < 2048) {
 				apu.sweep.freq = freq;
-				apu.ch1.duty.freq = freq;
+				apu.ch1.duty.freq = apu.sweep.freq;
 			}
 		}
 	}
@@ -352,6 +347,9 @@ void sequencer_clock(struct gbc *gbc)
 
 	/* Restart sounds */
 	if (gbcc_memory_read(gbc, NR14, true) & bit(7)) {
+		apu.ch1.duty.cycle = (gbcc_memory_read(gbc, NR11, true) & 0xC0u) >> 6u;
+		apu.ch1.duty.freq = gbcc_memory_read(gbc, NR13, true);
+		apu.ch1.duty.freq |= (gbcc_memory_read(gbc, NR14, true) & 0x07u) << 8u;
 		apu.ch1.enabled = true;
 		if (apu.ch1.counter == 0) {
 			apu.ch1.counter = 64;
@@ -360,9 +358,13 @@ void sequencer_clock(struct gbc *gbc)
 		timer_reset(&apu.ch1.envelope.timer);
 		apu.ch1.envelope.enabled = true;
 		apu.ch1.envelope.volume = (gbcc_memory_read(gbc, NR12, true) & 0xF0u) >> 4u;
+		apu.sweep.freq = apu.ch1.duty.freq;
 		gbcc_memory_clear_bit(gbc, NR14, 7, true);
 	}
 	if (gbcc_memory_read(gbc, NR24, true) & bit(7)) {
+		apu.ch2.duty.cycle = (gbcc_memory_read(gbc, NR21, true) & 0xC0u) >> 6u;
+		apu.ch2.duty.freq = gbcc_memory_read(gbc, NR23, true);
+		apu.ch2.duty.freq |= (gbcc_memory_read(gbc, NR24, true) & 0x07u) << 8u;
 		apu.ch2.enabled = true;
 		if (apu.ch2.counter == 0) {
 			apu.ch2.counter = 64;
