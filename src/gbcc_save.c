@@ -138,6 +138,10 @@ void gbcc_load_state(struct gbc *gbc)
 	fread(gbc, sizeof(struct gbc), 1, sav);
 	gbc->memory.emu_wram = emu_wram;
 	gbc->memory.emu_vram = emu_vram;
+	/* FIXME: Thread-unsafe, screen could try to read from here while the
+	 * pointer is still invalid */
+	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
+	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
 	fread(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, sav);
 	fread(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, sav);
 	fclose(sav);
