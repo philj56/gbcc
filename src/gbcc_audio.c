@@ -178,7 +178,8 @@ void gbcc_audio_update(struct gbc *gbc)
 	}
 	apu.noise.timer.period <<= (gbcc_memory_read(gbc, NR43, true) & 0xF0u) >> 4u;
 	if (timer_clock(&apu.noise.timer)) {
-		uint8_t tmp = check_bit(apu.noise.lfsr, 0) ^ check_bit(apu.noise.lfsr, 1);
+		uint8_t lfsr_low = apu.noise.lfsr & 0xFFu;
+		uint8_t tmp = check_bit(lfsr_low, 0) ^ check_bit(lfsr_low, 1);
 		apu.noise.lfsr >>= 1;
 		apu.noise.lfsr |= tmp * (1u << 14u);
 		if (check_bit(gbcc_memory_read(gbc, NR43, true), 3)) {
@@ -257,7 +258,7 @@ bool duty_clock(struct duty *duty)
 	if (timer_clock(&duty->freq_timer)) {
 		timer_clock(&duty->duty_timer);
 	}
-	return duty_table[duty->cycle] & bit(8-duty->duty_timer.counter);
+	return duty_table[duty->cycle] & bit((uint8_t)(8u-duty->duty_timer.counter));
 }
 
 void envelope_clock(struct envelope *envelope, uint8_t nrx2)
@@ -330,7 +331,7 @@ void sequencer_clock(struct gbc *gbc)
 		}
 		if (timer_clock(&apu.sweep.timer)) {
 			uint16_t freq = apu.sweep.freq >> apu.sweep.shift;
-			freq = apu.sweep.freq + apu.sweep.dir * freq;
+			freq = (uint16_t)(apu.sweep.freq + apu.sweep.dir * freq);
 			if (apu.sweep.shift != 0 && freq < 2048) {
 				apu.sweep.freq = freq;
 				apu.ch1.duty.freq = apu.sweep.freq;

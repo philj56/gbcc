@@ -107,8 +107,6 @@ static int gbcc_window_thread_function(void *window)
 		win->buffer[i] = 0;
 	}
 
-	//atexit(gbcc_window_quit);
-
 	/* Main rendering loop */
 	while (!(win->quit)) {
 		gbcc_input_process_all(win->gbc);
@@ -117,7 +115,7 @@ static int gbcc_window_thread_function(void *window)
 		}
 		/* Do the actual drawing */
 		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-			win->buffer[i] = win->gbc->memory.screen[i / GBC_SCREEN_WIDTH][i % GBC_SCREEN_WIDTH];
+			win->buffer[i] = win->gbc->memory.sdl_screen[i];
 		}
 		/* Draw the background */
 		if (SDL_UnlockMutex(win->mutex) < 0) {
