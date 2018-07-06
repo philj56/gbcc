@@ -1,6 +1,7 @@
 #include "gbcc.h"
 #include "gbcc_debug.h"
 #include "gbcc_save.h"
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -59,13 +60,10 @@ void gbcc_load(struct gbc *gbc)
 	fclose(sav);
 }
 
-/* FIXME: This should really be done better */
 void gbcc_save_state(struct gbc *gbc)
 {
-	const char *fname = "test.sav";
 	unsigned int wram_mult;
 	unsigned int vram_mult;
-	
 	switch (gbc->mode) {
 		case DMG:
 			wram_mult = 2;
@@ -76,24 +74,39 @@ void gbcc_save_state(struct gbc *gbc)
 			vram_mult = 2;
 			break;
 	}
-	FILE *state = fopen(fname, "wbe");
-	fwrite(gbc, sizeof(struct gbc), 1, state);
-	fwrite(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, state);
-	fwrite(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, state);
-	fclose(state);
+
+	char fname[MAX_NAME_LEN];
+	char tmp[MAX_NAME_LEN];
+	FILE *sav;
+	if (snprintf(tmp, MAX_NAME_LEN, "%s", gbc->cart.filename) >= MAX_NAME_LEN) {
+		gbcc_log(GBCC_LOG_ERROR, "Filename %s too long\n", tmp);
+	}
+	strip_ext(tmp);
+	if (snprintf(fname, MAX_NAME_LEN, "%s.s%d", tmp, gbc->save_state) >= MAX_NAME_LEN) {
+		gbcc_log(GBCC_LOG_ERROR, "Filename %s too long\n", fname);
+	}
+	sav = fopen(fname, "wbe");
+	if (!sav) {
+		gbcc_log(GBCC_LOG_ERROR, "Error opening %s: %s\n", fname, strerror(errno));
+		return;
+	}
+	gbc->save_state = 0;
+	gbc->load_state = 0;
+	fwrite(gbc, sizeof(struct gbc), 1, sav);
+	fwrite(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, sav);
+	fwrite(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, sav);
+	fclose(sav);
 }
 
 void gbcc_load_state(struct gbc *gbc)
 {
-	const char *fname = "test.sav";
 	unsigned int wram_mult;
 	unsigned int vram_mult;
 	uint8_t *emu_wram = gbc->memory.emu_wram;
 	uint8_t *emu_vram = gbc->memory.emu_vram;
 	uint8_t *rom = gbc->cart.rom;
 	uint8_t *ram = gbc->cart.ram;
-	char *name = gbc->cart.filename;
-	
+	const char *name = gbc->cart.filename;
 	switch (gbc->mode) {
 		case DMG:
 			wram_mult = 2;
@@ -104,13 +117,30 @@ void gbcc_load_state(struct gbc *gbc)
 			vram_mult = 2;
 			break;
 	}
-	FILE *state = fopen(fname, "rbe");
-	fread(gbc, sizeof(struct gbc), 1, state);
+
+	char fname[MAX_NAME_LEN];
+	char tmp[MAX_NAME_LEN];
+	FILE *sav;
+	if (snprintf(tmp, MAX_NAME_LEN, "%s", gbc->cart.filename) >= MAX_NAME_LEN) {
+		gbcc_log(GBCC_LOG_ERROR, "Filename %s too long\n", tmp);
+	}
+	strip_ext(tmp);
+	if (snprintf(fname, MAX_NAME_LEN, "%s.s%d", tmp, gbc->load_state) >= MAX_NAME_LEN) {
+		gbcc_log(GBCC_LOG_ERROR, "Filename %s too long\n", fname);
+	}
+	sav = fopen(fname, "rbe");
+	if (!sav) {
+		gbcc_log(GBCC_LOG_ERROR, "Error opening %s: %s\n", fname, strerror(errno));
+		gbc->save_state = 0;
+		gbc->load_state = 0;
+		return;
+	}
+	fread(gbc, sizeof(struct gbc), 1, sav);
 	gbc->memory.emu_wram = emu_wram;
 	gbc->memory.emu_vram = emu_vram;
-	fread(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, state);
-	fread(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, state);
-	fclose(state);
+	fread(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, sav);
+	fread(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, sav);
+	fclose(sav);
 
 	gbc->cart.rom = rom;
 	gbc->cart.ram = ram;

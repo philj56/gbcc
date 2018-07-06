@@ -3,18 +3,25 @@
 #include "gbcc_save.h"
 #include "gbcc_window.h"
 
-static const SDL_Keycode keymap[11] = {
-	SDLK_z,		/* A */
-	SDLK_x, 	/* B */
-	SDLK_RETURN,	/* Start */
-	SDLK_SPACE,	/* Select */
-	SDLK_UP,	/* DPAD up */
-	SDLK_DOWN,	/* DPAD down */
-	SDLK_LEFT,	/* DPAD left */
-	SDLK_RIGHT,	/* DPAD right */
-	SDLK_RSHIFT, 	/* Turbo */
-	SDLK_1,		/* Load State */
-	SDLK_2		/* Save State */
+static const SDL_Scancode keymap[18] = {
+	SDL_SCANCODE_Z,		/* A */
+	SDL_SCANCODE_X, 	/* B */
+	SDL_SCANCODE_RETURN,	/* Start */
+	SDL_SCANCODE_SPACE,	/* Select */
+	SDL_SCANCODE_UP,	/* DPAD up */
+	SDL_SCANCODE_DOWN,	/* DPAD down */
+	SDL_SCANCODE_LEFT,	/* DPAD left */
+	SDL_SCANCODE_RIGHT,	/* DPAD right */
+	SDL_SCANCODE_RSHIFT, 	/* Turbo */
+	SDL_SCANCODE_1,		/* State n */
+	SDL_SCANCODE_2,
+	SDL_SCANCODE_3,
+	SDL_SCANCODE_4,
+	SDL_SCANCODE_5,
+	SDL_SCANCODE_6,
+	SDL_SCANCODE_7,
+	SDL_SCANCODE_8,
+	SDL_SCANCODE_9
 };
 
 // Returns key that changed, or -1 for a non-emulated key
@@ -25,6 +32,7 @@ void gbcc_input_process_all(struct gbc *gbc)
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0) {
 		int key = gbcc_input_process(gbc, &e);
+		const uint8_t *state = SDL_GetKeyboardState(NULL);
 		bool val;
 		if (key < 0) {
 			continue;
@@ -65,10 +73,22 @@ void gbcc_input_process_all(struct gbc *gbc)
 				gbc->keys.turbo ^= val;
 				break;
 			case 9:
-				gbc->load_state = val;
-				break;
 			case 10:
-				gbc->save_state = val;
+			case 11:
+			case 12:
+			case 13:
+			case 14:
+			case 15:
+			case 16:
+			case 17:
+				if (!val) {
+					break;
+				}
+				if (state[SDL_SCANCODE_LSHIFT]) {
+					gbc->save_state = (int8_t)(key - 8);
+				} else {
+					gbc->load_state = (int8_t)(key - 8);
+				}
 				break;
 		}
 	}
@@ -80,7 +100,7 @@ int gbcc_input_process(struct gbc *gbc, const SDL_Event *e)
 		gbc->quit = true;
 	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
 		for (size_t i = 0; i < sizeof(keymap) / sizeof(keymap[0]); i++) {
-			if (e->key.keysym.sym == keymap[i]) {
+			if (e->key.keysym.scancode == keymap[i]) {
 				return (int)i;
 			}
 		}
