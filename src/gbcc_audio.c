@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <time.h>
 
-/* 4 channels, with volume 0x00-0x0F each */
 #define NANOSECOND 1000000000lu
 #define BASE_AMPLITUDE (UINT16_MAX / 8 / 0x0F)
 #define SAMPLE_RATE 48000
@@ -16,6 +15,8 @@
 #define AUDIO_FMT Uint16
 #define SLEEP_TIME (NANOSECOND / SAMPLE_RATE)
 #define SEQUENCER_CLOCKS 8192
+#define TIMER_RESTART (3600 * SAMPLE_RATE) /* restart after x samples */
+#define SLEEP_DETECT NANOSECOND
 
 struct timer {
 	uint16_t period;
@@ -99,6 +100,7 @@ static void ch1_update(struct gbc *gbc);
 static void ch2_update(struct gbc *gbc);
 static void ch3_update(struct gbc *gbc);
 static void ch4_update(struct gbc *gbc);
+static void time_sync(struct gbc *gbc);
 static uint64_t time_diff(const struct timespec *cur,
 		const struct timespec *old);
 
@@ -209,14 +211,7 @@ void gbcc_audio_update(struct gbc *gbc)
 		sequencer_clock(gbc);
 	}
 	if (clocks >= CLOCKS_PER_SAMPLE) {
-		clock_gettime(CLOCK_REALTIME, &apu.cur_time);
-		uint64_t diff = time_diff(&apu.cur_time, &apu.start_time);
-		while (diff < (NANOSECOND * apu.sample) / SAMPLE_RATE) {
-			const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
-			nanosleep(&time, NULL);
-			clock_gettime(CLOCK_REALTIME, &apu.cur_time);
-			diff = time_diff(&apu.cur_time, &apu.start_time);
-		}
+		time_sync(gbc);
 		apu.sample_clock = gbc->clock;
 		ch1_update(gbc);
 		ch2_update(gbc);
@@ -438,6 +433,31 @@ void ch4_update(struct gbc *gbc)
 	}
 	uint8_t volume = apu.ch4.envelope.volume;
 	apu.ch4.buffer[apu.index] = (AUDIO_FMT)(apu.ch4.state * volume * BASE_AMPLITUDE);
+}
+
+void time_sync(struct gbc *gbc)
+{
+	clock_gettime(CLOCK_REALTIME, &apu.cur_time);
+	uint64_t diff = time_diff(&apu.cur_time, &apu.start_time);
+	if (diff > SLEEP_DETECT + (NANOSECOND * apu.sample) / SAMPLE_RATE) {
+		const struct timespec time = {.tv_sec = 2, .tv_nsec = 0};
+		nanosleep(&time, NULL);
+		apu.start_time.tv_sec = 0;
+		apu.sample = 0;
+		apu.index = 0;
+		return;
+	}
+	while (diff < (NANOSECOND * apu.sample) / SAMPLE_RATE) {
+		printf("%lu\n", (NANOSECOND * apu.sample) / SAMPLE_RATE - diff);
+		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
+		nanosleep(&time, NULL);
+		clock_gettime(CLOCK_REALTIME, &apu.cur_time);
+		diff = time_diff(&apu.cur_time, &apu.start_time);
+	}
+	if (!(apu.sample % TIMER_RESTART)) {
+		apu.start_time = apu.cur_time;
+		apu.sample = 0;
+	}
 }
 
 uint64_t time_diff(const struct timespec * const cur,
