@@ -448,7 +448,6 @@ void time_sync(struct gbc *gbc)
 		return;
 	}
 	while (diff < (NANOSECOND * apu.sample) / SAMPLE_RATE) {
-		printf("%lu\n", (NANOSECOND * apu.sample) / SAMPLE_RATE - diff);
 		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
 		nanosleep(&time, NULL);
 		clock_gettime(CLOCK_REALTIME, &apu.cur_time);
