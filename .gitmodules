@@ -1,0 +1,6 @@
+[submodule "resources/tests/mooneye-gb"]
+	path = resources/tests/mooneye-gb
+	url = https://github.com/Gekkio/mooneye-gb.git
+[submodule "resources/tests/gb-test-roms"]
+	path = resources/tests/gb-test-roms
+	url = https://github.com/retrio/gb-test-roms.git
