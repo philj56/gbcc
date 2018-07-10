@@ -9,7 +9,7 @@
 #define BACKGROUND_MAP_BANK_2 0x9C00u
 #define NUM_SPRITES 40
 
-enum palette_flag { bk, sp1, sp2 };
+enum palette_flag { BACKGROUND, SPRITE_1, SPRITE_2 };
 
 static void gbcc_draw_line(struct gbc *gbc);
 static void gbcc_draw_background_line(struct gbc *gbc);
@@ -120,7 +120,7 @@ void gbcc_draw_background_line(struct gbc *gbc)
 		uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 		uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 		uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-		gbc->memory.gbc_screen[GBC_SCREEN_WIDTH * ly + x] = get_palette_colour(palette, colour, bk);
+		gbc->memory.gbc_screen[GBC_SCREEN_WIDTH * ly + x] = get_palette_colour(palette, colour, BACKGROUND);
 	}
 }
 
@@ -162,7 +162,7 @@ void gbcc_draw_window_line(struct gbc *gbc)
 		uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 		uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 		uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-		gbc->memory.gbc_screen[GBC_SCREEN_WIDTH * ly + x] = get_palette_colour(palette, colour, bk);
+		gbc->memory.gbc_screen[GBC_SCREEN_WIDTH * ly + x] = get_palette_colour(palette, colour, BACKGROUND);
 	}
 }
 
@@ -170,7 +170,7 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 {
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
-	uint32_t bg0 = get_palette_colour(gbcc_memory_read(gbc, BGP, true), 0, bk);
+	uint32_t bg0 = get_palette_colour(gbcc_memory_read(gbc, BGP, true), 0, BACKGROUND);
 	enum palette_flag pf;
 	if (!check_bit(lcdc, 1)) {
 		return;
@@ -225,10 +225,10 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		uint8_t palette;
 		if (check_bit(attr, 4)) {
 			palette = gbcc_memory_read(gbc, OBP1, true);
-			pf = sp1;
+			pf = SPRITE_1;
 		} else {
 			palette = gbcc_memory_read(gbc, OBP0, true);
-			pf = sp2;
+			pf = SPRITE_2;
 		}
 		uint8_t lo;
 		uint8_t hi;
@@ -284,45 +284,15 @@ uint32_t get_palette_colour(uint8_t palette, uint8_t n, enum palette_flag pf)
 		(palette & 0x30u) >> 4u,
 		(palette & 0xC0u) >> 6u
 	};
+	uint32_t red_palette[4]   = {0xf8f8f8u, 0xff8096u, 0x7f3848u, 0x000000u};
+	uint32_t green_palette[4] = {0xf8f8f8u, 0x1fba1fu, 0x376019u, 0x093609u};
+	uint32_t blue_palette[4]  = {0xf8f8f8u, 0x71b6d0u, 0x0f3eaau, 0x000000u}; 
 	switch (pf) {
-		case bk:
-		switch (colours[n]) {
-			case 3:
-				return 0x000000u;
-			case 2:
-				return 0x7f3848u;
-			case 1:
-				return 0xff8096u;
-			case 0:
-				return 0xf8f8f8u;
-			default:
-				return 0;
-		}
-		case sp1:
-		switch (colours[n]) {
-			case 3:
-				return 0x093609u;
-			case 2:
-				return 0x376019u;
-			case 1:
-				return 0x1fba1fu;
-			case 0:
-				return 0xf8f8f8u;
-			default:
-				return 0;
-		}
-		case sp2:
-		switch (colours[n]) {
-			case 3:
-				return 0x000000u;
-			case 2:
-				return 0x0f3eaau;
-			case 1:
-				return 0x71b6d0u;
-			case 0:
-				return 0xf8f8f8u;
-			default:
-				return 0;
-		}
+		case BACKGROUND:
+			return red_palette[colours[n]];
+		case SPRITE_1:
+			return blue_palette[colours[n]]; 	
+		case SPRITE_2:
+			return green_palette[colours[n]];
 	}
 }
