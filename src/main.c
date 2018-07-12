@@ -45,6 +45,11 @@ int main(int argc, char **argv)
 
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);
+		if (gbc.save_state) {
+			gbcc_save_state(&gbc);
+		} else if (gbc.load_state) {
+			gbcc_load_state(&gbc);
+		}
 	}
 	gbcc_save(&gbc);
 	

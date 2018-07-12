@@ -59,6 +59,10 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->stop = false;
 	gbc->instruction_timer = 0;
 	gbc->clock = GBC_LCD_MODE_PERIOD;
+	gbc->save_state = 0;
+	gbc->load_state = 0;
+	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
+	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
 	timespec_get(&gbc->real_time.current, TIME_UTC);
 	gbc->quit = false;
 	gbcc_load_rom(gbc, filename);

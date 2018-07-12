@@ -6,6 +6,7 @@
 #include "gbcc_ops.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static uint8_t READ_OPERAND_MOD(struct gbc *gbc);
 static void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val);
@@ -153,9 +154,11 @@ const uint8_t gbcc_op_sizes[0x100] = {
 
 /* Miscellaneous */
 
+__attribute__((noreturn))
 void INVALID(struct gbc *gbc)
 {
 	gbcc_log(GBCC_LOG_ERROR, "Invalid opcode: 0x%02X\n", gbc->opcode);
+	exit(EXIT_FAILURE);
 }
 
 void NOP(struct gbc *gbc)

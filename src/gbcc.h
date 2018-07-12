@@ -97,6 +97,8 @@ struct gbc {
 	} real_time;
 	bool quit;
 	bool initialised;
+	int8_t save_state;
+	int8_t load_state;
 
 	/* Memory map */
 	struct {
@@ -118,7 +120,10 @@ struct gbc {
 		/* Emulator areas */
 		uint8_t *emu_wram;	/* Actual location of WRAM */
 		uint8_t *emu_vram;	/* Actual location of VRAM */
-		uint32_t screen[GBC_SCREEN_HEIGHT][GBC_SCREEN_WIDTH];
+		uint32_t screen_buffer_0[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
+		uint32_t screen_buffer_1[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
+		uint32_t *gbc_screen;
+		uint32_t *sdl_screen;
 	} memory;
 
 	/* Current key states */
