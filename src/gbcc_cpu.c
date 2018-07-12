@@ -25,6 +25,18 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 			gbc->dma.source++;
 		}
 	}
+	if (gbc->hdma.length > 0){
+		/* FIXME: Only general-purpose hdma for now */
+		uint16_t start = gbc->hdma.source;
+		uint16_t end = gbc->hdma.source + gbc->hdma.length;
+		uint16_t dest = gbc->hdma.dest;
+		for (uint16_t src = start; src < end; src++, dest++) {
+			gbcc_memory_copy(gbc, src, dest, true);
+		}
+		gbcc_memory_write(gbc, HDMA5, 0xFFu, true);
+		printf("HDMA copied 0x%04X bytes from 0x%04X to 0x%04X\n", gbc->hdma.length, start, gbc->hdma.dest);
+		gbc->hdma.length = 0;
+	}
 	gbcc_update_timers(gbc);
 	//if (gbc->instruction_timer == 0) {
 	gbcc_check_interrupts(gbc);

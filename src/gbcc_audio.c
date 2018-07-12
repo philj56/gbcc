@@ -168,7 +168,6 @@ void gbcc_audio_update(struct gbc *gbc)
 
 	/* Duty */
 	apu.ch1.state = duty_clock(&apu.ch1.duty);
-
 	apu.ch2.state = duty_clock(&apu.ch2.duty);
 
 	/* Noise */
@@ -287,6 +286,9 @@ void sequencer_clock(struct gbc *gbc)
 	}
 	if (!(gbcc_memory_read(gbc, NR22, true) & 0xF7u)) {
 		apu.ch2.enabled = false;
+	}
+	if (!(gbcc_memory_read(gbc, NR30, true) & 0x80u)) {
+		apu.ch3.enabled = false;
 	}
 	if (!(gbcc_memory_read(gbc, NR42, true) & 0xF7u)) {
 		apu.ch4.enabled = false;

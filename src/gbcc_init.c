@@ -52,6 +52,10 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->halt.skip = 0;
 	gbc->dma.source = 0;
 	gbc->dma.timer = 0;
+	gbc->hdma.source = 0;
+	gbc->hdma.dest = 0;
+	gbc->hdma.length = 0;
+	gbc->hdma.hblank = 0;
 	gbc->stop = false;
 	gbc->instruction_timer = 0;
 	gbc->clock = GBC_LCD_MODE_PERIOD;
@@ -506,6 +510,9 @@ void gbcc_init_ioreg(struct gbc *gbc)
 	gbc->memory.ioreg[WY - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[WX - IOREG_START] = 0x00u;
 	gbc->memory.iereg = 0x00u;
+	for (size_t i = 0; i < sizeof(gbc->memory.bgp)/sizeof(gbc->memory.bgp[0]); i++) {
+		gbc->memory.bgp[i] = 0xFFu;
+	}
 }
 
 void gbcc_init_input(struct gbc *gbc)

@@ -15,7 +15,7 @@ static const uint8_t ioreg_read_masks[0x80] = {
 /* 0xFF30 */	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 /* 0xFF38 */	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 /* 0xFF40 */	0xFF, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF,
-/* 0xFF48 */	0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x81, 0x00, 0xFF,
+/* 0xFF48 */	0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x81, 0x00, 0x01,
 /* 0xFF50 */	0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC3, 0x00,
 /* 0xFF58 */	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 /* 0xFF60 */	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -293,6 +293,12 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 		}
 		return joyp | (uint8_t)~mask;
 	} 
+	if (gbc->mode == GBC && addr == BGPD) {
+		return gbc->memory.bgp[gbc->memory.ioreg[BGPI - IOREG_START]];
+	}
+	if (gbc->mode == GBC && addr == OBPD) {
+		return gbc->memory.obp[gbc->memory.ioreg[OBPI - IOREG_START]];
+	}
 	return gbc->memory.ioreg[addr - IOREG_START] | (uint8_t)~mask;
 }
 
@@ -322,6 +328,54 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			gbc->memory.ioreg[addr - IOREG_START] |= 0x20u;
 			gbc->memory.ioreg[addr - IOREG_START] &= ~0x10u;
 		}
+	} else if (gbc->mode == GBC && addr == BGPD) {
+		uint8_t index = gbc->memory.ioreg[BGPI - IOREG_START];
+		gbc->memory.bgp[index & 0x3Fu] = val;
+		if (index & 0x80u) {
+			index++;
+			if (index == 0x40u) {
+				index = 0;
+			}
+			gbc->memory.ioreg[BGPI - IOREG_START] = index;
+		}
+	} else if (gbc->mode == GBC && addr == OBPD) {
+		uint8_t index = gbc->memory.ioreg[OBPI - IOREG_START];
+		gbc->memory.obp[index & 0x3Fu] = val;
+		if (index & 0x80u) {
+			index++;
+			if (index == 0x40u) {
+				index = 0;
+			}
+			gbc->memory.ioreg[OBPI - IOREG_START] = index;
+		}
+	} else if (gbc->mode == GBC && addr == VBK) {
+		//printf("VBK = %u\n", val);
+		gbc->memory.ioreg[addr - IOREG_START] = val & 0x01u;
+		gbc->memory.vram = gbc->memory.emu_vram + (val & 0x01u) * VRAM_SIZE;
+	} else if (gbc->mode == GBC && addr == SVBK) {
+		//printf("SVBK = %u\n", val & 0x07u);
+		uint8_t bank = val & 0x07u;
+		bank += !bank;
+		gbc->memory.ioreg[addr - IOREG_START] = bank;
+		gbc->memory.vram = gbc->memory.emu_vram + bank * VRAM_SIZE;
+	} else if (gbc->mode == GBC && addr == HDMA1) {
+		gbc->memory.ioreg[addr - IOREG_START] = val & 0xF0u;
+	} else if (gbc->mode == GBC && addr == HDMA2) {
+		if (val < 0x80u || (val >= 0xA0u && val < 0xE0u)) {
+			gbc->memory.ioreg[addr - IOREG_START] = val;
+		}
+	} else if (gbc->mode == GBC && addr == HDMA3) {
+		gbc->memory.ioreg[addr - IOREG_START] = val & 0xF0u;
+	} else if (gbc->mode == GBC && addr == HDMA4) {
+		gbc->memory.ioreg[addr - IOREG_START] = (val & 0x1Fu) | 0x80u;
+	} else if (gbc->mode == GBC && addr == HDMA5) {
+		uint8_t src_hi = gbc->memory.ioreg[HDMA1 - IOREG_START];
+		uint8_t src_lo = gbc->memory.ioreg[HDMA2 - IOREG_START];
+		uint8_t dst_hi = gbc->memory.ioreg[HDMA3 - IOREG_START];
+		uint8_t dst_lo = gbc->memory.ioreg[HDMA4 - IOREG_START];
+		gbc->hdma.source = cat_bytes(src_lo, src_hi);
+		gbc->hdma.dest = cat_bytes(dst_lo, dst_hi);
+		gbc->hdma.length = ((val & 0x7Fu) + 1u) * 0x10u;
 	} else {
 		gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
 	}

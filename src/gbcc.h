@@ -12,6 +12,7 @@
 #define LITTLE_ENDIAN
 #endif
 
+
 struct gbc {
 	/* Registers */
 	struct {
@@ -80,6 +81,12 @@ struct gbc {
 		uint16_t source;
 		uint16_t timer;
 	} dma;
+	struct {
+		uint16_t source;
+		uint16_t dest;
+		uint16_t length;
+		bool hblank;
+	} hdma;
 	bool stop;
 	uint8_t instruction_timer;
 	uint8_t div_timer;
@@ -106,6 +113,8 @@ struct gbc {
 		uint8_t ioreg[IOREG_SIZE];	/* I/O Registers */
 		uint8_t hram[HRAM_SIZE];	/* Internal CPU RAM */
 		uint8_t iereg;	/* Interrupt enable flags */
+		uint8_t bgp[64]; 	/* 8 x 8-byte sprites */
+		uint8_t obp[64]; 	/* 8 x 8-byte sprites */
 		/* Emulator areas */
 		uint8_t *emu_wram;	/* Actual location of WRAM */
 		uint8_t *emu_vram;	/* Actual location of VRAM */
@@ -142,7 +151,7 @@ struct gbc {
 			enum MBC type;
 			enum BANK_MODE bank_mode;
 			bool sram_enable;
-			uint8_t romx_bank;
+			uint16_t romx_bank;
 			uint8_t sram_bank;
 			bool padding;
 		} mbc;
