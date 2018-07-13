@@ -351,13 +351,17 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 	} else if (gbc->mode == GBC && addr == VBK) {
 		//printf("VBK = %u\n", val);
 		gbc->memory.ioreg[addr - IOREG_START] = val & 0x01u;
-		gbc->memory.vram = gbc->memory.emu_vram + (val & 0x01u) * VRAM_SIZE;
+		if (val & 0x01u) {
+			gbc->memory.vram = gbc->memory.vram_bank1;
+		} else {
+			gbc->memory.vram = gbc->memory.vram_bank0;
+		}
 	} else if (gbc->mode == GBC && addr == SVBK) {
 		//printf("SVBK = %u\n", val & 0x07u);
 		uint8_t bank = val & 0x07u;
 		bank += !bank;
 		gbc->memory.ioreg[addr - IOREG_START] = bank;
-		gbc->memory.vram = gbc->memory.emu_vram + bank * VRAM_SIZE;
+		gbc->memory.wramx = gbc->memory.emu_wram + bank * WRAMX_SIZE;
 	} else if (gbc->mode == GBC && addr == HDMA1) {
 		gbc->memory.ioreg[addr - IOREG_START] = val & 0xF0u;
 	} else if (gbc->mode == GBC && addr == HDMA2) {

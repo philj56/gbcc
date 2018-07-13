@@ -51,6 +51,7 @@ int main(int argc, char **argv)
 			gbcc_load_state(&gbc);
 		}
 	}
+	//gbcc_vram_dump(&gbc, "vram.dump");
 	gbcc_save(&gbc);
 	
 	return 0;

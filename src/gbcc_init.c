@@ -79,7 +79,6 @@ void gbcc_free(struct gbc *gbc)
 		free(gbc->cart.ram);
 	}
 	free(gbc->memory.emu_wram);
-	free(gbc->memory.emu_vram);
 }
 
 void gbcc_load_rom(struct gbc *gbc, const char *filename)
@@ -461,15 +460,9 @@ void gbcc_init_mmap(struct gbc *gbc)
 		exit(EXIT_FAILURE);
 	}
 
-	gbc->memory.emu_vram = (uint8_t *) calloc(VRAM_SIZE * vram_mult, 1);
-	if (gbc->memory.emu_vram == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Error allocating VRAM.\n");
-		exit(EXIT_FAILURE);
-	}
-
 	gbc->memory.rom0 = gbc->cart.rom;
 	gbc->memory.romx = gbc->cart.rom + ROM0_SIZE;
-	gbc->memory.vram = gbc->memory.emu_vram;
+	gbc->memory.vram = gbc->memory.vram_bank0;
 	gbc->memory.sram = gbc->cart.ram;
 	gbc->memory.wram0 = gbc->memory.emu_wram;
 	gbc->memory.wramx = gbc->memory.emu_wram + WRAM0_SIZE;

@@ -141,3 +141,13 @@ void gbcc_log_append(enum GBCC_LOG_LEVEL level, const char *const fmt, ...)
 	}
 	va_end(args);
 }
+
+void gbcc_vram_dump(struct gbc *gbc, const char *filename)
+{
+	FILE *fp = fopen(filename, "wbe");
+	fwrite(gbc->memory.vram_bank0, 1, VRAM_SIZE, fp);
+	if (gbc->mode == GBC) {
+		fwrite(gbc->memory.vram_bank1, 1, VRAM_SIZE, fp);
+	}
+	fclose(fp);
+}

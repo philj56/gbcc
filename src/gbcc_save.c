@@ -94,7 +94,6 @@ void gbcc_save_state(struct gbc *gbc)
 	gbc->load_state = 0;
 	fwrite(gbc, sizeof(struct gbc), 1, sav);
 	fwrite(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, sav);
-	fwrite(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, sav);
 	fclose(sav);
 }
 
@@ -103,7 +102,6 @@ void gbcc_load_state(struct gbc *gbc)
 	unsigned int wram_mult;
 	unsigned int vram_mult;
 	uint8_t *emu_wram = gbc->memory.emu_wram;
-	uint8_t *emu_vram = gbc->memory.emu_vram;
 	uint8_t *rom = gbc->cart.rom;
 	uint8_t *ram = gbc->cart.ram;
 	const char *name = gbc->cart.filename;
@@ -137,13 +135,11 @@ void gbcc_load_state(struct gbc *gbc)
 	}
 	fread(gbc, sizeof(struct gbc), 1, sav);
 	gbc->memory.emu_wram = emu_wram;
-	gbc->memory.emu_vram = emu_vram;
 	/* FIXME: Thread-unsafe, screen could try to read from here while the
 	 * pointer is still invalid */
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
 	fread(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, sav);
-	fread(gbc->memory.emu_vram, VRAM_SIZE * vram_mult, 1, sav);
 	fclose(sav);
 
 	gbc->cart.rom = rom;
@@ -152,7 +148,7 @@ void gbcc_load_state(struct gbc *gbc)
 
 	gbc->memory.romx = gbc->cart.rom + (gbc->memory.romx - gbc->memory.rom0);
 	gbc->memory.rom0 = gbc->cart.rom;
-	gbc->memory.vram = gbc->memory.emu_vram;
+	gbc->memory.vram = gbc->memory.vram_bank0;
 	gbc->memory.sram = gbc->cart.ram;
 	gbc->memory.wramx = gbc->memory.emu_wram + (gbc->memory.wramx - gbc->memory.wram0);
 	gbc->memory.wram0 = gbc->memory.emu_wram;

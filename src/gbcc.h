@@ -119,7 +119,8 @@ struct gbc {
 		uint8_t obp[64]; 	/* 8 x 8-byte sprites */
 		/* Emulator areas */
 		uint8_t *emu_wram;	/* Actual location of WRAM */
-		uint8_t *emu_vram;	/* Actual location of VRAM */
+		uint8_t vram_bank0[VRAM_SIZE];	/* Actual location of VRAM */
+		uint8_t vram_bank1[VRAM_SIZE];	/* Actual location of VRAM */
 		uint32_t screen_buffer_0[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
 		uint32_t screen_buffer_1[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
 		uint32_t *gbc_screen;
