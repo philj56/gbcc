@@ -79,6 +79,7 @@ void gbcc_draw_line(struct gbc *gbc)
 	gbcc_draw_sprite_line(gbc);
 }
 
+/* TODO: GBC BG-to-OAM Priority */
 void gbcc_draw_background_line(struct gbc *gbc)
 {
 	uint8_t scy = gbcc_memory_read(gbc, SCY, true);
@@ -126,28 +127,28 @@ void gbcc_draw_background_line(struct gbc *gbc)
 			uint8_t xoff = (scx + x) % 8u;
 			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 			uint8_t attr = gbc->memory.vram_bank1[map + 32 * ty + tx - VRAM_START];
-			uint8_t *vram = gbc->memory.vram;
+			uint8_t *vbk;
 			uint16_t tile_addr;
 			if (check_bit(attr, 3)) {
-				gbc->memory.vram = gbc->memory.vram_bank1;
+				vbk = gbc->memory.vram_bank1;
 			} else {
-				gbc->memory.vram = gbc->memory.vram_bank0;
+				vbk = gbc->memory.vram_bank0;
 			}
 			/* TODO: Put this somewhere better */
 			if (check_bit(lcdc, 4)) {
-				tile_addr = VRAM_START + 16 * tile;
+				tile_addr = 16 * tile;
 			} else {
-				tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
+				tile_addr = (uint16_t)(0x1000 + 16 * (int8_t)tile);
 			}
 			uint8_t lo;
 			uint8_t hi;
 			/* Check for Y-flip */
 			if (check_bit(attr, 6)) {
-				lo = gbcc_memory_read(gbc, tile_addr + (14 - line_offset), true);
-				hi = gbcc_memory_read(gbc, tile_addr + (14 - line_offset) + 1, true);
+				lo = vbk[tile_addr + (14 - line_offset)];
+				hi = vbk[tile_addr + (14 - line_offset) + 1];
 			} else {
-				lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
-				hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
+				lo = vbk[tile_addr + line_offset];
+				hi = vbk[tile_addr + line_offset + 1];
 			}
 			uint8_t colour;
 			/* Check for X-flip */
@@ -157,7 +158,6 @@ void gbcc_draw_background_line(struct gbc *gbc)
 				colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 			}
 			gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = get_palette_colour(gbc, attr & 0x07u, colour, false);
-			gbc->memory.vram = vram;
 		}
 	}
 }
@@ -280,7 +280,7 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 				palette = gbcc_memory_read(gbc, OBP0, true);
 			}
 		} else {
-			palette = attr & 0x03u;
+			palette = attr & 0x07u;
 		}
 		uint8_t lo;
 		uint8_t hi;
