@@ -153,6 +153,16 @@ void gbcc_load_state(struct gbc *gbc)
 	gbc->memory.wramx = gbc->memory.emu_wram + (gbc->memory.wramx - gbc->memory.wram0);
 	gbc->memory.wram0 = gbc->memory.emu_wram;
 	gbc->memory.echo = gbc->memory.wram0;
+	
+	gbc->keys.a = false;
+	gbc->keys.b = false;
+	gbc->keys.start = false;
+	gbc->keys.select = false;
+	gbc->keys.dpad.up = false;
+	gbc->keys.dpad.down = false;
+	gbc->keys.dpad.left = false;
+	gbc->keys.dpad.right = false;
+	gbc->keys.turbo = false;
 }
 
 void strip_ext(char *fname)
