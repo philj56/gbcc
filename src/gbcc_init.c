@@ -412,14 +412,6 @@ void gbcc_print_destination_code(struct gbc *gbc)
 void gbcc_init_registers(struct gbc *gbc) {
 	switch (gbc->mode) {
 		case DMG:
-			/*
-			gbc->reg.af = 0x1180u;
-			gbc->reg.bc = 0x0000u;
-			gbc->reg.de = 0x0008u;
-			gbc->reg.hl = 0x007Cu;
-			gbc->reg.sp = 0xFFFEu;
-			gbc->reg.pc = 0x0100u;
-			*/
 			gbc->reg.af = 0x01B0u;
 			gbc->reg.bc = 0x0013u;
 			gbc->reg.de = 0x00D8u;
@@ -441,16 +433,13 @@ void gbcc_init_registers(struct gbc *gbc) {
 void gbcc_init_mmap(struct gbc *gbc)
 {
 	unsigned int wram_mult;
-	unsigned int vram_mult;
 	
 	switch (gbc->mode) {
 		case DMG:
 			wram_mult = 2;
-			vram_mult = 1;
 			break;
 		case GBC:
 			wram_mult = 8;
-			vram_mult = 2;
 			break;
 	}
 

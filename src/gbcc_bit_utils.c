@@ -30,9 +30,9 @@ uint8_t toggle_bit(uint8_t byte, uint8_t b)
 	return byte ^ bit(b);
 }
 
-bool check_bit(uint8_t byte, uint8_t b)
+uint8_t check_bit(uint8_t byte, uint8_t b)
 {
-	return byte & bit(b);
+	return (uint8_t)(byte & bit(b)) >> b;
 }
 
 uint8_t bit(uint8_t b)

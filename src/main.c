@@ -36,6 +36,7 @@ int main(int argc, char **argv)
 
 //	struct gbc gbc;
 
+	/* FIXME: shouldn't have to do this */
 	gbc.initialised = false;
 	gbcc_initialise(&gbc, argv[1]);
 	window = gbcc_window_initialise(&gbc);

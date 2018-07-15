@@ -3,6 +3,7 @@
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
 #include "gbcc_video.h"
+#include <math.h>
 #include <stdio.h>
 
 #define BACKGROUND_MAP_BANK_1 0x9800u
@@ -360,7 +361,6 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sp
 		lo = gbc->memory.bgp[index + 2 * n];
 		hi = gbc->memory.bgp[index + 2 * n + 1];
 	}
-	
 	uint8_t red = lo & 0x1Fu;
 	uint8_t green = ((lo & 0xE0u) >> 5u) | ((hi & 0x03u) << 3u);
 	uint8_t blue = hi & 0x7Cu >> 2u;
@@ -368,38 +368,4 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sp
 	green = (double)green / 0x1Fu * 0xFFu;
 	blue = (double)blue / 0x1Fu * 0xFFu;
 	return (red << 16u) | (green << 8u) | blue;
-
-	/*
-	uint32_t red = lo & 0x1Fu;
-	uint32_t green = ((lo & 0xE0u) >> 5u) | ((hi & 0x03u) << 3u);
-	uint32_t blue = hi & 0x7Cu >> 2u;
-	if (red < 0x10u) {
-		red = (double)red / 0x1Fu * 0x29BC44u;
-	} else {
-		red = (double)red / 0x1Fu * 0x537888u;
-	}
-	if (green < 0x10u) {
-		green = (double)green / 0x1Fu * 0x60EB28u;
-	} else {
-		green = (double)green / 0x1Fu * 0xc1d650u;
-	}
-	if (blue < 0x10u) {
-		blue = (double)blue / 0x1Fu * 0x7BBF24u;
-	} else {
-		blue = (double)blue / 0x1Fu * 0xf77e49u;
-	}
-	uint32_t r = (red & 0xFF0000u) + (green & 0xFF0000u) + (blue & 0xFF0000u);
-	uint32_t g = (red & 0x00FF00u) + (green & 0x00FF00u) + (blue & 0x00FF00u);
-	uint32_t b = (red & 0x0000FFu) + (green & 0x0000FFu) + (blue & 0x0000FFu);
-	if (r > 0xFF0000u) {
-		r = 0xFF0000u;
-	}
-	if (g > 0x00FF00u) {
-		g = 0x00FF00u;
-	}
-	if (b > 0x0000FFu) {
-		b = 0x0000FFu;
-	}
-	return r + g + b;
-	*/
 }

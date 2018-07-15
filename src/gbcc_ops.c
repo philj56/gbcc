@@ -110,7 +110,7 @@ void (*gbcc_ops[0x100])(struct gbc *gbc) = {
 };
 
 /*
- * Instruction lengths, in cycles. 0 means invalid instruction, or that the
+ * Instruction lengths, in m-cycles. 0 means invalid instruction, or that the
  * duration of the instruction is conditional
  */
 const uint8_t gbcc_op_times[0x100] = {
@@ -169,6 +169,10 @@ void NOP(struct gbc *gbc)
 void STOP(struct gbc *gbc)
 {
 	gbc->stop = true;
+	if (gbc->mode == GBC && check_bit(gbcc_memory_read(gbc, KEY1, true), 0)) {
+		gbcc_memory_clear_bit(gbc, KEY1, 0, true);
+		/* TODO: Speed switch */
+	}
 	gbcc_fetch_instruction(gbc); /* Discard next byte */
 }
 

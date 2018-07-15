@@ -34,7 +34,7 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 			gbcc_memory_copy(gbc, src, dest, true);
 		}
 		gbcc_memory_write(gbc, HDMA5, 0xFFu, true);
-		printf("HDMA copied 0x%04X bytes from 0x%04X to 0x%04X\n", gbc->hdma.length, start, gbc->hdma.dest);
+		//printf("HDMA copied 0x%04X bytes from 0x%04X to 0x%04X\n", gbc->hdma.length, start, gbc->hdma.dest);
 		gbc->hdma.length = 0;
 	}
 	gbcc_update_timers(gbc);
@@ -56,7 +56,7 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 
 void gbcc_update_timers(struct gbc *gbc)
 {
-	gbc->div_timer += 4u;
+	gbc->div_timer += 1u;
 	if (gbc->div_timer == 64u) {
 		gbcc_memory_increment(gbc, DIV, true);
 		gbc->div_timer = 0;
@@ -100,25 +100,20 @@ void gbcc_check_interrupts(struct gbc *gbc)
 	if (interrupt && gbc->ime) {
 		uint16_t addr;
 
-		if (interrupt & bit(0)) {
+		if (check_bit(interrupt, 0)) {
 			addr = INT_VBLANK;
-			//gbcc_log(GBCC_LOG_DEBUG, "VBLANK interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
-		} else if (interrupt & bit(1)) {
+		} else if (check_bit(interrupt, 1)) {
 			addr = INT_LCDSTAT;
-			//gbcc_log(GBCC_LOG_DEBUG, "LCDSTAT interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 1, true);
-		} else if (interrupt & bit(2)) {
+		} else if (check_bit(interrupt, 2)) {
 			addr = INT_TIMER;
-			//gbcc_log(GBCC_LOG_DEBUG, "TIMER interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 2, true);
-		} else if (interrupt & bit(3)) {
+		} else if (check_bit(interrupt, 3)) {
 			addr = INT_SERIAL;
-			//gbcc_log(GBCC_LOG_DEBUG, "SERIAL interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 3, true);
-		} else if (interrupt & bit(4)) {
+		} else if (check_bit(interrupt, 4)) {
 			addr = INT_JOYPAD;
-			//gbcc_log(GBCC_LOG_DEBUG, "JOYPAD interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 4, true);
 		} else {
 			gbcc_log(GBCC_LOG_ERROR, "False interrupt\n");
@@ -129,6 +124,10 @@ void gbcc_check_interrupts(struct gbc *gbc)
 		if (gbc->halt.set) {
 			gbcc_add_instruction_cycles(gbc, 4);
 		}
+		/* 
+		 * FIXME: EI instr. should take a full cycle to execute, but
+		 * here it gets done instantly.
+		 */
 		gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), true);
 		gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), true);
 		gbc->reg.pc = addr;

@@ -424,7 +424,7 @@ void ch3_update(struct gbc *gbc)
 		apu.ch3.buffer[apu.index] = 0;
 		return;
 	}
-	apu.ch3.buffer[apu.index] = (AUDIO_FMT)((apu.wave.buffer >> (apu.wave.shift - 1)) * BASE_AMPLITUDE);
+	apu.ch3.buffer[apu.index] = (AUDIO_FMT)((apu.wave.buffer >> (apu.wave.shift - 1u)) * BASE_AMPLITUDE);
 }
 
 void ch4_update(struct gbc *gbc)
