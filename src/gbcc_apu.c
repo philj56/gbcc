@@ -1,5 +1,5 @@
 #include "gbcc.h"
-#include "gbcc_audio.h"
+#include "gbcc_apu.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
@@ -104,7 +104,7 @@ static void time_sync(struct gbc *gbc);
 static uint64_t time_diff(const struct timespec *cur,
 		const struct timespec *old);
 
-void gbcc_audio_initialise(void)
+void gbcc_apu_init(void)
 {
 	if (SDL_Init(SDL_INIT_AUDIO) != 0) {
 		gbcc_log(GBCC_LOG_ERROR, "Failed to initialize SDL: %s\n", SDL_GetError());
@@ -157,7 +157,7 @@ void gbcc_audio_initialise(void)
 	SDL_PauseAudioDevice(apu.device, 0);
 }
 
-void gbcc_audio_update(struct gbc *gbc)
+void gbcc_apu_clock(struct gbc *gbc)
 {
 	if (gbc->keys.turbo) {
 		apu.start_time.tv_sec = 0;

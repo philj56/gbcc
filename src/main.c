@@ -1,5 +1,5 @@
 #include "gbcc.h"
-#include "gbcc_audio.h"
+#include "gbcc_apu.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
 #include "gbcc_save.h"
@@ -40,15 +40,15 @@ int main(int argc, char **argv)
 	gbc.initialised = false;
 	gbcc_initialise(&gbc, argv[1]);
 	window = gbcc_window_initialise(&gbc);
-	gbcc_audio_initialise();
+	gbcc_apu_init();
 	gbcc_load(&gbc);
 	gbc.initialised = true;
 
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);
-		if (gbc.save_state) {
+		if (gbc.save_state > 0) {
 			gbcc_save_state(&gbc);
-		} else if (gbc.load_state) {
+		} else if (gbc.load_state > 0) {
 			gbcc_load_state(&gbc);
 		}
 	}

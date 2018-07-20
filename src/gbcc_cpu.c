@@ -1,11 +1,11 @@
 #include "gbcc.h"
-#include "gbcc_audio.h"
+#include "gbcc_apu.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
 #include "gbcc_ops.h"
-#include "gbcc_video.h"
+#include "gbcc_ppu.h"
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
@@ -19,11 +19,16 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 {
 	gbc->clock += 4;
 	if (gbc->dma.timer > 0) {
-		gbc->dma.timer -= 4;
+		gbc->dma.timer--;
 		if (low_byte(gbc->dma.source) < OAM_SIZE) {
 			gbcc_memory_copy(gbc, gbc->dma.source, OAM_START + low_byte(gbc->dma.source), true);
 			gbc->dma.source++;
 		}
+	}
+	if (gbc->dma.requested) {
+		gbc->dma.timer = DMA_TIMER;
+		gbc->dma.requested = false;
+		gbc->dma.source = gbc->dma.new_source;
 	}
 	if (gbc->hdma.length > 0){
 		/* FIXME: Only general-purpose hdma for now */
@@ -38,20 +43,25 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 		gbc->hdma.length = 0;
 	}
 	gbcc_update_timers(gbc);
-	//if (gbc->instruction_timer == 0) {
 	gbcc_check_interrupts(gbc);
-	gbcc_video_update(gbc);
-	gbcc_audio_update(gbc);
-	//}
+	gbcc_ppu_clock(gbc);
+	gbcc_apu_clock(gbc);
 	if (gbc->halt.set || gbc->stop) {
 		return;
 	}
+	if (gbcc_op_fixed[gbc->opcode]) {
+		gbcc_ops[gbc->opcode](gbc);
+	}
 	if (gbc->instruction_timer == 0) {
 		gbcc_execute_instruction(gbc);
-		//printf("0x%04X\n", gbc->reg.pc);
-		//gbcc_log(GBCC_LOG_DEBUG, "pc: %04X\n", gbc->reg.pc);
+		if (gbc->rst.request) {
+			if (--gbc->rst.delay == 0) {
+				gbc->rst.request = 0;
+				gbc->reg.pc = gbc->rst.addr;
+			}
+		}
 	}
-	gbc->instruction_timer -= 4;
+	gbc->instruction_timer--;
 }
 
 void gbcc_update_timers(struct gbc *gbc)
@@ -120,9 +130,9 @@ void gbcc_check_interrupts(struct gbc *gbc)
 			addr = 0;
 		}
 
-		gbcc_add_instruction_cycles(gbc, 20);
+		gbcc_add_instruction_cycles(gbc, 5);
 		if (gbc->halt.set) {
-			gbcc_add_instruction_cycles(gbc, 4);
+			gbcc_add_instruction_cycles(gbc, 1);
 		}
 		/* 
 		 * FIXME: EI instr. should take a full cycle to execute, but
@@ -140,9 +150,12 @@ void gbcc_check_interrupts(struct gbc *gbc)
 void gbcc_execute_instruction(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
-	//gbcc_print_op(gbc);
+	/*printf("%04X\n", gbc->reg.pc);
+	printf("LY %d\n", gbcc_memory_read(gbc, LY, true));
+	printf("MODE %d\n", gbcc_memory_read(gbc, STAT, true) & 0x03u);
+	gbcc_print_op(gbc);
+	*/gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
 	gbcc_ops[gbc->opcode](gbc);
-	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)

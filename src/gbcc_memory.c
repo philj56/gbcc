@@ -144,7 +144,6 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool overrid
 			return;
 		}
 	}*/
-	//printf("Writing %02X to address %04X\n", val, addr);
 	if (addr < ROMX_END || (addr >= SRAM_START && addr < SRAM_END)) {
 		switch (gbc->cart.mbc.type) {
 			case NONE:
@@ -173,32 +172,23 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool overrid
 	}
 	if (addr >= VRAM_START && addr < VRAM_END) {
 		gbcc_vram_write(gbc, addr, val, override);
-		//printf("(VRAM).");
 	} else if (addr >= WRAM0_START && addr < WRAMX_END) {
 		gbcc_wram_write(gbc, addr, val, override);
-		//printf("(WRAM).");
 	} else if (addr >= ECHO_START && addr < ECHO_END) {
 		gbcc_echo_write(gbc, addr, val, override);
-		//printf("(ECHO).");
 	} else if (addr >= OAM_START && addr < OAM_END) {
 		gbcc_oam_write(gbc, addr, val, override);
-		//printf("(OAM).");
 	} else if (addr >= UNUSED_START && addr < UNUSED_END) {
 		gbcc_unused_write(gbc, addr, val, override);
-		//printf("(UNUSED).");
 	} else if (addr >= IOREG_START && addr < IOREG_END) {
 		gbcc_ioreg_write(gbc, addr, val, override);
-		//printf("(IOREG).");
 	} else if (addr >= HRAM_START && addr < HRAM_END) {
 		gbcc_hram_write(gbc, addr, val, override);
-		//printf("(HRAM).");
 	} else if (addr == IE) {
 		gbc->memory.iereg = val;
-		//printf("(IE).");
 	} else {
 		gbcc_log(GBCC_LOG_ERROR, "Writing to unknown memory address %04X.\n", addr);
 	}
-	//printf("\n");
 }
 
 uint8_t gbcc_vram_read(struct gbc *gbc, uint16_t addr, bool override)
@@ -337,8 +327,8 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		gbc->memory.ioreg[addr - IOREG_START] = 0;
 		gbc->div_timer = 0;
 	} else if (addr == DMA) {
-		gbc->dma.source = (uint16_t)(((uint16_t)val) << 8u);
-		gbc->dma.timer = DMA_TIMER;
+		gbc->dma.new_source = (uint16_t)(((uint16_t)val) << 8u);
+		gbc->dma.requested = true;
 	} else if (addr == JOYP) {
 		if (val & (1u << 5u)) {
 			gbc->memory.ioreg[addr - IOREG_START] |= 0x10u;
@@ -403,7 +393,7 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			gbcc_log(GBCC_LOG_DEBUG, "TODO: H-Blank DMA\n");
 		}
 	} else if (gbc->mode == GBC && addr == KEY1) {
-		gbcc_log(GBCC_LOG_DEBUG, "TODO: Double Speed\n");
+		gbc->memory.ioreg[addr - IOREG_START] = val & 0x01u;
 	} else {
 		gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
 	}
@@ -416,5 +406,8 @@ uint8_t gbcc_hram_read(struct gbc *gbc, uint16_t addr, bool override)
 
 void gbcc_hram_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 {
+	if (addr == 0xFFC8u) {
+		printf("Writing %u to 0x%04X\n", val, addr);
+	}
 	gbc->memory.hram[addr - HRAM_START] = val;
 }

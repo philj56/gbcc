@@ -79,7 +79,9 @@ struct gbc {
 	} halt;
 	struct {
 		uint16_t source;
+		uint16_t new_source;
 		uint16_t timer;
+		bool requested;
 	} dma;
 	struct {
 		uint16_t source;
@@ -87,6 +89,11 @@ struct gbc {
 		uint16_t length;
 		bool hblank;
 	} hdma;
+	struct {
+		uint16_t addr;
+		uint8_t delay;
+		bool request;
+	} rst;
 	bool stop;
 	uint8_t instruction_timer;
 	uint8_t div_timer;

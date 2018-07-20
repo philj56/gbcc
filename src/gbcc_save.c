@@ -63,15 +63,12 @@ void gbcc_load(struct gbc *gbc)
 void gbcc_save_state(struct gbc *gbc)
 {
 	unsigned int wram_mult;
-	unsigned int vram_mult;
 	switch (gbc->mode) {
 		case DMG:
 			wram_mult = 2;
-			vram_mult = 1;
 			break;
 		case GBC:
 			wram_mult = 8;
-			vram_mult = 2;
 			break;
 	}
 
@@ -100,7 +97,6 @@ void gbcc_save_state(struct gbc *gbc)
 void gbcc_load_state(struct gbc *gbc)
 {
 	unsigned int wram_mult;
-	unsigned int vram_mult;
 	uint8_t *emu_wram = gbc->memory.emu_wram;
 	uint8_t *rom = gbc->cart.rom;
 	uint8_t *ram = gbc->cart.ram;
@@ -108,11 +104,9 @@ void gbcc_load_state(struct gbc *gbc)
 	switch (gbc->mode) {
 		case DMG:
 			wram_mult = 2;
-			vram_mult = 1;
 			break;
 		case GBC:
 			wram_mult = 8;
-			vram_mult = 2;
 			break;
 	}
 

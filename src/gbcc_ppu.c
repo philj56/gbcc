@@ -2,7 +2,7 @@
 #include "gbcc_bit_utils.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
-#include "gbcc_video.h"
+#include "gbcc_ppu.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -18,7 +18,7 @@ static uint8_t gbcc_get_video_mode(struct gbc *gbc);
 static void gbcc_set_video_mode(struct gbc *gbc, uint8_t mode);
 static uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sprite);
 
-void gbcc_video_update(struct gbc *gbc)
+void gbcc_ppu_clock(struct gbc *gbc)
 {
 	uint8_t mode = gbcc_get_video_mode(gbc);
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
@@ -64,7 +64,7 @@ void gbcc_video_update(struct gbc *gbc)
 		} else if (clock == 8) {
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
 		}
-	} else if (ly == 154 ) {
+	} else if (ly == 154) {
 		gbcc_memory_write(gbc, LY, 0, true);
 		gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
 	}
@@ -163,6 +163,7 @@ void gbcc_draw_background_line(struct gbc *gbc)
 	}
 }
 
+/* TODO: Implement GBC tile attrs as for background */
 void gbcc_draw_window_line(struct gbc *gbc)
 {
 	uint8_t wy = gbcc_memory_read(gbc, WY, true);
@@ -201,7 +202,7 @@ void gbcc_draw_window_line(struct gbc *gbc)
 		uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 		uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 		uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-		gbc->memory.gbc_screen[GBC_SCREEN_WIDTH * ly + x] = get_palette_colour(gbc, palette, colour, false);
+		gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = get_palette_colour(gbc, palette, colour, false);
 	}
 }
 
