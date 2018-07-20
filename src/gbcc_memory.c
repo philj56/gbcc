@@ -321,7 +321,7 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 	uint8_t mask = ioreg_write_masks[addr - IOREG_START];
 	if (addr == SC) {
 		if (val & 0x80u) {
-			fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
+			//fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
 		}
 	} else if (addr == DIV) {
 		gbc->memory.ioreg[addr - IOREG_START] = 0;
@@ -372,15 +372,15 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		gbc->memory.ioreg[addr - IOREG_START] = bank;
 		gbc->memory.wramx = gbc->memory.wram_bank[bank];
 	} else if (gbc->mode == GBC && addr == HDMA1) {
-		gbc->memory.ioreg[addr - IOREG_START] = val & 0xF0u;
-	} else if (gbc->mode == GBC && addr == HDMA2) {
 		if (val < 0x80u || (val >= 0xA0u && val < 0xE0u)) {
 			gbc->memory.ioreg[addr - IOREG_START] = val;
 		}
-	} else if (gbc->mode == GBC && addr == HDMA3) {
+	} else if (gbc->mode == GBC && addr == HDMA2) {
 		gbc->memory.ioreg[addr - IOREG_START] = val & 0xF0u;
-	} else if (gbc->mode == GBC && addr == HDMA4) {
+	} else if (gbc->mode == GBC && addr == HDMA3) {
 		gbc->memory.ioreg[addr - IOREG_START] = (val & 0x1Fu) | 0x80u;
+	} else if (gbc->mode == GBC && addr == HDMA4) {
+		gbc->memory.ioreg[addr - IOREG_START] = val & 0xF0u;
 	} else if (gbc->mode == GBC && addr == HDMA5) {
 		uint8_t src_hi = gbc->memory.ioreg[HDMA1 - IOREG_START];
 		uint8_t src_lo = gbc->memory.ioreg[HDMA2 - IOREG_START];
@@ -406,8 +406,10 @@ uint8_t gbcc_hram_read(struct gbc *gbc, uint16_t addr, bool override)
 
 void gbcc_hram_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 {
+	/*
 	if (addr == 0xFFC8u) {
 		printf("Writing %u to 0x%04X\n", val, addr);
 	}
+	*/
 	gbc->memory.hram[addr - HRAM_START] = val;
 }
