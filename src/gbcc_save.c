@@ -1,5 +1,6 @@
 #include "gbcc.h"
 #include "gbcc_debug.h"
+#include "gbcc_memory.h"
 #include "gbcc_save.h"
 #include <errno.h>
 #include <stdio.h>
@@ -62,16 +63,6 @@ void gbcc_load(struct gbc *gbc)
 
 void gbcc_save_state(struct gbc *gbc)
 {
-	unsigned int wram_mult;
-	switch (gbc->mode) {
-		case DMG:
-			wram_mult = 2;
-			break;
-		case GBC:
-			wram_mult = 8;
-			break;
-	}
-
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
 	FILE *sav;
@@ -90,25 +81,16 @@ void gbcc_save_state(struct gbc *gbc)
 	gbc->save_state = 0;
 	gbc->load_state = 0;
 	fwrite(gbc, sizeof(struct gbc), 1, sav);
-	fwrite(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, sav);
 	fclose(sav);
 }
 
 void gbcc_load_state(struct gbc *gbc)
 {
-	unsigned int wram_mult;
-	uint8_t *emu_wram = gbc->memory.emu_wram;
 	uint8_t *rom = gbc->cart.rom;
 	uint8_t *ram = gbc->cart.ram;
+	uint8_t wram_bank;
+	uint8_t vram_bank;
 	const char *name = gbc->cart.filename;
-	switch (gbc->mode) {
-		case DMG:
-			wram_mult = 2;
-			break;
-		case GBC:
-			wram_mult = 8;
-			break;
-	}
 
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
@@ -128,24 +110,33 @@ void gbcc_load_state(struct gbc *gbc)
 		return;
 	}
 	fread(gbc, sizeof(struct gbc), 1, sav);
-	gbc->memory.emu_wram = emu_wram;
 	/* FIXME: Thread-unsafe, screen could try to read from here while the
 	 * pointer is still invalid */
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
-	fread(gbc->memory.emu_wram, WRAM0_SIZE * wram_mult, 1, sav);
 	fclose(sav);
 
 	gbc->cart.rom = rom;
 	gbc->cart.ram = ram;
 	gbc->cart.filename = name;
 
+	switch (gbc->mode) {
+		case DMG:
+			wram_bank = 1;
+			vram_bank = 0;
+			break;
+		case GBC:
+			wram_bank = gbcc_memory_read(gbc, SVBK, true);
+			vram_bank = gbcc_memory_read(gbc, VBK, true);
+			break;
+	}
+
 	gbc->memory.romx = gbc->cart.rom + (gbc->memory.romx - gbc->memory.rom0);
 	gbc->memory.rom0 = gbc->cart.rom;
-	gbc->memory.vram = gbc->memory.vram_bank0;
+	gbc->memory.vram = gbc->memory.vram_bank[vram_bank];
 	gbc->memory.sram = gbc->cart.ram;
-	gbc->memory.wramx = gbc->memory.emu_wram + (gbc->memory.wramx - gbc->memory.wram0);
-	gbc->memory.wram0 = gbc->memory.emu_wram;
+	gbc->memory.wram0 = gbc->memory.wram_bank[0];
+	gbc->memory.wramx = gbc->memory.wram_bank[wram_bank];
 	gbc->memory.echo = gbc->memory.wram0;
 	
 	gbc->keys.a = false;

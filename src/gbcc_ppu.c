@@ -127,13 +127,13 @@ void gbcc_draw_background_line(struct gbc *gbc)
 			uint8_t tx = ((scx + x) / 8u) % 32u;
 			uint8_t xoff = (scx + x) % 8u;
 			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
-			uint8_t attr = gbc->memory.vram_bank1[map + 32 * ty + tx - VRAM_START];
+			uint8_t attr = gbc->memory.vram_bank[1][map + 32 * ty + tx - VRAM_START];
 			uint8_t *vbk;
 			uint16_t tile_addr;
 			if (check_bit(attr, 3)) {
-				vbk = gbc->memory.vram_bank1;
+				vbk = gbc->memory.vram_bank[1];
 			} else {
-				vbk = gbc->memory.vram_bank0;
+				vbk = gbc->memory.vram_bank[0];
 			}
 			/* TODO: Put this somewhere better */
 			if (check_bit(lcdc, 4)) {
@@ -233,10 +233,10 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 		uint8_t *vram_bank;
 		switch (gbc->mode) {
 			case DMG:
-				vram_bank = gbc->memory.vram_bank0;
+				vram_bank = gbc->memory.vram_bank[0];
 				break;
 			case GBC:
-				vram_bank = attr & bit(3) ? gbc->memory.vram_bank1 : gbc->memory.vram_bank0;
+				vram_bank = attr & bit(3) ? gbc->memory.vram_bank[1] : gbc->memory.vram_bank[0];
 				break;
 		}
 		if (ly < sy - 16 || ly >= sy) {

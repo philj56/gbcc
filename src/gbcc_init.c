@@ -78,7 +78,6 @@ void gbcc_free(struct gbc *gbc)
 	if (gbc->cart.ram_size > 0) {
 		free(gbc->cart.ram);
 	}
-	free(gbc->memory.emu_wram);
 }
 
 void gbcc_load_rom(struct gbc *gbc, const char *filename)
@@ -432,29 +431,12 @@ void gbcc_init_registers(struct gbc *gbc) {
 
 void gbcc_init_mmap(struct gbc *gbc)
 {
-	unsigned int wram_mult;
-	
-	switch (gbc->mode) {
-		case DMG:
-			wram_mult = 2;
-			break;
-		case GBC:
-			wram_mult = 8;
-			break;
-	}
-
-	gbc->memory.emu_wram = (uint8_t *) calloc(WRAM0_SIZE * wram_mult, 1);
-	if (gbc->memory.emu_wram == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Error allocating WRAM.\n");
-		exit(EXIT_FAILURE);
-	}
-
 	gbc->memory.rom0 = gbc->cart.rom;
 	gbc->memory.romx = gbc->cart.rom + ROM0_SIZE;
-	gbc->memory.vram = gbc->memory.vram_bank0;
+	gbc->memory.vram = gbc->memory.vram_bank[0];
 	gbc->memory.sram = gbc->cart.ram;
-	gbc->memory.wram0 = gbc->memory.emu_wram;
-	gbc->memory.wramx = gbc->memory.emu_wram + WRAM0_SIZE;
+	gbc->memory.wram0 = gbc->memory.wram_bank[0];
+	gbc->memory.wramx = gbc->memory.wram_bank[1];
 	gbc->memory.echo = gbc->memory.wram0;
 }
 
