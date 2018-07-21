@@ -365,13 +365,25 @@ void gbcc_init_ram(struct gbc *gbc)
 			}
 			break;
 		case 0x01u:
-			gbc->cart.ram_size = 0x0800u;
+			if (gbc->cart.mbc.type == MBC5) {
+				gbc->cart.ram_size = 0x2000u;
+			} else {
+				gbc->cart.ram_size = 0x0800u;
+			}
 			break;
 		case 0x02u:
-			gbc->cart.ram_size = 0x2000u;
+			if (gbc->cart.mbc.type == MBC5) {
+				gbc->cart.ram_size = 0x8000u;
+			} else {
+				gbc->cart.ram_size = 0x2000u;
+			}
 			break;
 		case 0x03u:
-			gbc->cart.ram_size = 0x8000u;
+			if (gbc->cart.mbc.type == MBC5) {
+				gbc->cart.ram_size = 0x20000u;
+			} else {
+				gbc->cart.ram_size = 0x8000u;
+			}
 			break;
 		default:
 			gbcc_log(GBCC_LOG_ERROR, "Unknown ram size flag: %u\n", ram_size_flag);
