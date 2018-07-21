@@ -303,19 +303,6 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 			gbc->cart.battery = true;
 			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC3 + RAM + Battery\n");
 			break;
-		case 0x15u:	/* MBC4 */
-			gbc->cart.mbc.type = MBC4;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC4\n");
-			break;
-		case 0x16u:	/* MBC4 + RAM */
-			gbc->cart.mbc.type = MBC4;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC4 + RAM\n");
-			break;
-		case 0x17u:	/* MBC4 + RAM + BATTERY */
-			gbc->cart.mbc.type = MBC4;
-			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC4 + RAM + Battery\n");
-			break;
 		case 0x19u:	/* MBC5 */
 			gbc->cart.mbc.type = MBC5;
 			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5\n");
@@ -395,7 +382,7 @@ void gbcc_init_ram(struct gbc *gbc)
 	}*/
 
 	if (gbc->cart.ram_size > 0) {
-		gbcc_log(GBCC_LOG_INFO, "\tCartridge RAM: %lu bytes\n", gbc->cart.ram_size);
+		gbcc_log(GBCC_LOG_INFO, "\tCartridge RAM: 0x%0X bytes\n", gbc->cart.ram_size);
 		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
 		if (gbc->cart.ram == NULL) {
 			gbcc_log(GBCC_LOG_ERROR, "Error allocating RAM.\n");

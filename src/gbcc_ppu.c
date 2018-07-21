@@ -411,5 +411,5 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sp
 	red = (double)red / 0x1Fu * 0xFFu;
 	green = (double)green / 0x1Fu * 0xFFu;
 	blue = (double)blue / 0x1Fu * 0xFFu;
-	return (red << 16u) | (green << 8u) | blue;
+	return (uint32_t)((uint32_t)(red << 16u) | (uint32_t)(green << 8u)) | blue;
 }

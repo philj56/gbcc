@@ -101,8 +101,6 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr, bool override)
 				return gbcc_mbc_mbc2_read(gbc, addr);
 			case MBC3:
 				return gbcc_mbc_mbc3_read(gbc, addr);
-			case MBC4:
-				return gbcc_mbc_mbc4_read(gbc, addr);
 			case MBC5:
 				return gbcc_mbc_mbc5_read(gbc, addr);
 			case MMM01:
@@ -157,9 +155,6 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool overrid
 				break;
 			case MBC3:
 				gbcc_mbc_mbc3_write(gbc, addr, val);
-				break;
-			case MBC4:
-				gbcc_mbc_mbc4_write(gbc, addr, val);
 				break;
 			case MBC5:
 				gbcc_mbc_mbc5_write(gbc, addr, val);

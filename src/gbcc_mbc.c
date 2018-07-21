@@ -154,13 +154,6 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	}
 }
 
-uint8_t gbcc_mbc_mbc4_read(struct gbc *gbc, uint16_t addr) {
-	return 0xFFu;
-}
-
-void gbcc_mbc_mbc4_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
-}
-
 uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr) {
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
@@ -192,13 +185,13 @@ void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 			gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
 		}
 	} else if (addr < 0x2000u) {
-		gbc->cart.mbc.sram_enable = ((val & 0x0Au) == 0x0Au);
+		gbc->cart.mbc.sram_enable = ((val & 0x0Fu) == 0x0Au);
 	} else if (addr < 0x3000u) {
 		gbc->cart.mbc.romx_bank &= ~0x00FFu;
 		gbc->cart.mbc.romx_bank |= val;
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
-	} else if (addr < 4000u) {
-		gbc->cart.mbc.romx_bank &= 0x0100u;
+	} else if (addr < 0x4000u) {
+		gbc->cart.mbc.romx_bank &= ~0x0100u;
 		gbc->cart.mbc.romx_bank |= (val & 0x01u) << 8u;
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 	} else if (addr < 0x6000u) {
