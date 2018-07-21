@@ -81,6 +81,9 @@ void gbcc_save_state(struct gbc *gbc)
 	gbc->save_state = 0;
 	gbc->load_state = 0;
 	fwrite(gbc, sizeof(struct gbc), 1, sav);
+	if (gbc->cart.ram_size > 0) {
+		fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, sav);
+	}
 	fclose(sav);
 }
 
@@ -114,11 +117,14 @@ void gbcc_load_state(struct gbc *gbc)
 	 * pointer is still invalid */
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
-	fclose(sav);
 
 	gbc->cart.rom = rom;
 	gbc->cart.ram = ram;
 	gbc->cart.filename = name;
+	
+	if (gbc->cart.ram_size > 0) {
+		fread(gbc->cart.ram, 1, gbc->cart.ram_size, sav);
+	}
 
 	switch (gbc->mode) {
 		case DMG:
@@ -148,6 +154,7 @@ void gbcc_load_state(struct gbc *gbc)
 	gbc->keys.dpad.left = false;
 	gbc->keys.dpad.right = false;
 	gbc->keys.turbo = false;
+	fclose(sav);
 }
 
 void strip_ext(char *fname)
