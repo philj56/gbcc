@@ -476,6 +476,7 @@ void gbcc_init_ioreg(struct gbc *gbc)
 	gbc->memory.ioreg[OBP1 - IOREG_START] = 0xFFu;
 	gbc->memory.ioreg[WY - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[WX - IOREG_START] = 0x00u;
+	gbc->memory.ioreg[HDMA5 - IOREG_START] = 0x80u;
 	gbc->memory.iereg = 0x00u;
 	for (size_t i = 0; i < sizeof(gbc->memory.bgp)/sizeof(gbc->memory.bgp[0]); i++) {
 		gbc->memory.bgp[i] = 0xFFu;
