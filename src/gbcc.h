@@ -12,6 +12,10 @@
 #define LITTLE_ENDIAN
 #endif
 
+struct line_buffer {
+	uint32_t colour[GBC_SCREEN_WIDTH];
+	uint8_t attr[GBC_SCREEN_WIDTH];
+};
 
 struct gbc {
 	/* Registers */
@@ -129,6 +133,9 @@ struct gbc {
 		uint8_t vram_bank[2][VRAM_SIZE]; 	/* Actual location of VRAM */
 		uint32_t screen_buffer_0[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
 		uint32_t screen_buffer_1[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
+		struct line_buffer background_buffer;
+		struct line_buffer window_buffer;
+		struct line_buffer sprite_buffer;
 		uint32_t *gbc_screen;
 		uint32_t *sdl_screen;
 	} memory;

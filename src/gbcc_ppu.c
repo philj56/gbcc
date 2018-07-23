@@ -10,10 +10,22 @@
 #define BACKGROUND_MAP_BANK_2 0x9C00u
 #define NUM_SPRITES 40
 
+/* 
+ * Guide to line buffer attribute bits:
+ * 0 - is this pixel being drawn?
+ * 1 - is this colour 0?
+ * 2 - priority bit
+ */
+
+#define ATTR_DRAWN (bit(0))
+#define ATTR_COLOUR0 (bit(1))
+#define ATTR_PRIORITY (bit(2))
+
 static void gbcc_draw_line(struct gbc *gbc);
 static void gbcc_draw_background_line(struct gbc *gbc);
 static void gbcc_draw_window_line(struct gbc *gbc);
 static void gbcc_draw_sprite_line(struct gbc *gbc);
+static void gbcc_composite_line(struct gbc *gbc);
 static uint8_t gbcc_get_video_mode(struct gbc *gbc);
 static void gbcc_set_video_mode(struct gbc *gbc, uint8_t mode);
 static uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sprite);
@@ -75,9 +87,15 @@ void gbcc_draw_line(struct gbc *gbc)
 	if (gbcc_memory_read(gbc, LY, true) > GBC_SCREEN_HEIGHT) {
 		return;
 	}
+	for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
+		gbc->memory.background_buffer.attr[x] = 0;
+		gbc->memory.window_buffer.attr[x] = 0;
+		gbc->memory.sprite_buffer.attr[x] = 0;
+	}
 	gbcc_draw_background_line(gbc);
 	gbcc_draw_window_line(gbc);
 	gbcc_draw_sprite_line(gbc);
+	gbcc_composite_line(gbc);
 }
 
 /* TODO: GBC BG-to-OAM Priority */
@@ -120,7 +138,11 @@ void gbcc_draw_background_line(struct gbc *gbc)
 			uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 			uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 			uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = get_palette_colour(gbc, palette, colour, false);
+			gbc->memory.background_buffer.colour[x] = get_palette_colour(gbc, palette, colour, false);
+			gbc->memory.background_buffer.attr[x] |= ATTR_DRAWN;
+			if (colour == 0) {
+				gbc->memory.background_buffer.attr[x] |= ATTR_COLOUR0;
+			}
 		}
 	} else {
 		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
@@ -158,7 +180,14 @@ void gbcc_draw_background_line(struct gbc *gbc)
 			} else {
 				colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 			}
-			gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = get_palette_colour(gbc, attr & 0x07u, colour, false);
+			gbc->memory.background_buffer.colour[x] = get_palette_colour(gbc, attr & 0x07u, colour, false);
+			gbc->memory.background_buffer.attr[x] |= ATTR_DRAWN;
+			if (colour == 0) {
+				gbc->memory.background_buffer.attr[x] |= ATTR_COLOUR0;
+			}
+			if (check_bit(attr, 7)) {
+				gbc->memory.background_buffer.attr[x] |= ATTR_PRIORITY;
+			}
 		}
 	}
 }
@@ -172,7 +201,7 @@ void gbcc_draw_window_line(struct gbc *gbc)
 	uint8_t palette = gbcc_memory_read(gbc, BGP, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 
-	if (ly < wy || !check_bit(lcdc, 5)) {
+	if (ly < wy || !check_bit(lcdc, 5) || (gbc->mode == DMG && !check_bit(lcdc, 0))) {
 		return;
 	}
 
@@ -203,7 +232,11 @@ void gbcc_draw_window_line(struct gbc *gbc)
 			uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 			uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 			uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = get_palette_colour(gbc, palette, colour, false);
+			gbc->memory.window_buffer.colour[x] = get_palette_colour(gbc, palette, colour, false);
+			gbc->memory.window_buffer.attr[x] |= ATTR_DRAWN;
+			if (colour == 0) {
+				gbc->memory.window_buffer.attr[x] |= ATTR_COLOUR0;
+			}
 		}
 	} else {
 		for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
@@ -244,7 +277,14 @@ void gbcc_draw_window_line(struct gbc *gbc)
 			} else {
 				colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 			}
-			gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = get_palette_colour(gbc, attr & 0x07u, colour, false);
+			gbc->memory.window_buffer.colour[x] = get_palette_colour(gbc, attr & 0x07u, colour, false);
+			gbc->memory.window_buffer.attr[x] |= ATTR_DRAWN;
+			if (colour == 0) {
+				gbc->memory.window_buffer.attr[x] |= ATTR_COLOUR0;
+			}
+			if (check_bit(attr, 7)) {
+				gbc->memory.window_buffer.attr[x] |= ATTR_PRIORITY;
+			}
 		}
 	}
 }
@@ -257,7 +297,6 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 	 */
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
-	uint32_t bg0 = get_palette_colour(gbc, gbcc_memory_read(gbc, BGP, true), 0, false);
 	if (!check_bit(lcdc, 1)) {
 		return;
 	}
@@ -351,11 +390,61 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 				screen_x = sx + x - 8;
 			}
 			if (screen_x < GBC_SCREEN_WIDTH) {
-				if (check_bit(attr, 7) && gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + screen_x] != bg0) {
+				/*if (check_bit(attr, 7) && gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + screen_x] != bg0) {
+					if ((gbc->mode == GBC && check_bit(lcdc, 0))) {
+						continue;
+					}
+				}*/
+				gbc->memory.sprite_buffer.colour[screen_x] = get_palette_colour(gbc, palette, colour, true);
+				gbc->memory.sprite_buffer.attr[screen_x] |= ATTR_DRAWN;
+				if (check_bit(attr, 7)) {
+					gbc->memory.sprite_buffer.attr[screen_x] |= ATTR_PRIORITY;
+				}
+			}
+		}
+	}
+}
+
+void gbcc_composite_line(struct gbc *gbc)
+{
+	uint8_t ly = gbcc_memory_read(gbc, LY, true);
+	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
+	uint8_t bg_attr;
+	uint8_t win_attr;
+	uint8_t ob_attr;
+	uint16_t pixel;
+	for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
+		pixel = ly * GBC_SCREEN_WIDTH + x;
+
+		bg_attr = gbc->memory.background_buffer.attr[x];
+		win_attr = gbc->memory.window_buffer.attr[x];
+		ob_attr = gbc->memory.sprite_buffer.attr[x];
+		if (bg_attr & ATTR_DRAWN) {
+			gbc->memory.gbc_screen[pixel] = gbc->memory.background_buffer.colour[x];
+		}
+
+		if (win_attr & ATTR_DRAWN) {
+			gbc->memory.gbc_screen[pixel] = gbc->memory.window_buffer.colour[x];
+		}
+
+		if (ob_attr & ATTR_DRAWN) {
+			if ((win_attr & ATTR_DRAWN)) {
+				if (win_attr & ATTR_PRIORITY) {
 					continue;
 				}
-				gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + screen_x] = get_palette_colour(gbc, palette, colour, true);
+				if (!(win_attr & ATTR_COLOUR0) && (ob_attr & ATTR_PRIORITY)) {
+					continue;
+				}
 			}
+			if ((bg_attr & ATTR_DRAWN)) {
+				if (bg_attr & ATTR_PRIORITY) {
+					continue;
+				}
+				if (!(bg_attr & ATTR_COLOUR0) && (ob_attr & ATTR_PRIORITY)) {
+					continue;
+				}
+			}
+			gbc->memory.gbc_screen[pixel] = gbc->memory.sprite_buffer.colour[x];
 		}
 	}
 }
