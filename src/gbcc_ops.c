@@ -192,6 +192,7 @@ void STOP(struct gbc *gbc)
 		gbcc_memory_clear_bit(gbc, KEY1, 0, true);
 		/* TODO: Speed switch */
 		gbcc_log(GBCC_LOG_DEBUG, "TODO: Double Speed\n");
+		gbcc_memory_set_bit(gbc, KEY1, 7, true);
 		gbc->stop = false;
 	}
 	gbcc_fetch_instruction(gbc); /* Discard next byte */

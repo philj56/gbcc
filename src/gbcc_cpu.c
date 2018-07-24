@@ -155,9 +155,9 @@ void gbcc_execute_instruction(struct gbc *gbc)
 	printf("MODE %d\n", gbcc_memory_read(gbc, STAT, true) & 0x03u);
 	*/
 	//gbcc_print_op(gbc);
-	//gbcc_print_registers(gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
 	gbcc_ops[gbc->opcode](gbc);
+	//gbcc_print_registers(gbc);
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)

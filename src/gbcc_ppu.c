@@ -192,7 +192,6 @@ void gbcc_draw_background_line(struct gbc *gbc)
 	}
 }
 
-/* TODO: Implement GBC tile attrs as for background */
 void gbcc_draw_window_line(struct gbc *gbc)
 {
 	uint8_t wy = gbcc_memory_read(gbc, WY, true);
@@ -390,11 +389,6 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 				screen_x = sx + x - 8;
 			}
 			if (screen_x < GBC_SCREEN_WIDTH) {
-				/*if (check_bit(attr, 7) && gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + screen_x] != bg0) {
-					if ((gbc->mode == GBC && check_bit(lcdc, 0))) {
-						continue;
-					}
-				}*/
 				gbc->memory.sprite_buffer.colour[screen_x] = get_palette_colour(gbc, palette, colour, true);
 				gbc->memory.sprite_buffer.attr[screen_x] |= ATTR_DRAWN;
 				if (check_bit(attr, 7)) {
