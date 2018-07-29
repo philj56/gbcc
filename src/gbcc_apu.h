@@ -3,7 +3,7 @@
 
 #include "gbcc.h"
 
-void gbcc_apu_init(void);
+void gbcc_apu_init(struct gbc *gbc);
 void gbcc_apu_clock(struct gbc *gbc);
 
 #endif /* GBCC_AUDIO_H */

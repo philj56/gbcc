@@ -11,7 +11,6 @@ struct gbcc_window {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
-	SDL_mutex *mutex;
 	uint32_t buffer[GBC_SCREEN_WIDTH * GBC_SCREEN_HEIGHT];
 	bool quit;
 	char padding[7]; /* TODO: remove */

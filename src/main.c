@@ -1,5 +1,6 @@
 #include "gbcc.h"
 #include "gbcc_apu.h"
+#include "gbcc_audio.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
 #include "gbcc_save.h"
@@ -11,7 +12,6 @@
 #include <time.h>
 
 static struct gbc gbc;
-static struct gbcc_window *window;
 
 static void quit(int sig);
 
@@ -39,8 +39,9 @@ int main(int argc, char **argv)
 	/* FIXME: shouldn't have to do this */
 	gbc.initialised = false;
 	gbcc_initialise(&gbc, argv[1]);
-	window = gbcc_window_initialise(&gbc);
-	gbcc_apu_init();
+	gbcc_window_initialise(&gbc);
+	gbcc_apu_init(&gbc);
+	gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
 	gbc.initialised = true;
 
