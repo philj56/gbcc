@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_apu.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_constants.h"
 #include "gbcc_debug.h"
@@ -70,6 +71,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbcc_init_mmap(gbc);
 	gbcc_init_ioreg(gbc);
 	gbcc_init_input(gbc);
+	gbcc_apu_init(gbc);
 }
 
 void gbcc_free(struct gbc *gbc)

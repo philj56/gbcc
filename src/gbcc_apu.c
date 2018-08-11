@@ -7,11 +7,8 @@
 #include <time.h>
 
 #define NANOSECOND 1000000000lu
-#define BASE_AMPLITUDE (UINT16_MAX / 8 / 0x0F)
 #define SAMPLE_RATE 48000
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
-#define BUFSIZE 512 /* samples */
-#define AUDIO_FMT Uint16
 #define SLEEP_TIME (NANOSECOND / SAMPLE_RATE)
 #define SEQUENCER_CLOCKS 8192
 #define TIMER_RESTART (3600 * SAMPLE_RATE) /* restart after x samples */

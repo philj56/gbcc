@@ -7,21 +7,14 @@
 #include <stdint.h>
 #include <time.h>
 
-#define NANOSECOND 1000000000lu
 #define BASE_AMPLITUDE (UINT16_MAX / 8 / 0x0F)
 #define SAMPLE_RATE 48000
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
-#define SLEEP_TIME (NANOSECOND / SAMPLE_RATE)
-#define SLEEP_DETECT NANOSECOND
 
-static int audio_thread_function(void *_audio);
 static void ch1_update(struct gbcc_audio *audio);
 static void ch2_update(struct gbcc_audio *audio);
 static void ch3_update(struct gbcc_audio *audio);
 static void ch4_update(struct gbcc_audio *audio);
-static void time_sync(struct gbcc_audio *audio);
-static uint64_t time_diff(const struct timespec *cur,
-		const struct timespec *old);
 
 struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc)
 {
@@ -44,6 +37,7 @@ struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc)
 	want.callback = NULL;
 	want.userdata = NULL;
 
+	audio->sample_clock = 0;
 	audio->device = SDL_OpenAudioDevice(NULL, 0, &want, &audio->audiospec, 0);
 	if (audio->device == 0) {
 		gbcc_log(GBCC_LOG_ERROR, "Failed to open audio: %s\n", SDL_GetError());
@@ -54,26 +48,18 @@ struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc)
 		exit(EXIT_FAILURE);
 	}
 	
-	audio->thread = SDL_CreateThread(
-			audio_thread_function, 
-			"AudioThread", 
-			(void *)(audio));
-
-	if (audio->thread == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Error creating audio thread: %s\n", SDL_GetError());
-		exit(EXIT_FAILURE);
-	}
+	clock_gettime(CLOCK_REALTIME, &audio->start_time);
 	SDL_PauseAudioDevice(audio->device, 0);
 	return audio;
 }
 
-int audio_thread_function(void *_audio)
+void gbcc_audio_update(struct gbcc_audio *audio)
 {
-	struct gbcc_audio *audio = (struct gbcc_audio *)_audio;
-
-	clock_gettime(CLOCK_REALTIME, &audio->start_time);
-	while (!audio->quit) {
-		time_sync(audio);
+	if (audio->gbc->keys.turbo) {
+		return;
+	}
+	if (audio->gbc->clock - audio->sample_clock > CLOCKS_PER_SAMPLE) {
+		audio->sample_clock = audio->gbc->clock;
 		audio->mix_buffer[audio->index] = 0;
 		ch1_update(audio);
 		ch2_update(audio);
@@ -86,8 +72,6 @@ int audio_thread_function(void *_audio)
 			SDL_QueueAudio(audio->device, audio->mix_buffer, GBCC_AUDIO_BUFSIZE * sizeof(GBCC_AUDIO_FMT));
 		}
 	}
-
-	return 0;
 }
 
 void ch1_update(struct gbcc_audio *audio)
@@ -123,41 +107,4 @@ void ch4_update(struct gbcc_audio *audio)
 	}
 	uint8_t volume = audio->gbc->apu.ch4.envelope.volume;
 	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(audio->gbc->apu.ch4.state * volume * BASE_AMPLITUDE);
-}
-
-void time_sync(struct gbcc_audio *audio)
-{
-	clock_gettime(CLOCK_REALTIME, &audio->cur_time);
-	uint64_t diff = time_diff(&audio->cur_time, &audio->start_time);
-	if (diff > SLEEP_DETECT + (NANOSECOND * audio->sample) / SAMPLE_RATE) {
-		const struct timespec time = {.tv_sec = 2, .tv_nsec = 0};
-		nanosleep(&time, NULL);
-		audio->start_time.tv_sec = 0;
-		audio->sample = 0;
-		return;
-	}
-	while (diff < (NANOSECOND * audio->sample) / SAMPLE_RATE) {
-		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
-		nanosleep(&time, NULL);
-		clock_gettime(CLOCK_REALTIME, &audio->cur_time);
-		diff = time_diff(&audio->cur_time, &audio->start_time);
-	}
-}
-
-uint64_t time_diff(const struct timespec * const cur,
-		const struct timespec * const old)
-{
-	uint64_t sec = (uint64_t)(cur->tv_sec - old->tv_sec);
-	uint64_t nsec;
-	if (sec == 0) {
-		nsec = (uint64_t)(cur->tv_nsec - old->tv_nsec);
-		return nsec;
-	}
-	nsec = NANOSECOND * sec;
-	if (old->tv_nsec > cur->tv_nsec) {
-		nsec -= (uint64_t)(old->tv_nsec - cur->tv_nsec);
-	} else {
-		nsec += (uint64_t)(cur->tv_nsec - old->tv_nsec);
-	}
-	return nsec;
 }

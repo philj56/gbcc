@@ -40,8 +40,7 @@ int main(int argc, char **argv)
 	gbc.initialised = false;
 	gbcc_initialise(&gbc, argv[1]);
 	gbcc_window_initialise(&gbc);
-	gbcc_apu_init(&gbc);
-	gbcc_audio_initialise(&gbc);
+	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
 	gbc.initialised = true;
 
@@ -52,6 +51,7 @@ int main(int argc, char **argv)
 		} else if (gbc.load_state > 0) {
 			gbcc_load_state(&gbc);
 		}
+		gbcc_audio_update(audio);
 	}
 	//gbcc_vram_dump(&gbc, "vram.dump");
 	gbcc_save(&gbc);
