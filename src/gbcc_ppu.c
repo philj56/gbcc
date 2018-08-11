@@ -1,5 +1,6 @@
 #include "gbcc.h"
 #include "gbcc_bit_utils.h"
+#include "gbcc_colour.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
 #include "gbcc_ppu.h"
@@ -490,9 +491,10 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sp
 	}
 	uint8_t red = lo & 0x1Fu;
 	uint8_t green = ((lo & 0xE0u) >> 5u) | ((hi & 0x03u) << 3u);
-	uint8_t blue = hi & 0x7Cu >> 2u;
-	red = (double)red / 0x1Fu * 0xFFu;
-	green = (double)green / 0x1Fu * 0xFFu;
-	blue = (double)blue / 0x1Fu * 0xFFu;
-	return (uint32_t)((uint32_t)(red << 16u) | (uint32_t)(green << 8u)) | blue;
+	uint8_t blue = (hi & 0x7Cu) >> 2u;
+	//red = (double)red / 0x1Fu * 0xFFu;
+	//green = (double)green / 0x1Fu * 0xFFu;
+	//blue = (double)blue / 0x1Fu * 0xFFu;
+	//return (uint32_t)((uint32_t)(red << 16u) | (uint32_t)(green << 8u)) | blue;
+	return gbcc_lerp_colour(red, green, blue);
 }

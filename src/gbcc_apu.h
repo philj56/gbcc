@@ -1,9 +1,9 @@
 #ifndef GBCC_APU_H
 #define GBCC_APU_H
 
-#include<stdbool.h>
-#include<stdint.h>
-#include<time.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <time.h>
 
 struct gbc;
 
