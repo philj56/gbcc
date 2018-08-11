@@ -427,12 +427,12 @@ void gbcc_composite_line(struct gbc *gbc)
 				if (win_attr & ATTR_PRIORITY) {
 					continue;
 				}
-				if (!(win_attr & ATTR_COLOUR0) && (ob_attr & ATTR_PRIORITY)) {
+				if (ob_attr & ATTR_PRIORITY) {
 					continue;
 				}
 			}
 			if ((bg_attr & ATTR_DRAWN)) {
-				if (bg_attr & ATTR_PRIORITY) {
+				if (bg_attr & ATTR_PRIORITY && !(bg_attr & ATTR_COLOUR0)) {
 					continue;
 				}
 				if (!(bg_attr & ATTR_COLOUR0) && (ob_attr & ATTR_PRIORITY)) {
