@@ -1,6 +1,7 @@
 #include "gbcc.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_debug.h"
+#include "gbcc_hdma.h"
 #include "gbcc_mbc.h"
 #include "gbcc_memory.h"
 #include <stdio.h>
@@ -383,8 +384,8 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		gbc->hdma.source = cat_bytes(src_lo, src_hi);
 		gbc->hdma.dest = cat_bytes(dst_lo, dst_hi);
 		gbc->hdma.length = ((val & 0x7Fu) + 1u) * 0x10u;
-		if (check_bit(val, 7)) {
-			gbcc_log(GBCC_LOG_DEBUG, "TODO: H-Blank DMA\n");
+		if (!check_bit(val, 7)) {
+			gbcc_hdma_copy(gbc);
 		}
 	} else if (gbc->mode == GBC && addr == KEY1) {
 		gbc->memory.ioreg[addr - IOREG_START] = val & 0x01u;

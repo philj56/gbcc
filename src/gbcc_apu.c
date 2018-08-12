@@ -64,6 +64,7 @@ void gbcc_apu_init(struct gbc *gbc)
 
 void gbcc_apu_clock(struct gbc *gbc)
 {
+	gbc->apu_clock += 4;
 	if (gbc->apu.start_time.tv_sec == 0) {
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 	}
@@ -105,8 +106,8 @@ void gbcc_apu_clock(struct gbc *gbc)
 		gbc->apu.wave.buffer >>= 4u * gbc->apu.wave.nibble;
 	}
 
-	uint64_t clocks = gbc->clock - gbc->apu.sample_clock;
-	if (!(gbc->clock % SEQUENCER_CLOCKS)) {
+	uint64_t clocks = gbc->apu_clock - gbc->apu.sample_clock;
+	if (!(gbc->apu_clock % SEQUENCER_CLOCKS)) {
 		sequencer_clock(gbc);
 	}
 	if (clocks >= CLOCKS_PER_SAMPLE) {
@@ -116,7 +117,7 @@ void gbcc_apu_clock(struct gbc *gbc)
 		} else {
 			time_sync(gbc);
 		}
-		gbc->apu.sample_clock = gbc->clock;
+		gbc->apu.sample_clock = gbc->apu_clock;
 		gbc->apu.sample++;
 	}
 }

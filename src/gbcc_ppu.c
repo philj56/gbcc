@@ -2,6 +2,7 @@
 #include "gbcc_bit_utils.h"
 #include "gbcc_colour.h"
 #include "gbcc_debug.h"
+#include "gbcc_hdma.h"
 #include "gbcc_memory.h"
 #include "gbcc_ppu.h"
 #include <math.h>
@@ -22,21 +23,22 @@
 #define ATTR_COLOUR0 (bit(1))
 #define ATTR_PRIORITY (bit(2))
 
-static void gbcc_draw_line(struct gbc *gbc);
-static void gbcc_draw_background_line(struct gbc *gbc);
-static void gbcc_draw_window_line(struct gbc *gbc);
-static void gbcc_draw_sprite_line(struct gbc *gbc);
-static void gbcc_composite_line(struct gbc *gbc);
+static void draw_line(struct gbc *gbc);
+static void draw_background_line(struct gbc *gbc);
+static void draw_window_line(struct gbc *gbc);
+static void draw_sprite_line(struct gbc *gbc);
+static void composite_line(struct gbc *gbc);
 static uint8_t gbcc_get_video_mode(struct gbc *gbc);
 static void gbcc_set_video_mode(struct gbc *gbc, uint8_t mode);
 static uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sprite);
 
 void gbcc_ppu_clock(struct gbc *gbc)
 {
+	gbc->ppu_clock += 4;
 	uint8_t mode = gbcc_get_video_mode(gbc);
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
-	uint16_t clock = gbc->clock % 456;
+	uint16_t clock = gbc->ppu_clock % 456;
 
 	if (clock == 0) {
 		gbcc_memory_increment(gbc, LY, true);
@@ -48,8 +50,9 @@ void gbcc_ppu_clock(struct gbc *gbc)
 		} else if (clock == GBC_LCD_MODE_PERIOD) {
 			gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_VRAM_READ);
 		} else if (clock == (3 * GBC_LCD_MODE_PERIOD)) {
-			gbcc_draw_line(gbc);
+			draw_line(gbc);
 			gbcc_set_video_mode(gbc, GBC_LCD_MODE_HBLANK);
+			gbcc_hdma_copy_block(gbc);
 		}
 	}
 	/* LCD STAT Interrupt */
@@ -83,7 +86,7 @@ void gbcc_ppu_clock(struct gbc *gbc)
 	}
 }
 
-void gbcc_draw_line(struct gbc *gbc)
+void draw_line(struct gbc *gbc)
 {
 	if (gbcc_memory_read(gbc, LY, true) > GBC_SCREEN_HEIGHT) {
 		return;
@@ -93,14 +96,14 @@ void gbcc_draw_line(struct gbc *gbc)
 		gbc->memory.window_buffer.attr[x] = 0;
 		gbc->memory.sprite_buffer.attr[x] = 0;
 	}
-	gbcc_draw_background_line(gbc);
-	gbcc_draw_window_line(gbc);
-	gbcc_draw_sprite_line(gbc);
-	gbcc_composite_line(gbc);
+	draw_background_line(gbc);
+	draw_window_line(gbc);
+	draw_sprite_line(gbc);
+	composite_line(gbc);
 }
 
 /* TODO: GBC BG-to-OAM Priority */
-void gbcc_draw_background_line(struct gbc *gbc)
+void draw_background_line(struct gbc *gbc)
 {
 	uint8_t scy = gbcc_memory_read(gbc, SCY, true);
 	uint8_t scx = gbcc_memory_read(gbc, SCX, true);
@@ -193,7 +196,7 @@ void gbcc_draw_background_line(struct gbc *gbc)
 	}
 }
 
-void gbcc_draw_window_line(struct gbc *gbc)
+void draw_window_line(struct gbc *gbc)
 {
 	uint8_t wy = gbcc_memory_read(gbc, WY, true);
 	uint8_t wx = gbcc_memory_read(gbc, WX, true);
@@ -289,7 +292,7 @@ void gbcc_draw_window_line(struct gbc *gbc)
 	}
 }
 
-void gbcc_draw_sprite_line(struct gbc *gbc)
+void draw_sprite_line(struct gbc *gbc)
 {
 	/* 
 	 * FIXME: Possible off-by-one error in y - check Link's awakening,
@@ -400,7 +403,7 @@ void gbcc_draw_sprite_line(struct gbc *gbc)
 	}
 }
 
-void gbcc_composite_line(struct gbc *gbc)
+void composite_line(struct gbc *gbc)
 {
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
@@ -492,9 +495,5 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sp
 	uint8_t red = lo & 0x1Fu;
 	uint8_t green = ((lo & 0xE0u) >> 5u) | ((hi & 0x03u) << 3u);
 	uint8_t blue = (hi & 0x7Cu) >> 2u;
-	//red = (double)red / 0x1Fu * 0xFFu;
-	//green = (double)green / 0x1Fu * 0xFFu;
-	//blue = (double)blue / 0x1Fu * 0xFFu;
-	//return (uint32_t)((uint32_t)(red << 16u) | (uint32_t)(green << 8u)) | blue;
 	return gbcc_lerp_colour(red, green, blue);
 }

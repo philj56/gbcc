@@ -3,6 +3,7 @@
 #include "gbcc_bit_utils.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
+#include "gbcc_hdma.h"
 #include "gbcc_memory.h"
 #include "gbcc_ops.h"
 #include "gbcc_ppu.h"
@@ -13,9 +14,20 @@
 static void gbcc_update_timers(struct gbc *gbc);
 static void gbcc_check_interrupts(struct gbc *gbc);
 static void gbcc_execute_instruction(struct gbc *gbc);
+static void gbcc_cpu_clock(struct gbc *gbc);
 
 /* TODO: Check order of all of these */
 void gbcc_emulate_cycle(struct gbc *gbc)
+{
+	gbcc_ppu_clock(gbc);
+	gbcc_apu_clock(gbc);
+	gbcc_cpu_clock(gbc);
+	if (gbc->speed_mult == 2) {
+		gbcc_cpu_clock(gbc);
+	}
+}
+
+void gbcc_cpu_clock(struct gbc *gbc)
 {
 	gbc->clock += 4;
 	if (gbc->dma.timer > 0) {
@@ -30,22 +42,8 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 		gbc->dma.requested = false;
 		gbc->dma.source = gbc->dma.new_source;
 	}
-	if (gbc->hdma.length > 0){
-		/* FIXME: Only general-purpose hdma for now */
-		uint16_t start = gbc->hdma.source;
-		uint16_t end = gbc->hdma.source + gbc->hdma.length;
-		uint16_t dest = gbc->hdma.dest;
-		for (uint16_t src = start; src < end; src++, dest++) {
-			gbcc_memory_copy(gbc, src, dest, true);
-		}
-		gbcc_memory_write(gbc, HDMA5, 0xFFu, true);
-		//printf("HDMA copied 0x%04X bytes from 0x%04X to 0x%04X\n", gbc->hdma.length, start, gbc->hdma.dest);
-		gbc->hdma.length = 0;
-	}
 	gbcc_update_timers(gbc);
 	gbcc_check_interrupts(gbc);
-	gbcc_ppu_clock(gbc);
-	gbcc_apu_clock(gbc);
 	if (gbc->halt.set || gbc->stop) {
 		return;
 	}

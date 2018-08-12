@@ -103,6 +103,8 @@ struct gbc {
 	uint8_t instruction_timer;
 	uint8_t div_timer;
 	uint64_t clock;
+	uint64_t ppu_clock;
+	uint64_t apu_clock;
 	struct {
 		struct timespec current;
 		struct timespec old;
@@ -111,6 +113,7 @@ struct gbc {
 	bool initialised;
 	int8_t save_state;
 	int8_t load_state;
+	int8_t speed_mult;
 
 	/* Memory map */
 	struct {

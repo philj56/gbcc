@@ -187,13 +187,17 @@ void NOP(struct gbc *gbc)
 
 void STOP(struct gbc *gbc)
 {
-	gbc->stop = true;
 	if (gbc->mode == GBC && check_bit(gbcc_memory_read(gbc, KEY1, true), 0)) {
 		gbcc_memory_clear_bit(gbc, KEY1, 0, true);
-		/* TODO: Speed switch */
-		gbcc_log(GBCC_LOG_DEBUG, "TODO: Double Speed\n");
-		gbcc_memory_set_bit(gbc, KEY1, 7, true);
-		gbc->stop = false;
+		if (gbc->speed_mult == 1) {
+			gbcc_memory_set_bit(gbc, KEY1, 7, true);
+			gbc->speed_mult = 2;
+		} else {
+			gbcc_memory_clear_bit(gbc, KEY1, 7, true);
+			gbc->speed_mult = 1;
+		}
+	} else {
+		gbc->stop = true;
 	}
 	gbcc_fetch_instruction(gbc); /* Discard next byte */
 }
