@@ -67,6 +67,8 @@ struct apu {
 	uint64_t sample_clock;
 	uint64_t sample;
 	size_t index;
+	uint8_t left_vol;
+	uint8_t right_vol;
 	struct timespec cur_time;
 	struct timespec start_time;
 	struct channel ch1; 	/* Tone & Sweep */

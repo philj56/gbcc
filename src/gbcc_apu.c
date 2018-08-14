@@ -65,6 +65,8 @@ void gbcc_apu_init(struct gbc *gbc)
 	timer_reset(&gbc->apu.wave.timer);
 	gbc->apu.wave.addr = WAVE_START;
 	gbc->apu.noise.width_mode = false;
+	gbc->apu.left_vol = 0;
+	gbc->apu.right_vol = 0;
 	gbc->apu.ch1.enabled = false;
 	gbc->apu.ch2.enabled = false;
 	gbc->apu.ch3.enabled = false;
@@ -278,7 +280,7 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	switch (addr) {
 		case NR10:
 			gbc->apu.sweep.timer.period = (val & 0x70u) >> 4u;
-			gbc->apu.sweep.dir = check_bit(val, 4) ? -1 : 1;
+			gbc->apu.sweep.dir = check_bit(val, 3u) ? -1 : 1;
 			gbc->apu.sweep.shift = val & 0x07u;
 			break;
 		case NR11:
@@ -368,6 +370,8 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			}
 			break;
 		case NR50:
+			gbc->apu.left_vol = (val & 0x70u) >> 4u;
+			gbc->apu.right_vol = val & 0x07u;
 			break;
 		case NR51:
 			gbc->apu.ch4.left = check_bit(val, 7);
@@ -384,7 +388,6 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 
 void ch1_trigger(struct gbc *gbc)
 {
-	uint8_t nr10 = gbcc_memory_read(gbc, NR10, true);
 	uint8_t nr11 = gbcc_memory_read(gbc, NR11, true);
 	uint8_t nr13 = gbcc_memory_read(gbc, NR13, true);
 	uint8_t nr14 = gbcc_memory_read(gbc, NR14, true);
@@ -401,10 +404,7 @@ void ch1_trigger(struct gbc *gbc)
 	gbc->apu.ch1.envelope.volume = gbc->apu.ch1.envelope.start_volume;
 	timer_reset(&gbc->apu.ch1.envelope.timer);
 	gbc->apu.sweep.freq = gbc->apu.ch1.duty.freq;
-	gbc->apu.sweep.timer.period = (nr10 & 0x70u) >> 4u;
 	timer_reset(&gbc->apu.sweep.timer);
-	gbc->apu.sweep.dir = check_bit(nr10, 4) ? -1 : 1;
-	gbc->apu.sweep.shift = nr10 & 0x07u;
 	if (gbc->apu.sweep.shift == 0 && gbc->apu.sweep.timer.period == 0) {
 		gbc->apu.sweep.enabled = false;
 	} else {

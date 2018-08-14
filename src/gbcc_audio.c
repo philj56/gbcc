@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <time.h>
 
-#define BASE_AMPLITUDE (UINT16_MAX / 8 / 0x0F)
+#define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F / 0x10u)
 #define SAMPLE_RATE 48000
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
 
@@ -66,6 +66,8 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 		ch2_update(audio);
 		ch3_update(audio);
 		ch4_update(audio);
+		audio->mix_buffer[audio->index] *= (1 + audio->gbc->apu.left_vol);
+		audio->mix_buffer[audio->index + 1] = (1 + audio->gbc->apu.right_vol);
 		audio->index += 2;
 		if (audio->index == GBCC_AUDIO_BUFSIZE) {
 			audio->index = 0;
