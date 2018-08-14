@@ -324,19 +324,21 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			}
 			break;
 		case NR31:
-			gbc->apu.ch3.counter = 255 - val;
+			gbc->apu.ch3.counter = 256 - val;
+			if (gbc->apu.ch3.counter == 0) {
+				gbc->apu.ch3.counter = 256;
+			}
 			break;
 		case NR32:
 			gbc->apu.wave.shift = (val & 0x60u) >> 5u;
 			break;
 		case NR33:
+			gbc->apu.wave.freq &= ~0x00FFu;
 			gbc->apu.wave.freq = val;
-			gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
 			break;
 		case NR34:
 			gbc->apu.ch3.length_enable = check_bit(val, 6);
 			gbc->apu.wave.freq |= (val & 0x07u) << 8u;
-			gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
 			if (check_bit(val, 7)) {
 				ch3_trigger(gbc);
 			}
@@ -376,9 +378,6 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch3.right = check_bit(val, 2);
 			gbc->apu.ch2.right = check_bit(val, 1);
 			gbc->apu.ch1.right = check_bit(val, 0);
-			break;
-		case NR52:
-			//gbcc_log(GBCC_LOG_DEBUG, "NR52 = 0x%02X\n", val);
 			break;
 	}
 }
@@ -440,6 +439,7 @@ void ch3_trigger(struct gbc *gbc)
 	if (gbc->apu.ch3.counter == 0) {
 		gbc->apu.ch3.counter = 256;
 	}
+	gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
 	timer_reset(&gbc->apu.wave.timer);
 	gbc->apu.wave.addr = WAVE_START;
 }

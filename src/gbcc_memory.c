@@ -280,6 +280,14 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 		}
 		return joyp | (uint8_t)~mask;
 	} 
+	if (addr == NR52) {
+		uint8_t tmp = 0;
+		tmp |= gbc->apu.ch1.enabled << 0u;
+		tmp |= gbc->apu.ch2.enabled << 1u;
+		tmp |= gbc->apu.ch3.enabled << 2u;
+		tmp |= gbc->apu.ch4.enabled << 3u;
+		return  tmp;
+	}
 	if (gbc->mode == GBC && addr == BGPD) {
 		return gbc->memory.bgp[gbc->memory.ioreg[BGPI - IOREG_START]];
 	}
