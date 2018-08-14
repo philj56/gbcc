@@ -316,9 +316,6 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 	}
 	uint8_t tmp = gbc->memory.ioreg[addr - IOREG_START];
 	uint8_t mask = ioreg_write_masks[addr - IOREG_START];
-	if (addr == NR22) {
-		printf("%02X\n", val);
-	}
 	if (addr == NR13) {
 		gbc->apu.ch1.duty.freq = val;
 		timer_reset(&gbc->apu.ch1.duty.freq_timer);
