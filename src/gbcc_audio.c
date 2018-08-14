@@ -67,7 +67,7 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 		ch3_update(audio);
 		ch4_update(audio);
 		audio->mix_buffer[audio->index] *= (1 + audio->gbc->apu.left_vol);
-		audio->mix_buffer[audio->index + 1] = (1 + audio->gbc->apu.right_vol);
+		audio->mix_buffer[audio->index + 1] *= (1 + audio->gbc->apu.right_vol);
 		audio->index += 2;
 		if (audio->index == GBCC_AUDIO_BUFSIZE) {
 			audio->index = 0;
