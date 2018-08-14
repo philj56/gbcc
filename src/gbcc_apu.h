@@ -24,6 +24,7 @@ struct sweep {
 	struct timer timer;
 	uint8_t shift;
 	int8_t dir;
+	bool enabled;
 };
 
 struct noise {
@@ -42,6 +43,7 @@ struct wave {
 struct envelope {
 	struct timer timer;
 	uint8_t volume;
+	int8_t dir;
 	bool enabled;
 };
 
@@ -54,6 +56,7 @@ struct channel {
 };
 
 struct apu {
+	uint64_t clock;
 	uint64_t sample_clock;
 	uint64_t sample;
 	size_t index;
@@ -69,6 +72,7 @@ struct apu {
 	struct timer sequencer_timer;
 };
 
+void timer_reset(struct timer *timer);
 void gbcc_apu_init(struct gbc *gbc);
 void gbcc_apu_clock(struct gbc *gbc);
 

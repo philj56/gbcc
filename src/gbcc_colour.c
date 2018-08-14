@@ -7,6 +7,9 @@
  * 2 - G
  * 3 - B
  */
+
+static uint32_t lut_calc[32][32][32];
+
 static const uint8_t lut[3][5][5][5] =
 {
 	{

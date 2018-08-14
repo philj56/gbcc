@@ -61,7 +61,6 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->instruction_timer = 0;
 	gbc->clock = GBC_LCD_MODE_PERIOD;
 	gbc->ppu_clock = gbc->clock;
-	gbc->apu_clock = gbc->clock;
 	gbc->save_state = 0;
 	gbc->load_state = 0;
 	gbc->speed_mult = 1;

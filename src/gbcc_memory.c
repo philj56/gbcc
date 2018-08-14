@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_apu.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_debug.h"
 #include "gbcc_hdma.h"
@@ -315,7 +316,26 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 	}
 	uint8_t tmp = gbc->memory.ioreg[addr - IOREG_START];
 	uint8_t mask = ioreg_write_masks[addr - IOREG_START];
-	if (addr == SC) {
+	if (addr == NR22) {
+		printf("%02X\n", val);
+	}
+	if (addr == NR13) {
+		gbc->apu.ch1.duty.freq = val;
+		timer_reset(&gbc->apu.ch1.duty.freq_timer);
+		gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
+	} else if (addr == NR14) {
+		gbc->apu.ch1.duty.freq |= (val & 0x07u) << 8u;
+		timer_reset(&gbc->apu.ch1.duty.freq_timer);
+		gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
+	} else if (addr == NR23) {
+		gbc->apu.ch2.duty.freq = val;
+		timer_reset(&gbc->apu.ch2.duty.freq_timer);
+		gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
+	} else if (addr == NR24) {
+		gbc->apu.ch2.duty.freq |= (val & 0x07u) << 8u;
+		timer_reset(&gbc->apu.ch2.duty.freq_timer);
+		gbc->memory.ioreg[addr - IOREG_START] = (uint8_t)(tmp & (uint8_t)(~mask)) | (uint8_t)(val & mask);
+	} else if (addr == SC) {
 		if (check_bit(val, 7)) {
 			//fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
 		}

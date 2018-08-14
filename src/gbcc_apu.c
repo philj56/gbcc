@@ -22,9 +22,8 @@ static const uint8_t duty_table[4] = {
 };
 
 static bool timer_clock(struct timer *timer);
-static void timer_reset(struct timer *timer);
 static bool duty_clock(struct duty *duty);
-static void envelope_clock(struct envelope *envelope, uint8_t nrx2);
+static void envelope_clock(struct envelope *envelope);
 static void sequencer_clock(struct gbc *gbc);
 static void time_sync(struct gbc *gbc);
 static uint64_t time_diff(const struct timespec *cur,
@@ -49,6 +48,7 @@ void gbcc_apu_init(struct gbc *gbc)
 	timer_reset(&gbc->apu.ch1.envelope.timer);
 	timer_reset(&gbc->apu.ch2.envelope.timer);
 	timer_reset(&gbc->apu.ch4.envelope.timer);
+	gbc->apu.sweep.enabled = false;
 	gbc->apu.sweep.timer.period = 8;
 	timer_reset(&gbc->apu.sweep.timer);
 	gbc->apu.noise.timer.period = 8;
@@ -145,20 +145,18 @@ bool duty_clock(struct duty *duty)
 	return duty_table[duty->cycle] & bit((uint8_t)(8u-duty->duty_timer.counter));
 }
 
-void envelope_clock(struct envelope *envelope, uint8_t nrx2)
+void envelope_clock(struct envelope *envelope)
 {
 	if (!envelope->enabled) {
 		return;
 	}
-	envelope->timer.period = nrx2 & 0x07u;
-	int dir = nrx2 & 0x08u ? 1 : -1;
 	if (envelope->timer.period == 0) {
 		envelope->timer.period = 8;
 	}
 	if (timer_clock(&envelope->timer)) {
-		envelope->volume += dir;
+		envelope->volume += envelope->dir;
 		if (envelope->volume == 0x10u || envelope->volume == 0xFFu) {
-			envelope->volume -= dir;
+			envelope->volume -= envelope->dir;
 			envelope->enabled = false;
 		}
 	}
@@ -209,10 +207,7 @@ void sequencer_clock(struct gbc *gbc)
 	}
 
 	/* Sweep on clocks 2 & 6 */
-	if (gbc->apu.sequencer_timer.counter == 2u || gbc->apu.sequencer_timer.counter == 6u) {
-		gbc->apu.sweep.timer.period = (gbcc_memory_read(gbc, NR10, true) & 0x70u) >> 4u;
-		gbc->apu.sweep.dir = gbcc_memory_read(gbc, NR10, true) & 0x08u ? -1 : 1;
-		gbc->apu.sweep.shift = gbcc_memory_read(gbc, NR10, true) & 0x07u;
+	if (gbc->apu.sweep.enabled && (gbc->apu.sequencer_timer.counter == 2u || gbc->apu.sequencer_timer.counter == 6u)) {
 		if (gbc->apu.sweep.timer.period == 0) {
 			gbc->apu.sweep.timer.period = 8;
 		}
@@ -228,9 +223,9 @@ void sequencer_clock(struct gbc *gbc)
 
 	/* Envelope */
 	if (gbc->apu.sequencer_timer.counter == 7u) {
-		envelope_clock(&gbc->apu.ch1.envelope, gbcc_memory_read(gbc, NR12, true));
-		envelope_clock(&gbc->apu.ch2.envelope, gbcc_memory_read(gbc, NR22, true));
-		envelope_clock(&gbc->apu.ch4.envelope, gbcc_memory_read(gbc, NR42, true));
+		envelope_clock(&gbc->apu.ch1.envelope);
+		envelope_clock(&gbc->apu.ch2.envelope);
+		envelope_clock(&gbc->apu.ch4.envelope);
 	}
 
 	/* Restart sounds */
@@ -239,14 +234,26 @@ void sequencer_clock(struct gbc *gbc)
 		gbc->apu.ch1.duty.freq = gbcc_memory_read(gbc, NR13, true);
 		gbc->apu.ch1.duty.freq |= (gbcc_memory_read(gbc, NR14, true) & 0x07u) << 8u;
 		gbc->apu.ch1.enabled = true;
+		gbc->apu.ch1.counter = 64 - (gbcc_memory_read(gbc, NR11, true) & 0x3Fu);
 		if (gbc->apu.ch1.counter == 0) {
 			gbc->apu.ch1.counter = 64;
 		}
 		timer_reset(&gbc->apu.ch1.duty.freq_timer);
-		timer_reset(&gbc->apu.ch1.envelope.timer);
+		gbc->apu.ch1.envelope.timer.period = gbcc_memory_read(gbc, NR12, true) & 0x07u;
+		gbc->apu.ch1.envelope.dir = gbcc_memory_read(gbc, NR12, true) & 0x08u ? 1 : -1;
 		gbc->apu.ch1.envelope.enabled = true;
 		gbc->apu.ch1.envelope.volume = (gbcc_memory_read(gbc, NR12, true) & 0xF0u) >> 4u;
+		timer_reset(&gbc->apu.ch1.envelope.timer);
 		gbc->apu.sweep.freq = gbc->apu.ch1.duty.freq;
+		uint8_t nr10 = gbcc_memory_read(gbc, NR10, true);
+		gbc->apu.sweep.timer.period = (nr10 & 0x70u) >> 4u;
+		gbc->apu.sweep.dir = check_bit(nr10, 4) ? -1 : 1;
+		gbc->apu.sweep.shift = nr10 & 0x07u;
+		if (gbc->apu.sweep.shift == 0 && gbc->apu.sweep.timer.period == 0) {
+			gbc->apu.sweep.enabled = false;
+		} else {
+			gbc->apu.sweep.enabled = true;
+		}
 		gbcc_memory_clear_bit(gbc, NR14, 7, true);
 	}
 	if (gbcc_memory_read(gbc, NR24, true) & bit(7)) {
@@ -254,19 +261,24 @@ void sequencer_clock(struct gbc *gbc)
 		gbc->apu.ch2.duty.freq = gbcc_memory_read(gbc, NR23, true);
 		gbc->apu.ch2.duty.freq |= (gbcc_memory_read(gbc, NR24, true) & 0x07u) << 8u;
 		gbc->apu.ch2.enabled = true;
+		gbc->apu.ch2.counter = 64 - (gbcc_memory_read(gbc, NR21, true) & 0x3Fu);
 		if (gbc->apu.ch2.counter == 0) {
 			gbc->apu.ch2.counter = 64;
 		}
 		timer_reset(&gbc->apu.ch2.duty.freq_timer);
-		timer_reset(&gbc->apu.ch2.envelope.timer);
+		gbc->apu.ch2.envelope.timer.period = gbcc_memory_read(gbc, NR22, true) & 0x07u;
+		gbc->apu.ch2.envelope.dir = gbcc_memory_read(gbc, NR22, true) & 0x08u ? 1 : -1;
 		gbc->apu.ch2.envelope.enabled = true;
 		gbc->apu.ch2.envelope.volume = (gbcc_memory_read(gbc, NR22, true) & 0xF0u) >> 4u;
+		timer_reset(&gbc->apu.ch2.envelope.timer);
 		gbcc_memory_clear_bit(gbc, NR24, 7, true);
 	}
 	if (gbcc_memory_read(gbc, NR34, true) & bit(7)) {
 		gbc->apu.ch3.enabled = true;
+		gbc->apu.ch3.counter = 256 - gbcc_memory_read(gbc, NR31, true);
 		if (gbc->apu.ch3.counter == 0) {
-			gbc->apu.ch3.counter = 64;
+			/* FIXME: This should be 256 */
+			gbc->apu.ch3.counter = 255;
 		}
 		timer_reset(&gbc->apu.wave.timer);
 		gbc->apu.wave.addr = WAVE_START;
@@ -274,13 +286,16 @@ void sequencer_clock(struct gbc *gbc)
 	}
 	if (gbcc_memory_read(gbc, NR44, true) & bit(7)) {
 		gbc->apu.ch4.enabled = true;
+		gbc->apu.ch4.counter = 64 - (gbcc_memory_read(gbc, NR41, true) & 0x3Fu);
 		if (gbc->apu.ch4.counter == 0) {
 			gbc->apu.ch4.counter = 64;
 		}
 		timer_reset(&gbc->apu.noise.timer);
-		timer_reset(&gbc->apu.ch4.envelope.timer);
+		gbc->apu.ch4.envelope.timer.period = gbcc_memory_read(gbc, NR42, true) & 0x07u;
+		gbc->apu.ch4.envelope.dir = gbcc_memory_read(gbc, NR42, true) & 0x08u ? 1 : -1;
 		gbc->apu.ch4.envelope.enabled = true;
 		gbc->apu.ch4.envelope.volume = (gbcc_memory_read(gbc, NR42, true) & 0xF0u) >> 4u;
+		timer_reset(&gbc->apu.ch4.envelope.timer);
 		gbc->apu.noise.lfsr = 0xFFu;
 		gbcc_memory_clear_bit(gbc, NR44, 7, true);
 	}
