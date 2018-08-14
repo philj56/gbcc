@@ -131,7 +131,7 @@
 #define NR51 0xFF25u	/* Selection of Sound Output Terminal (R/W) */
 #define NR52 0xFF26u	/* Sound On / Off (0-3 R, 7 R/W) */
 #define WAVE_START 0xFF30u 	/* Wave pattern RAM */
-#define WAVE_SIZE 0x0Fu
+#define WAVE_SIZE 0x10u
 #define WAVE_END (WAVE_START + WAVE_SIZE)
 
 /* Interrupts */

@@ -28,6 +28,8 @@ struct sweep {
 };
 
 struct noise {
+	uint8_t shift;
+	bool width_mode;
 	struct timer timer;
 	uint16_t lfsr;
 };
@@ -38,19 +40,24 @@ struct wave {
 	uint8_t buffer;
 	uint8_t nibble;
 	uint8_t shift;
+	uint16_t freq;
 };
 
 struct envelope {
 	struct timer timer;
+	uint8_t start_volume;
 	uint8_t volume;
 	int8_t dir;
 	bool enabled;
 };
 
 struct channel {
-	uint8_t counter;
+	uint16_t counter;
+	bool length_enable;
 	bool state;
 	bool enabled;
+	bool left;
+	bool right;
 	struct envelope envelope;
 	struct duty duty;
 };
@@ -75,5 +82,6 @@ struct apu {
 void timer_reset(struct timer *timer);
 void gbcc_apu_init(struct gbc *gbc);
 void gbcc_apu_clock(struct gbc *gbc);
+void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
 #endif /* GBCC_AUDIO_H */

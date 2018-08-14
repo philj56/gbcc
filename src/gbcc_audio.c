@@ -32,7 +32,7 @@ struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc)
 	SDL_AudioSpec want;
 	want.freq = SAMPLE_RATE;
 	want.format = AUDIO_S16SYS;
-	want.channels = 1;
+	want.channels = 2;
 	want.samples = 0;
 	want.callback = NULL;
 	want.userdata = NULL;
@@ -61,11 +61,12 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 	if (audio->gbc->apu_clock - audio->sample_clock > CLOCKS_PER_SAMPLE) {
 		audio->sample_clock = audio->gbc->apu_clock;
 		audio->mix_buffer[audio->index] = 0;
+		audio->mix_buffer[audio->index + 1] = 0;
 		ch1_update(audio);
 		ch2_update(audio);
 		ch3_update(audio);
 		ch4_update(audio);
-		audio->index++;
+		audio->index += 2;
 		audio->sample++;
 		if (audio->index == GBCC_AUDIO_BUFSIZE) {
 			audio->index = 0;
@@ -76,35 +77,43 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 
 void ch1_update(struct gbcc_audio *audio)
 {
-	if (!audio->gbc->apu.ch1.enabled) {
+	struct channel *ch1 = &audio->gbc->apu.ch1;
+	if (!ch1->enabled) {
 		return;
 	}
-	uint8_t volume = audio->gbc->apu.ch1.envelope.volume;
-	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(audio->gbc->apu.ch1.state * volume * BASE_AMPLITUDE);
+	uint8_t volume = ch1->envelope.volume;
+	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(ch1->left * ch1->state * volume * BASE_AMPLITUDE);
+	audio->mix_buffer[audio->index + 1] += (GBCC_AUDIO_FMT)(ch1->right * ch1->state * volume * BASE_AMPLITUDE);
 }
 
 void ch2_update(struct gbcc_audio *audio)
 {
-	if (!audio->gbc->apu.ch2.enabled) {
+	struct channel *ch2 = &audio->gbc->apu.ch2;
+	if (!ch2->enabled) {
 		return;
 	}
-	uint8_t volume = audio->gbc->apu.ch2.envelope.volume;
-	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(audio->gbc->apu.ch2.state * volume * BASE_AMPLITUDE);
+	uint8_t volume = ch2->envelope.volume;
+	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(ch2->left * ch2->state * volume * BASE_AMPLITUDE);
+	audio->mix_buffer[audio->index + 1] += (GBCC_AUDIO_FMT)(ch2->right * ch2->state * volume * BASE_AMPLITUDE);
 }
 
 void ch3_update(struct gbcc_audio *audio)
 {
+	struct channel *ch3 = &audio->gbc->apu.ch3;
 	if (!audio->gbc->apu.ch3.enabled || audio->gbc->apu.wave.shift == 0) {
 		return;
 	}
-	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)((audio->gbc->apu.wave.buffer >> (audio->gbc->apu.wave.shift - 1u)) * BASE_AMPLITUDE);
+	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(ch3->left * (audio->gbc->apu.wave.buffer >> (audio->gbc->apu.wave.shift - 1u)) * BASE_AMPLITUDE);
+	audio->mix_buffer[audio->index + 1] += (GBCC_AUDIO_FMT)(ch3->right * (audio->gbc->apu.wave.buffer >> (audio->gbc->apu.wave.shift - 1u)) * BASE_AMPLITUDE);
 }
 
 void ch4_update(struct gbcc_audio *audio)
 {
-	if (!audio->gbc->apu.ch4.enabled) {
+	struct channel *ch4 = &audio->gbc->apu.ch4;
+	if (!ch4->enabled) {
 		return;
 	}
-	uint8_t volume = audio->gbc->apu.ch4.envelope.volume;
-	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(audio->gbc->apu.ch4.state * volume * BASE_AMPLITUDE);
+	uint8_t volume = ch4->envelope.volume;
+	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(ch4->left * ch4->state * volume * BASE_AMPLITUDE);
+	audio->mix_buffer[audio->index + 1] += (GBCC_AUDIO_FMT)(ch4->right * ch4->state * volume * BASE_AMPLITUDE);
 }

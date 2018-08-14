@@ -4,7 +4,7 @@
 #include "gbcc.h"
 #include <SDL2/SDL.h>
 
-#define GBCC_AUDIO_BUFSIZE 512 /* samples */
+#define GBCC_AUDIO_BUFSIZE (512*2) /* samples * channels */
 #define GBCC_AUDIO_FMT Uint16
 
 struct gbcc_audio {
