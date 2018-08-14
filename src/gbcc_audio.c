@@ -67,7 +67,6 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 		ch3_update(audio);
 		ch4_update(audio);
 		audio->index += 2;
-		audio->sample++;
 		if (audio->index == GBCC_AUDIO_BUFSIZE) {
 			audio->index = 0;
 			SDL_QueueAudio(audio->device, audio->mix_buffer, GBCC_AUDIO_BUFSIZE * sizeof(GBCC_AUDIO_FMT));

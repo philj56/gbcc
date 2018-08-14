@@ -13,7 +13,6 @@ struct gbcc_audio {
 	SDL_AudioSpec audiospec;
 	SDL_AudioDeviceID device;
 	uint64_t sample_clock;
-	uint64_t sample;
 	size_t index;
 	bool quit;
 	struct timespec cur_time;

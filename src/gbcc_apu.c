@@ -64,6 +64,7 @@ void gbcc_apu_init(struct gbc *gbc)
 	gbc->apu.wave.timer.period = 8;
 	timer_reset(&gbc->apu.wave.timer);
 	gbc->apu.wave.addr = WAVE_START;
+	gbc->apu.noise.width_mode = false;
 	gbc->apu.ch1.enabled = false;
 	gbc->apu.ch2.enabled = false;
 	gbc->apu.ch3.enabled = false;
@@ -82,10 +83,7 @@ void gbcc_apu_clock(struct gbc *gbc)
 	gbc->apu.ch2.state = duty_clock(&gbc->apu.ch2.duty);
 
 	/* Noise */
-	if (gbc->apu.noise.timer.period == 0) {
-		gbc->apu.noise.timer.period = 0x08u;
-	}
-	if (timer_clock(&gbc->apu.noise.timer)) {
+	if (gbc->apu.noise.shift < 14 && timer_clock(&gbc->apu.noise.timer)) {
 		uint8_t lfsr_low = gbc->apu.noise.lfsr & 0xFFu;
 		uint8_t tmp = check_bit(lfsr_low, 0) ^ check_bit(lfsr_low, 1);
 		gbc->apu.noise.lfsr >>= 1u;
@@ -354,7 +352,12 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		case NR43:
 			gbc->apu.noise.shift = (val & 0xF0u) >> 4u;
 			gbc->apu.noise.width_mode = check_bit(val, 3);
-			gbc->apu.noise.timer.period = 0x10u * (val & 0x07u);
+			gbc->apu.noise.timer.period = (val & 0x07u) << 4u;
+			if (gbc->apu.noise.timer.period == 0) {
+				gbc->apu.noise.timer.period = 0x08u;
+			}
+			gbc->apu.noise.timer.period <<= gbc->apu.noise.shift;
+		//	timer_reset(&gbc->apu.noise.timer);
 			break;
 		case NR44:
 			gbc->apu.ch4.length_enable = check_bit(val, 6);
@@ -375,30 +378,32 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch1.right = check_bit(val, 0);
 			break;
 		case NR52:
-			gbcc_log(GBCC_LOG_DEBUG, "NR52 = 0x%02X\n", val);
+			//gbcc_log(GBCC_LOG_DEBUG, "NR52 = 0x%02X\n", val);
 			break;
 	}
 }
 
 void ch1_trigger(struct gbc *gbc)
 {
-	gbc->apu.ch1.duty.cycle = (gbcc_memory_read(gbc, NR11, true) & 0xC0u) >> 6u;
-	gbc->apu.ch1.duty.freq = gbcc_memory_read(gbc, NR13, true);
-	gbc->apu.ch1.duty.freq |= (gbcc_memory_read(gbc, NR14, true) & 0x07u) << 8u;
+	uint8_t nr10 = gbcc_memory_read(gbc, NR10, true);
+	uint8_t nr11 = gbcc_memory_read(gbc, NR11, true);
+	uint8_t nr13 = gbcc_memory_read(gbc, NR13, true);
+	uint8_t nr14 = gbcc_memory_read(gbc, NR14, true);
+	gbc->apu.ch1.duty.cycle = (nr11 & 0xC0u) >> 6u;
+	gbc->apu.ch1.duty.freq = nr13;
+	gbc->apu.ch1.duty.freq |= (nr14 & 0x07u) << 8u;
 	gbc->apu.ch1.enabled = true;
-	gbc->apu.ch1.counter = 64 - (gbcc_memory_read(gbc, NR11, true) & 0x3Fu);
+	gbc->apu.ch1.counter = 64 - (nr11 & 0x3Fu);
 	if (gbc->apu.ch1.counter == 0) {
 		gbc->apu.ch1.counter = 64;
 	}
 	timer_reset(&gbc->apu.ch1.duty.freq_timer);
-	gbc->apu.ch1.envelope.timer.period = gbcc_memory_read(gbc, NR12, true) & 0x07u;
-	gbc->apu.ch1.envelope.dir = gbcc_memory_read(gbc, NR12, true) & 0x08u ? 1 : -1;
 	gbc->apu.ch1.envelope.enabled = true;
 	gbc->apu.ch1.envelope.volume = gbc->apu.ch1.envelope.start_volume;
 	timer_reset(&gbc->apu.ch1.envelope.timer);
 	gbc->apu.sweep.freq = gbc->apu.ch1.duty.freq;
-	uint8_t nr10 = gbcc_memory_read(gbc, NR10, true);
 	gbc->apu.sweep.timer.period = (nr10 & 0x70u) >> 4u;
+	timer_reset(&gbc->apu.sweep.timer);
 	gbc->apu.sweep.dir = check_bit(nr10, 4) ? -1 : 1;
 	gbc->apu.sweep.shift = nr10 & 0x07u;
 	if (gbc->apu.sweep.shift == 0 && gbc->apu.sweep.timer.period == 0) {
@@ -411,7 +416,6 @@ void ch1_trigger(struct gbc *gbc)
 void ch2_trigger(struct gbc *gbc)
 {
 	uint8_t nr21 = gbcc_memory_read(gbc, NR21, true);
-	uint8_t nr22 = gbcc_memory_read(gbc, NR22, true);
 	uint8_t nr23 = gbcc_memory_read(gbc, NR23, true);
 	uint8_t nr24 = gbcc_memory_read(gbc, NR24, true);
 	gbc->apu.ch2.duty.cycle = (nr21 & 0xC0u) >> 6u;
@@ -424,8 +428,6 @@ void ch2_trigger(struct gbc *gbc)
 		gbc->apu.ch2.counter = 64 - (nr21 & 0x3Fu);
 	}
 	timer_reset(&gbc->apu.ch2.duty.freq_timer);
-	gbc->apu.ch2.envelope.timer.period = nr22 & 0x07u;
-	gbc->apu.ch2.envelope.dir = nr22 & 0x08u ? 1 : -1;
 	gbc->apu.ch2.envelope.enabled = true;
 	gbc->apu.ch2.envelope.volume = gbc->apu.ch2.envelope.start_volume;
 	timer_reset(&gbc->apu.ch2.envelope.timer);
@@ -450,10 +452,8 @@ void ch4_trigger(struct gbc *gbc)
 		gbc->apu.ch4.counter = 64;
 	}
 	timer_reset(&gbc->apu.noise.timer);
-	gbc->apu.ch4.envelope.timer.period = gbcc_memory_read(gbc, NR42, true) & 0x07u;
-	gbc->apu.ch4.envelope.dir = gbcc_memory_read(gbc, NR42, true) & 0x08u ? 1 : -1;
 	gbc->apu.ch4.envelope.enabled = true;
 	gbc->apu.ch4.envelope.volume = gbc->apu.ch4.envelope.start_volume;
 	timer_reset(&gbc->apu.ch4.envelope.timer);
-	gbc->apu.noise.lfsr = 0xFFu;
+	gbc->apu.noise.lfsr = 0xFFFFu;
 }
