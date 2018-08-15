@@ -1,5 +1,9 @@
 #include "gbcc_bit_utils.h"
 
+/* 
+ * TODO: These should all probably be macros, as they are called very
+ * frequently with constant args.
+ */
 uint8_t high_byte(uint16_t x)
 {
 	return (x & 0xFF00u) >> 8u;

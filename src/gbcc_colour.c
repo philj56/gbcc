@@ -1,4 +1,10 @@
+#include <stdbool.h>
 #include <stdint.h>
+
+
+static uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b);
+static bool lut_initialised = false;
+static uint32_t lut_calc[32][32][32];
 
 /* 
  * Dimensions are as follows:
@@ -7,9 +13,6 @@
  * 2 - G
  * 3 - B
  */
-
-static uint32_t lut_calc[32][32][32];
-
 static const uint8_t lut[3][5][5][5] =
 {
 	{
@@ -130,8 +133,23 @@ static float lerp1d(float a, float b, float t)
 	return a * (1 - t) + b * t;
 }
 
-/* Trilinearly interpolate from gameboy r,g,b values to hex code */
 uint32_t gbcc_lerp_colour(uint8_t r, uint8_t g, uint8_t b)
+{
+	if (!lut_initialised) {
+		for (uint8_t x = 0; x < 32; x++) {
+			for (uint8_t y = 0; y < 32; y++) {
+				for (uint8_t z = 0; z < 32; z++) {
+					lut_calc[x][y][z] = lerp_colour(x, y, z);
+				}
+			}
+		}
+		lut_initialised = true;
+	}
+	return lut_calc[r][g][b];
+}
+
+/* Trilinearly interpolate from gameboy r,g,b values to hex code */
+uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 {
 	uint8_t x0 = (r / 8);
 	uint8_t x1 = x0 + 1;
@@ -143,28 +161,28 @@ uint32_t gbcc_lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 	float xd = (float)r / 8 - x0;
 	float yd = (float)g / 8 - y0;
 	float zd = (float)b / 8 - z0;
-	
+
 	float c00r = lerp1d(lut[0][x0][y0][z0], lut[0][x1][y0][z0], xd);
 	float c01r = lerp1d(lut[0][x0][y0][z1], lut[0][x1][y0][z1], xd);
 	float c10r = lerp1d(lut[0][x0][y1][z0], lut[0][x1][y1][z1], xd);
 	float c11r = lerp1d(lut[0][x0][y1][z1], lut[0][x1][y1][z1], xd);
-	
+
 	float c00g = lerp1d(lut[1][x0][y0][z0], lut[1][x1][y0][z0], xd);
 	float c01g = lerp1d(lut[1][x0][y0][z1], lut[1][x1][y0][z1], xd);
 	float c10g = lerp1d(lut[1][x0][y1][z0], lut[1][x1][y1][z1], xd);
 	float c11g = lerp1d(lut[1][x0][y1][z1], lut[1][x1][y1][z1], xd);
-	
+
 	float c00b = lerp1d(lut[2][x0][y0][z0], lut[2][x1][y0][z0], xd);
 	float c01b = lerp1d(lut[2][x0][y0][z1], lut[2][x1][y0][z1], xd);
 	float c10b = lerp1d(lut[2][x0][y1][z0], lut[2][x1][y1][z1], xd);
 	float c11b = lerp1d(lut[2][x0][y1][z1], lut[2][x1][y1][z1], xd);
-	
+
 	float c0r = lerp1d(c00r, c10r, yd);
 	float c1r = lerp1d(c01r, c11r, yd);
-	
+
 	float c0g = lerp1d(c00g, c10g, yd);
 	float c1g = lerp1d(c01g, c11g, yd);
-	
+
 	float c0b = lerp1d(c00b, c10b, yd);
 	float c1b = lerp1d(c01b, c11b, yd);
 

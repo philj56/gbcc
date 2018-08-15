@@ -289,10 +289,10 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 		return  tmp;
 	}
 	if (gbc->mode == GBC && addr == BGPD) {
-		return gbc->memory.bgp[gbc->memory.ioreg[BGPI - IOREG_START]];
+		return gbc->memory.bgp[gbc->memory.ioreg[BGPI - IOREG_START] & 0x3Fu];
 	}
 	if (gbc->mode == GBC && addr == OBPD) {
-		return gbc->memory.obp[gbc->memory.ioreg[OBPI - IOREG_START]];
+		return gbc->memory.obp[gbc->memory.ioreg[OBPI - IOREG_START] & 0x3Fu];
 	}
 	/* GBC-specific registers should return 0xFF when in DMG mode */
 	if (gbc->mode == DMG) {
@@ -348,11 +348,12 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		}
 	} else if (gbc->mode == GBC && addr == BGPD) {
 		uint8_t index = gbc->memory.ioreg[BGPI - IOREG_START];
+		//printf("BGPD[0x%02X] = 0x%02X\n", index & 0x3Fu, val);
 		gbc->memory.bgp[index & 0x3Fu] = val;
 		if (check_bit(index, 7)) {
 			index++;
-			if (index == 0x40u) {
-				index = 0;
+			if ((index & 0x7Fu) == 0x40u) {
+				index = bit(7);
 			}
 			gbc->memory.ioreg[BGPI - IOREG_START] = index;
 		}
@@ -361,8 +362,8 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		gbc->memory.obp[index & 0x3Fu] = val;
 		if (check_bit(index, 7)) {
 			index++;
-			if (index == 0x40u) {
-				index = 0;
+			if ((index & 0x7Fu) == 0x40u) {
+				index = bit(7);
 			}
 			gbc->memory.ioreg[OBPI - IOREG_START] = index;
 		}
