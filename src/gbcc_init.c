@@ -124,7 +124,8 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
-	gbcc_log(GBCC_LOG_INFO, "\tCartridge size: 0x%X bytes\n", gbc->cart.rom_size);
+	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
+	gbcc_log(GBCC_LOG_INFO, "\tCartridge size: 0x%X bytes (%u banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
 
 	gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
 	if (gbc->cart.rom == NULL) {
@@ -386,7 +387,8 @@ void gbcc_init_ram(struct gbc *gbc)
 	}*/
 
 	if (gbc->cart.ram_size > 0) {
-		gbcc_log(GBCC_LOG_INFO, "\tCartridge RAM: 0x%0X bytes\n", gbc->cart.ram_size);
+		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;
+		gbcc_log(GBCC_LOG_INFO, "\tCartridge RAM: 0x%0X bytes (%u banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
 		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
 		if (gbc->cart.ram == NULL) {
 			gbcc_log(GBCC_LOG_ERROR, "Error allocating RAM.\n");

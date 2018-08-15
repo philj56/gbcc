@@ -406,7 +406,6 @@ void draw_sprite_line(struct gbc *gbc)
 void composite_line(struct gbc *gbc)
 {
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
-	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 	uint8_t bg_attr;
 	uint8_t win_attr;
 	uint8_t ob_attr;

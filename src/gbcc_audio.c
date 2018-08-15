@@ -58,8 +58,8 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 	if (audio->gbc->keys.turbo) {
 		return;
 	}
-	if (audio->gbc->apu_clock - audio->sample_clock > CLOCKS_PER_SAMPLE) {
-		audio->sample_clock = audio->gbc->apu_clock;
+	if (audio->gbc->apu.clock - audio->sample_clock > CLOCKS_PER_SAMPLE) {
+		audio->sample_clock = audio->gbc->apu.clock;
 		audio->mix_buffer[audio->index] = 0;
 		audio->mix_buffer[audio->index + 1] = 0;
 		ch1_update(audio);

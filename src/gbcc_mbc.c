@@ -66,11 +66,19 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 		gbc->cart.mbc.romx_bank &= ~0x1Fu;
 		gbc->cart.mbc.romx_bank |= val & 0x1Fu;
 		gbc->cart.mbc.romx_bank += !(val & 0x1Fu);
+		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
+			gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
+		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 	} else if (addr < 0x6000u) {
 		if (gbc->cart.mbc.bank_mode == ROM) {
 			gbc->cart.mbc.romx_bank &= ~0x60u;
 			gbc->cart.mbc.romx_bank |= val & 0x60u;
+			if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
+				gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+				gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
+			}
 			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 			if ((size_t)(gbc->memory.romx - gbc->memory.rom0) > gbc->cart.rom_size) {
 				gbc->cart.mbc.romx_bank &= ~0x60u;
@@ -78,18 +86,22 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 			}
 		} else {
 			gbc->cart.mbc.sram_bank = val & 0x03u;
+			if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
+				gbcc_log(GBCC_LOG_DEBUG, "Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
+				gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
+			}
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 		}
 	} else if (addr < 0x8000u) {
 		if (val & 0x01u) {
 			gbc->cart.mbc.bank_mode = RAM;
-			//gbc->cart.mbc.sram_bank = (gbc->cart.mbc.romx_bank & 0x60u) >> 4u; /* TODO: Are these upper 2 bits remembered? */
+			gbc->cart.mbc.sram_bank = (gbc->cart.mbc.romx_bank & 0x60u) >> 4u; /* TODO: Are these upper 2 bits remembered? */
 			gbc->cart.mbc.romx_bank &= ~0x60u; /* TODO: Are these upper 2 bits remembered? */
 			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 		} else {
 			gbc->cart.mbc.bank_mode = ROM;
-			//gbc->cart.mbc.romx_bank = (uint8_t)(gbc->cart.mbc.sram_bank << 4u); /* TODO: Are these upper 2 bits remembered? */
+			gbc->cart.mbc.romx_bank = (uint8_t)(gbc->cart.mbc.sram_bank << 4u); /* TODO: Are these upper 2 bits remembered? */
 			gbc->cart.mbc.sram_bank = 0x00u; /* TODO: Are these upper 2 bits remembered? */
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 		}
@@ -140,9 +152,17 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	} else if (addr < 0x4000u) {
 		gbc->cart.mbc.romx_bank = val & 0x7Fu;
 		gbc->cart.mbc.romx_bank += !(val & 0x7Fu);
+		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
+			gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
+		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 	} else if (addr < 0x6000u) {
 		gbc->cart.mbc.sram_bank = val & 0x03u;
+		if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
+			gbcc_log(GBCC_LOG_DEBUG, "Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
+			gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
+		}
 		gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 		if (val >= 0x08u && val <= 0x0Cu) {
 			gbcc_log(GBCC_LOG_DEBUG, "TODO: RTC Register Select\n");
@@ -189,13 +209,25 @@ void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	} else if (addr < 0x3000u) {
 		gbc->cart.mbc.romx_bank &= ~0x00FFu;
 		gbc->cart.mbc.romx_bank |= val;
+		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
+			gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
+		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 	} else if (addr < 0x4000u) {
 		gbc->cart.mbc.romx_bank &= ~0x0100u;
 		gbc->cart.mbc.romx_bank |= (val & 0x01u) << 8u;
+		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
+			gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
+		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 	} else if (addr < 0x6000u) {
 		gbc->cart.mbc.sram_bank = val & 0x0Fu;
+		if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
+			gbcc_log(GBCC_LOG_DEBUG, "Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
+			gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
+		}
 		gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 	} else {
 		gbcc_log(GBCC_LOG_ERROR, "Writing memory address %04X out of bounds.\n", addr);

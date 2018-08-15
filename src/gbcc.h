@@ -104,7 +104,6 @@ struct gbc {
 	uint8_t div_timer;
 	uint64_t clock;
 	uint64_t ppu_clock;
-	uint64_t apu_clock;
 	struct {
 		struct timespec current;
 		struct timespec old;
@@ -167,8 +166,10 @@ struct gbc {
 		const char *filename;
 		uint8_t *rom;
 		size_t rom_size;
+		size_t rom_banks;
 		uint8_t *ram;
 		size_t ram_size;
+		size_t ram_banks;
 		bool battery;
 		bool timer;
 		bool rumble;

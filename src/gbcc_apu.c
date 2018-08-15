@@ -75,7 +75,7 @@ void gbcc_apu_init(struct gbc *gbc)
 
 void gbcc_apu_clock(struct gbc *gbc)
 {
-	gbc->apu_clock += 4;
+	gbc->apu.clock += 4;
 	if (gbc->apu.start_time.tv_sec == 0) {
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 	}
@@ -108,8 +108,8 @@ void gbcc_apu_clock(struct gbc *gbc)
 		gbc->apu.wave.buffer >>= 4u * gbc->apu.wave.nibble;
 	}
 
-	uint64_t clocks = gbc->apu_clock - gbc->apu.sample_clock;
-	if (!(gbc->apu_clock % SEQUENCER_CLOCKS)) {
+	uint64_t clocks = gbc->apu.clock - gbc->apu.sample_clock;
+	if (!(gbc->apu.clock % SEQUENCER_CLOCKS)) {
 		sequencer_clock(gbc);
 	}
 	if (clocks >= CLOCKS_PER_SAMPLE) {
@@ -119,7 +119,7 @@ void gbcc_apu_clock(struct gbc *gbc)
 		} else {
 			time_sync(gbc);
 		}
-		gbc->apu.sample_clock = gbc->apu_clock;
+		gbc->apu.sample_clock = gbc->apu.clock;
 		gbc->apu.sample++;
 	}
 }
@@ -356,7 +356,7 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		case NR43:
 			gbc->apu.noise.shift = (val & 0xF0u) >> 4u;
 			gbc->apu.noise.width_mode = check_bit(val, 3);
-			gbc->apu.noise.timer.period = (val & 0x07u) << 4u;
+			gbc->apu.noise.timer.period = (uint16_t)((val & 0x07u) << 4u);
 			if (gbc->apu.noise.timer.period == 0) {
 				gbc->apu.noise.timer.period = 0x08u;
 			}
