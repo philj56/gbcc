@@ -956,13 +956,14 @@ void CB_BIT_OP(struct gbc *gbc)
 			break;
 		case 2:	/* RES */
 			op &= ~rmask;
+			WRITE_OPERAND_MOD(gbc, op);
 			break;
 		case 3:	/* SET */
 			op |= smask;
+			WRITE_OPERAND_MOD(gbc, op);
 			break;
 	}
 
-	WRITE_OPERAND_MOD(gbc, op);
 
 	gbcc_add_instruction_cycles(gbc, 1);
 	if ((gbc->opcode % 0x08u) == 6) {	/* Operating on (hl) */
