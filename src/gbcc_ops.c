@@ -110,26 +110,26 @@ void (*gbcc_ops[0x100])(struct gbc *gbc) = {
 };
 
 /*
- * Instruction lengths, in cycles. 0 means invalid instruction, or that the
+ * Instruction lengths, in m-cycles. 0 means invalid instruction, or that the
  * duration of the instruction is conditional
  */
 const uint8_t gbcc_op_times[0x100] = {
-/* 0x00 */	4,  12, 8,  8,  4,  4,  8,  4,  20, 8,  8,  8,  4,  4,  8,  4,
-/* 0x10 */	4,  12, 8,  8,  4,  4,  8,  4,  12, 8,  8,  8,  4,  4,  8,  4,
-/* 0x20 */	0,  12, 8,  8,  4,  4,  8,  4,  0,  8,  8,  8,  4,  4,  8,  4,
-/* 0x30 */	0,  12, 8,  8,  12, 12, 12, 4,  0,  8,  8,  8,  4,  4,  8,  4,
-/* 0x40 */	4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-/* 0x50 */	4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-/* 0x60 */	4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-/* 0x70 */	8,  8,  8,  8,  8,  8,  4,  8,  4,  4,  4,  4,  4,  4,  8,  4,
-/* 0x80 */	4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-/* 0x90 */	4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-/* 0xA0 */	4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-/* 0xB0 */	4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-/* 0xC0 */	0,  12, 0,  16, 0,  16, 8,  16, 0,  16, 0,  4,  0,  24, 8,  16,
-/* 0xD0 */	0,  12, 0,  0,  0,  16, 8,  16, 0,  16, 0,  0,  0,  0,  8,  16,
-/* 0xE0 */	12, 12, 8,  0,  0,  16, 8,  16, 16, 4,  16, 0,  0,  0,  8,  16,
-/* 0xF0 */	12, 12, 8,  4,  0,  16, 8,  16, 12, 8,  16, 4,  0,  0,  8,  16
+/* 0x00 */ 	1, 3, 2, 2, 1, 1, 2, 1, 5, 2, 2, 2, 1, 1, 2, 1,
+/* 0x10 */ 	1, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1,
+/* 0x20 */ 	0, 3, 2, 2, 1, 1, 2, 1, 0, 2, 2, 2, 1, 1, 2, 1,
+/* 0x30 */ 	0, 3, 2, 2, 3, 3, 3, 1, 0, 2, 2, 2, 1, 1, 2, 1,
+/* 0x40 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+/* 0x50 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+/* 0x60 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+/* 0x70 */ 	2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1,
+/* 0x80 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+/* 0x90 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+/* 0xA0 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+/* 0xB0 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+/* 0xC0 */ 	0, 3, 0, 4, 0, 4, 2, 4, 0, 4, 0, 1, 0, 6, 2, 4,
+/* 0xD0 */ 	0, 3, 0, 0, 0, 4, 2, 4, 0, 4, 0, 0, 0, 0, 2, 4,
+/* 0xE0 */ 	3, 3, 2, 0, 0, 4, 2, 4, 4, 1, 4, 0, 0, 0, 2, 4,
+/* 0xF0 */ 	3, 3, 2, 1, 0, 4, 2, 4, 3, 2, 4, 1, 0, 0, 2, 4
 };
 
 /* Instruction sizes, in bytes. 0 means invalid instruction */
@@ -152,6 +152,25 @@ const uint8_t gbcc_op_sizes[0x100] = {
 /* 0xF0 */	2, 1, 2, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1
 };
 
+const uint8_t gbcc_op_fixed[0x100] = {
+/* 0x00 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x10 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x20 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x30 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x40 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x50 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x60 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x70 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x80 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0x90 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0xA0 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0xB0 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0xC0 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0xD0 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0xE0 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 0xF0 */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0
+};
+
 /* Miscellaneous */
 
 __attribute__((noreturn))
@@ -168,7 +187,18 @@ void NOP(struct gbc *gbc)
 
 void STOP(struct gbc *gbc)
 {
-	gbc->stop = true;
+	if (gbc->mode == GBC && check_bit(gbcc_memory_read(gbc, KEY1, true), 0)) {
+		gbcc_memory_clear_bit(gbc, KEY1, 0, true);
+		if (gbc->speed_mult == 1) {
+			gbcc_memory_set_bit(gbc, KEY1, 7, true);
+			gbc->speed_mult = 2;
+		} else {
+			gbcc_memory_clear_bit(gbc, KEY1, 7, true);
+			gbc->speed_mult = 1;
+		}
+	} else {
+		gbc->stop = true;
+	}
 	gbcc_fetch_instruction(gbc); /* Discard next byte */
 }
 
@@ -229,7 +259,9 @@ void CCF(struct gbc *gbc)
 
 void EI(struct gbc *gbc)
 {
-	gbc->ime = true;
+	if (gbc->instruction_timer == 0) {
+		gbc->ime = true;
+	}
 }
 
 void DI(struct gbc *gbc)
@@ -568,6 +600,9 @@ void ADD_HL(struct gbc *gbc)
 
 void ADD_SP(struct gbc *gbc)
 {
+	/*if (gbc->instruction_timer != 3) {
+		return;
+	}*/
 	uint16_t tmp = gbc->reg.sp;
 	int8_t op = (int8_t)gbcc_fetch_instruction(gbc);
 	gbc->reg.sp += op;
@@ -631,33 +666,33 @@ void JP_COND(struct gbc *gbc)
 		case 0:	/* JP NZ */
 			if (!get_flag(gbc, ZF)) {
 				gbc->reg.pc = addr;
-				gbcc_add_instruction_cycles(gbc, 16);
+				gbcc_add_instruction_cycles(gbc, 4);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			}
 			break;
 		case 1:	/* JP Z */
 			if (get_flag(gbc, ZF)) {
 				gbc->reg.pc = addr;
-				gbcc_add_instruction_cycles(gbc, 16);
+				gbcc_add_instruction_cycles(gbc, 4);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			}
 			break;
 		case 2:	/* JP NC */
 			if (!get_flag(gbc, CF)) {
 				gbc->reg.pc = addr;
-				gbcc_add_instruction_cycles(gbc, 16);
+				gbcc_add_instruction_cycles(gbc, 4);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			}
 			break;
 		case 3:	/* JP C */
 			if (get_flag(gbc, CF)) {
 				gbc->reg.pc = addr;
-				gbcc_add_instruction_cycles(gbc, 16);
+				gbcc_add_instruction_cycles(gbc, 4);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			}
 			break;
 		default:
@@ -679,33 +714,33 @@ void JR_COND(struct gbc *gbc)
 		case 0:	/* JR NZ */
 			if (!get_flag(gbc, ZF)) {
 				gbc->reg.pc += rel_addr;
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
+				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
 		case 1:	/* JR Z */
 			if (get_flag(gbc, ZF)) {
 				gbc->reg.pc += rel_addr;
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
+				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
 		case 2:	/* JR NC */
 			if (!get_flag(gbc, CF)) {
 				gbc->reg.pc += rel_addr;
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
+				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
 		case 3:	/* JR C */
 			if (get_flag(gbc, CF)) {
 				gbc->reg.pc += rel_addr;
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
+				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
 		default:
@@ -718,10 +753,15 @@ void JR_COND(struct gbc *gbc)
 
 void CALL(struct gbc *gbc)
 {
-	uint16_t addr = cat_bytes(gbcc_fetch_instruction(gbc), gbcc_fetch_instruction(gbc));
-	gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), false);
-	gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
-	gbc->reg.pc = addr;
+	static uint8_t low;
+	static uint8_t high;
+	static uint16_t addr;
+			low = gbcc_fetch_instruction(gbc);
+			high = gbcc_fetch_instruction(gbc);
+			addr = cat_bytes(low, high);
+			gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), false);
+			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
+			gbc->reg.pc = addr;
 }
 
 void CALL_COND(struct gbc *gbc)
@@ -732,33 +772,33 @@ void CALL_COND(struct gbc *gbc)
 		case 0:	/* CALL NZ */
 			if (!get_flag(gbc, ZF)) {
 				call = true;
-				gbcc_add_instruction_cycles(gbc, 24);
+				gbcc_add_instruction_cycles(gbc, 6);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			}
 			break;
 		case 1:	/* CALL Z */
 			if (get_flag(gbc, ZF)) {
 				call = true;
-				gbcc_add_instruction_cycles(gbc, 24);
+				gbcc_add_instruction_cycles(gbc, 6);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			}
 			break;
 		case 2:	/* CALL NC */
 			if (!get_flag(gbc, CF)) {
 				call = true;
-				gbcc_add_instruction_cycles(gbc, 24);
+				gbcc_add_instruction_cycles(gbc, 6);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			}
 			break;
 		case 3:	/* CALL C */
 			if (get_flag(gbc, CF)) {
 				call = true;
-				gbcc_add_instruction_cycles(gbc, 24);
+				gbcc_add_instruction_cycles(gbc, 6);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 12);
+				gbcc_add_instruction_cycles(gbc, 3);
 			}
 			break;
 		default:
@@ -788,33 +828,33 @@ void RET_COND(struct gbc *gbc) {
 		case 0:	/* RET NZ */
 			if (!get_flag(gbc, ZF)) {
 				ret = true;
-				gbcc_add_instruction_cycles(gbc, 20);
+				gbcc_add_instruction_cycles(gbc, 5);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
+				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
 		case 1:	/* RET Z */
 			if (get_flag(gbc, ZF)) {
 				ret = true;
-				gbcc_add_instruction_cycles(gbc, 20);
+				gbcc_add_instruction_cycles(gbc, 5);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
+				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
 		case 2:	/* RET NC */
 			if (!get_flag(gbc, CF)) {
 				ret = true;
-				gbcc_add_instruction_cycles(gbc, 20);
+				gbcc_add_instruction_cycles(gbc, 5);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
+				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
 		case 3:	/* RET C */
 			if (get_flag(gbc, CF)) {
 				ret = true;
-				gbcc_add_instruction_cycles(gbc, 20);
+				gbcc_add_instruction_cycles(gbc, 5);
 			} else {
-				gbcc_add_instruction_cycles(gbc, 8);
+				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
 	}
@@ -828,7 +868,10 @@ void RST(struct gbc *gbc)
 	uint8_t addr = gbc->opcode - 0xC7u;
 	gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), false);
 	gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
-	gbc->reg.pc = 0x0000u | addr;
+	//gbc->reg.pc = 0x0000u | addr;
+	gbc->rst.addr = addr;
+	gbc->rst.request = true;
+	gbc->rst.delay = 1;
 }
 
 /* CB-prefix */
@@ -891,9 +934,9 @@ void CB_SHIFT_OP(struct gbc *gbc)
 
 	WRITE_OPERAND_MOD(gbc, op);
 
-	gbcc_add_instruction_cycles(gbc, 4);
+	gbcc_add_instruction_cycles(gbc, 1);
 	if ((gbc->opcode % 0x08u) == 6) {	/* Operating on (hl) */
-		gbcc_add_instruction_cycles(gbc, 8);
+		gbcc_add_instruction_cycles(gbc, 2);
 	}
 }
 
@@ -913,17 +956,22 @@ void CB_BIT_OP(struct gbc *gbc)
 			break;
 		case 2:	/* RES */
 			op &= ~rmask;
+			WRITE_OPERAND_MOD(gbc, op);
 			break;
 		case 3:	/* SET */
 			op |= smask;
+			WRITE_OPERAND_MOD(gbc, op);
 			break;
 	}
 
-	WRITE_OPERAND_MOD(gbc, op);
 
-	gbcc_add_instruction_cycles(gbc, 4);
+	gbcc_add_instruction_cycles(gbc, 1);
 	if ((gbc->opcode % 0x08u) == 6) {	/* Operating on (hl) */
-		gbcc_add_instruction_cycles(gbc, 8);
+		if (operation == 1) {
+			gbcc_add_instruction_cycles(gbc, 1);
+		} else {
+			gbcc_add_instruction_cycles(gbc, 2);
+		}
 	}
 }
 

@@ -1,6 +1,7 @@
 #ifndef GBCC_H
 #define GBCC_H
 
+#include "gbcc_apu.h"
 #include "gbcc_constants.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,6 +12,11 @@
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN
 #endif
+
+struct line_buffer {
+	uint32_t colour[GBC_SCREEN_WIDTH];
+	uint8_t attr[GBC_SCREEN_WIDTH];
+};
 
 struct gbc {
 	/* Registers */
@@ -78,12 +84,26 @@ struct gbc {
 	} halt;
 	struct {
 		uint16_t source;
+		uint16_t new_source;
 		uint16_t timer;
+		bool requested;
 	} dma;
+	struct {
+		uint16_t source;
+		uint16_t dest;
+		uint16_t length;
+		bool hblank;
+	} hdma;
+	struct {
+		uint16_t addr;
+		uint8_t delay;
+		bool request;
+	} rst;
 	bool stop;
 	uint8_t instruction_timer;
 	uint8_t div_timer;
 	uint64_t clock;
+	uint64_t ppu_clock;
 	struct {
 		struct timespec current;
 		struct timespec old;
@@ -92,6 +112,7 @@ struct gbc {
 	bool initialised;
 	int8_t save_state;
 	int8_t load_state;
+	int8_t speed_mult;
 
 	/* Memory map */
 	struct {
@@ -108,11 +129,16 @@ struct gbc {
 		uint8_t ioreg[IOREG_SIZE];	/* I/O Registers */
 		uint8_t hram[HRAM_SIZE];	/* Internal CPU RAM */
 		uint8_t iereg;	/* Interrupt enable flags */
+		uint8_t bgp[64]; 	/* 8 x 8-byte sprites */
+		uint8_t obp[64]; 	/* 8 x 8-byte sprites */
 		/* Emulator areas */
-		uint8_t *emu_wram;	/* Actual location of WRAM */
-		uint8_t *emu_vram;	/* Actual location of VRAM */
+		uint8_t wram_bank[8][WRAM0_SIZE];	/* Actual location of WRAM */
+		uint8_t vram_bank[2][VRAM_SIZE]; 	/* Actual location of VRAM */
 		uint32_t screen_buffer_0[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
 		uint32_t screen_buffer_1[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
+		struct line_buffer background_buffer;
+		struct line_buffer window_buffer;
+		struct line_buffer sprite_buffer;
 		uint32_t *gbc_screen;
 		uint32_t *sdl_screen;
 	} memory;
@@ -131,14 +157,19 @@ struct gbc {
 		} dpad;
 		bool turbo;
 	} keys;
+	
+	/* APU */
+	struct apu apu;
 
 	/* Cartridge data & flags */
 	struct {
 		const char *filename;
 		uint8_t *rom;
 		size_t rom_size;
+		size_t rom_banks;
 		uint8_t *ram;
 		size_t ram_size;
+		size_t ram_banks;
 		bool battery;
 		bool timer;
 		bool rumble;
@@ -147,7 +178,7 @@ struct gbc {
 			enum MBC type;
 			enum BANK_MODE bank_mode;
 			bool sram_enable;
-			uint8_t romx_bank;
+			uint16_t romx_bank;
 			uint8_t sram_bank;
 			bool padding;
 		} mbc;

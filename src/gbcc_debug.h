@@ -13,5 +13,6 @@ void gbcc_print_registers(struct gbc *gbc);
 void gbcc_print_op(struct gbc *gbc);
 void gbcc_log(enum GBCC_LOG_LEVEL level, const char *fmt, ...);
 void gbcc_log_append(enum GBCC_LOG_LEVEL level, const char *fmt, ...);
+void gbcc_vram_dump(struct gbc *gbc, const char *filename);
 
 #endif /* GBCC_DEBUG_H */

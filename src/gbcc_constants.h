@@ -2,10 +2,10 @@
 #define GBC_CONSTANTS_H
 
 /* Flags register */
-#define ZF 0x80u
-#define NF 0x40u
-#define HF 0x20u
-#define CF 0x10u
+#define ZF ((uint8_t)(0x80u))
+#define NF ((uint8_t)(0x40u))
+#define HF ((uint8_t)(0x20u))
+#define CF ((uint8_t)(0x10u))
 
 /* Memory map */
 #define ROM0_START 0x0000u	/* Non-Switchable ROM Bank */
@@ -131,7 +131,7 @@
 #define NR51 0xFF25u	/* Selection of Sound Output Terminal (R/W) */
 #define NR52 0xFF26u	/* Sound On / Off (0-3 R, 7 R/W) */
 #define WAVE_START 0xFF30u 	/* Wave pattern RAM */
-#define WAVE_SIZE 0x0Fu
+#define WAVE_SIZE 0x10u
 #define WAVE_END (WAVE_START + WAVE_SIZE)
 
 /* Interrupts */
@@ -163,10 +163,10 @@
 #define GBC_LCD_MODE_VBLANK 1
 #define GBC_LCD_MODE_OAM_READ 2
 #define GBC_LCD_MODE_OAM_VRAM_READ 3
-#define DMA_TIMER 672 /* How long DMG DMA takes in clocks (Must be multiple of 4) */
+#define DMA_TIMER 160 /* How long DMG DMA takes in m-cycles */
 
 
-enum MBC { NONE, MBC1, MBC2, MBC3, MBC4, MBC5, MMM01 };
+enum MBC { NONE, MBC1, MBC2, MBC3, MBC5, MMM01 };
 enum BANK_MODE { ROM, RAM };
 enum CART_MODE { GBC, DMG };
 

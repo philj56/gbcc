@@ -1,8 +1,20 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define BUF_LEN 32
+#define VRAM_SIZE 0x2000u
+
+uint8_t bit(uint8_t b)
+{
+	return (uint8_t)(1u << b);
+}
+
+bool check_bit(uint8_t byte, uint8_t b)
+{
+	return byte & bit(b);
+}
 
 void n2c(uint8_t n)
 {
@@ -30,19 +42,22 @@ int main(int argc, char **argv)
 	}
 
 	uint8_t buf[BUF_LEN];
-	FILE *f = fopen(argv[1], "rb");
+	FILE *f = fopen(argv[1], "rbe");
+	int vram_pos = 0;
+	printf("VRAM Bank 0:\n");
 	while (fread(buf, BUF_LEN, 1, f)) {
-		for (uint8_t i = 0; i < BUF_LEN; i++) {
-			n2c((buf[i] & 0xC0u) >> 6);
-			n2c((buf[i] & 0x30u) >> 4);
-			n2c((buf[i] & 0x0Cu) >> 2);
-			n2c((buf[i] & 0x03u) >> 0);
-			i++;
-			n2c((buf[i] & 0xC0u) >> 6);
-			n2c((buf[i] & 0x30u) >> 4);
-			n2c((buf[i] & 0x0Cu) >> 2);
-			n2c((buf[i] & 0x03u) >> 0);
+		for (uint8_t i = 0; i < BUF_LEN; i += 2) {
+			uint8_t lo = buf[i];
+			uint8_t hi = buf[i + 1];
+			for (uint8_t xoff = 0; xoff < 8; xoff++) {
+				n2c((uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff));
+			}
 			printf("\n");
+			vram_pos += 2;
+			if (vram_pos >= VRAM_SIZE) {
+				printf("VRAM Bank 1:\n");
+				vram_pos = 0;
+			}
 		}
 	}
 	fclose(f);

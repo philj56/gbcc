@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static int gbcc_window_thread_function(void *window);
+static int window_thread_function(void *window);
 
 struct gbcc_window *gbcc_window_initialise(struct gbc *gbc)
 {
@@ -17,15 +17,12 @@ struct gbcc_window *gbcc_window_initialise(struct gbc *gbc)
 	win->gbc = gbc;
 	win->quit = false;
 
-	SDL_InitSubSystem(SDL_INIT_VIDEO);
-	win->mutex = SDL_CreateMutex();
-	if (win->mutex == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Could not create mutex: %s\n", SDL_GetError());
-		exit(EXIT_FAILURE);
+	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
+		gbcc_log(GBCC_LOG_ERROR, "Failed to initialize SDL: %s\n", SDL_GetError());
 	}
 
 	win->thread = SDL_CreateThread(
-			gbcc_window_thread_function, 
+			window_thread_function, 
 			"RenderingThread", 
 			(void *)(win));
 
@@ -40,13 +37,12 @@ void gbcc_window_destroy(struct gbcc_window *win)
 {
 	win->quit = true;
 	SDL_WaitThread(win->thread, NULL);
-	SDL_DestroyMutex(win->mutex);
 	SDL_DestroyTexture(win->texture);
 	SDL_DestroyRenderer(win->renderer);
 	SDL_DestroyWindow(win->window);
 }
 
-static int gbcc_window_thread_function(void *window)
+static int window_thread_function(void *window)
 {
 	int err;
 	struct gbcc_window *win = (struct gbcc_window *)window;
@@ -63,7 +59,6 @@ static int gbcc_window_thread_function(void *window)
 
 	if (win->window == NULL) {
 		gbcc_log(GBCC_LOG_ERROR, "Could not create window: %s\n", SDL_GetError());
-		SDL_DestroyMutex(win->mutex);
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
@@ -77,7 +72,6 @@ static int gbcc_window_thread_function(void *window)
 	if (win->renderer == NULL) {
 		gbcc_log(GBCC_LOG_ERROR, "Could not create renderer: %s\n", SDL_GetError());
 		SDL_DestroyWindow(win->window);
-		SDL_DestroyMutex(win->mutex);
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
@@ -93,7 +87,6 @@ static int gbcc_window_thread_function(void *window)
 		gbcc_log(GBCC_LOG_ERROR, "Could not create texture: %s\n", SDL_GetError());
 		SDL_DestroyRenderer(win->renderer);
 		SDL_DestroyWindow(win->window);
-		SDL_DestroyMutex(win->mutex);
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
@@ -110,17 +103,11 @@ static int gbcc_window_thread_function(void *window)
 	/* Main rendering loop */
 	while (!(win->quit)) {
 		gbcc_input_process_all(win->gbc);
-		if (SDL_LockMutex(win->mutex) < 0) {
-			gbcc_log(GBCC_LOG_ERROR, "Could not lock mutex: %s\n", SDL_GetError());
-		}
 		/* Do the actual drawing */
 		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
 			win->buffer[i] = win->gbc->memory.sdl_screen[i];
 		}
 		/* Draw the background */
-		if (SDL_UnlockMutex(win->mutex) < 0) {
-			gbcc_log(GBCC_LOG_ERROR, "Could not unlock mutex: %s\n", SDL_GetError());
-		}
 		err = SDL_UpdateTexture(
 				win->texture, 
 				NULL, 

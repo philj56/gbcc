@@ -1,5 +1,9 @@
 #include "gbcc_bit_utils.h"
 
+/* 
+ * TODO: These should all probably be macros, as they are called very
+ * frequently with constant args.
+ */
 uint8_t high_byte(uint16_t x)
 {
 	return (x & 0xFF00u) >> 8u;
@@ -30,9 +34,9 @@ uint8_t toggle_bit(uint8_t byte, uint8_t b)
 	return byte ^ bit(b);
 }
 
-bool check_bit(uint8_t byte, uint8_t b)
+uint8_t check_bit(uint8_t byte, uint8_t b)
 {
-	return byte & bit(b);
+	return (uint8_t)(byte & bit(b)) >> b;
 }
 
 uint8_t bit(uint8_t b)

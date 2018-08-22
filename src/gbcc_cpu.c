@@ -1,11 +1,12 @@
 #include "gbcc.h"
-#include "gbcc_audio.h"
+#include "gbcc_apu.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
+#include "gbcc_hdma.h"
 #include "gbcc_memory.h"
 #include "gbcc_ops.h"
-#include "gbcc_video.h"
+#include "gbcc_ppu.h"
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
@@ -13,38 +14,57 @@
 static void gbcc_update_timers(struct gbc *gbc);
 static void gbcc_check_interrupts(struct gbc *gbc);
 static void gbcc_execute_instruction(struct gbc *gbc);
+static void gbcc_cpu_clock(struct gbc *gbc);
 
 /* TODO: Check order of all of these */
 void gbcc_emulate_cycle(struct gbc *gbc)
 {
+	gbcc_ppu_clock(gbc);
+	gbcc_apu_clock(gbc);
+	gbcc_cpu_clock(gbc);
+	if (gbc->speed_mult == 2) {
+		gbcc_cpu_clock(gbc);
+	}
+}
+
+void gbcc_cpu_clock(struct gbc *gbc)
+{
 	gbc->clock += 4;
 	if (gbc->dma.timer > 0) {
-		gbc->dma.timer -= 4;
+		gbc->dma.timer--;
 		if (low_byte(gbc->dma.source) < OAM_SIZE) {
 			gbcc_memory_copy(gbc, gbc->dma.source, OAM_START + low_byte(gbc->dma.source), true);
 			gbc->dma.source++;
 		}
 	}
+	if (gbc->dma.requested) {
+		gbc->dma.timer = DMA_TIMER;
+		gbc->dma.requested = false;
+		gbc->dma.source = gbc->dma.new_source;
+	}
 	gbcc_update_timers(gbc);
-	//if (gbc->instruction_timer == 0) {
 	gbcc_check_interrupts(gbc);
-	gbcc_video_update(gbc);
-	gbcc_audio_update(gbc);
-	//}
 	if (gbc->halt.set || gbc->stop) {
 		return;
 	}
+	if (gbcc_op_fixed[gbc->opcode]) {
+		gbcc_ops[gbc->opcode](gbc);
+	}
 	if (gbc->instruction_timer == 0) {
 		gbcc_execute_instruction(gbc);
-		//printf("0x%04X\n", gbc->reg.pc);
-		//gbcc_log(GBCC_LOG_DEBUG, "pc: %04X\n", gbc->reg.pc);
+		if (gbc->rst.request) {
+			if (--gbc->rst.delay == 0) {
+				gbc->rst.request = 0;
+				gbc->reg.pc = gbc->rst.addr;
+			}
+		}
 	}
-	gbc->instruction_timer -= 4;
+	gbc->instruction_timer--;
 }
 
 void gbcc_update_timers(struct gbc *gbc)
 {
-	gbc->div_timer += 4u;
+	gbc->div_timer++;
 	if (gbc->div_timer == 64u) {
 		gbcc_memory_increment(gbc, DIV, true);
 		gbc->div_timer = 0;
@@ -88,35 +108,34 @@ void gbcc_check_interrupts(struct gbc *gbc)
 	if (interrupt && gbc->ime) {
 		uint16_t addr;
 
-		if (interrupt & bit(0)) {
+		if (check_bit(interrupt, 0)) {
 			addr = INT_VBLANK;
-			//gbcc_log(GBCC_LOG_DEBUG, "VBLANK interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
-		} else if (interrupt & bit(1)) {
+		} else if (check_bit(interrupt, 1)) {
 			addr = INT_LCDSTAT;
-			//gbcc_log(GBCC_LOG_DEBUG, "LCDSTAT interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 1, true);
-		} else if (interrupt & bit(2)) {
+		} else if (check_bit(interrupt, 2)) {
 			addr = INT_TIMER;
-			//gbcc_log(GBCC_LOG_DEBUG, "TIMER interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 2, true);
-		} else if (interrupt & bit(3)) {
+		} else if (check_bit(interrupt, 3)) {
 			addr = INT_SERIAL;
-			//gbcc_log(GBCC_LOG_DEBUG, "SERIAL interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 3, true);
-		} else if (interrupt & bit(4)) {
+		} else if (check_bit(interrupt, 4)) {
 			addr = INT_JOYPAD;
-			//gbcc_log(GBCC_LOG_DEBUG, "JOYPAD interrupt\n");
 			gbcc_memory_clear_bit(gbc, IF, 4, true);
 		} else {
 			gbcc_log(GBCC_LOG_ERROR, "False interrupt\n");
 			addr = 0;
 		}
 
-		gbcc_add_instruction_cycles(gbc, 20);
+		gbcc_add_instruction_cycles(gbc, 5);
 		if (gbc->halt.set) {
-			gbcc_add_instruction_cycles(gbc, 4);
+			gbcc_add_instruction_cycles(gbc, 1);
 		}
+		/* 
+		 * FIXME: EI instr. should take a full cycle to execute, but
+		 * here it gets done instantly.
+		 */
 		gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), true);
 		gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), true);
 		gbc->reg.pc = addr;
@@ -129,9 +148,14 @@ void gbcc_check_interrupts(struct gbc *gbc)
 void gbcc_execute_instruction(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
+	/*printf("%04X\n", gbc->reg.pc);
+	printf("LY %d\n", gbcc_memory_read(gbc, LY, true));
+	printf("MODE %d\n", gbcc_memory_read(gbc, STAT, true) & 0x03u);
+	*/
 	//gbcc_print_op(gbc);
-	gbcc_ops[gbc->opcode](gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
+	gbcc_ops[gbc->opcode](gbc);
+	//gbcc_print_registers(gbc);
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)

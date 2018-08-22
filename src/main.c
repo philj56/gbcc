@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_apu.h"
 #include "gbcc_audio.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
@@ -11,7 +12,6 @@
 #include <time.h>
 
 static struct gbc gbc;
-static struct gbcc_window *window;
 
 static void quit(int sig);
 
@@ -36,21 +36,24 @@ int main(int argc, char **argv)
 
 //	struct gbc gbc;
 
+	/* FIXME: shouldn't have to do this */
 	gbc.initialised = false;
 	gbcc_initialise(&gbc, argv[1]);
-	window = gbcc_window_initialise(&gbc);
-	gbcc_audio_initialise();
+	gbcc_window_initialise(&gbc);
+	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
 	gbc.initialised = true;
 
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);
-		if (gbc.save_state) {
+		if (gbc.save_state > 0) {
 			gbcc_save_state(&gbc);
-		} else if (gbc.load_state) {
+		} else if (gbc.load_state > 0) {
 			gbcc_load_state(&gbc);
 		}
+		gbcc_audio_update(audio);
 	}
+	//gbcc_vram_dump(&gbc, "vram.dump");
 	gbcc_save(&gbc);
 	
 	return 0;

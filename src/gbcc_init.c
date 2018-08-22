@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_apu.h"
 #include "gbcc_bit_utils.h"
 #include "gbcc_constants.h"
 #include "gbcc_debug.h"
@@ -52,11 +53,17 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->halt.skip = 0;
 	gbc->dma.source = 0;
 	gbc->dma.timer = 0;
+	gbc->hdma.source = 0;
+	gbc->hdma.dest = 0;
+	gbc->hdma.length = 0;
+	gbc->hdma.hblank = 0;
 	gbc->stop = false;
 	gbc->instruction_timer = 0;
 	gbc->clock = GBC_LCD_MODE_PERIOD;
+	gbc->ppu_clock = gbc->clock;
 	gbc->save_state = 0;
 	gbc->load_state = 0;
+	gbc->speed_mult = 1;
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
 	timespec_get(&gbc->real_time.current, TIME_UTC);
@@ -66,6 +73,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbcc_init_mmap(gbc);
 	gbcc_init_ioreg(gbc);
 	gbcc_init_input(gbc);
+	gbcc_apu_init(gbc);
 }
 
 void gbcc_free(struct gbc *gbc)
@@ -74,8 +82,6 @@ void gbcc_free(struct gbc *gbc)
 	if (gbc->cart.ram_size > 0) {
 		free(gbc->cart.ram);
 	}
-	free(gbc->memory.emu_wram);
-	free(gbc->memory.emu_vram);
 }
 
 void gbcc_load_rom(struct gbc *gbc, const char *filename)
@@ -118,7 +124,8 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
-	gbcc_log(GBCC_LOG_INFO, "\tCartridge size: 0x%X bytes\n", gbc->cart.rom_size);
+	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
+	gbcc_log(GBCC_LOG_INFO, "\tCartridge size: 0x%X bytes (%u banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
 
 	gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
 	if (gbc->cart.rom == NULL) {
@@ -301,19 +308,6 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 			gbc->cart.battery = true;
 			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC3 + RAM + Battery\n");
 			break;
-		case 0x15u:	/* MBC4 */
-			gbc->cart.mbc.type = MBC4;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC4\n");
-			break;
-		case 0x16u:	/* MBC4 + RAM */
-			gbc->cart.mbc.type = MBC4;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC4 + RAM\n");
-			break;
-		case 0x17u:	/* MBC4 + RAM + BATTERY */
-			gbc->cart.mbc.type = MBC4;
-			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC4 + RAM + Battery\n");
-			break;
 		case 0x19u:	/* MBC5 */
 			gbc->cart.mbc.type = MBC5;
 			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5\n");
@@ -363,13 +357,25 @@ void gbcc_init_ram(struct gbc *gbc)
 			}
 			break;
 		case 0x01u:
-			gbc->cart.ram_size = 0x0800u;
+			if (gbc->cart.mbc.type == MBC5) {
+				gbc->cart.ram_size = 0x2000u;
+			} else {
+				gbc->cart.ram_size = 0x0800u;
+			}
 			break;
 		case 0x02u:
-			gbc->cart.ram_size = 0x2000u;
+			if (gbc->cart.mbc.type == MBC5) {
+				gbc->cart.ram_size = 0x8000u;
+			} else {
+				gbc->cart.ram_size = 0x2000u;
+			}
 			break;
 		case 0x03u:
-			gbc->cart.ram_size = 0x8000u;
+			if (gbc->cart.mbc.type == MBC5) {
+				gbc->cart.ram_size = 0x20000u;
+			} else {
+				gbc->cart.ram_size = 0x8000u;
+			}
 			break;
 		default:
 			gbcc_log(GBCC_LOG_ERROR, "Unknown ram size flag: %u\n", ram_size_flag);
@@ -381,7 +387,8 @@ void gbcc_init_ram(struct gbc *gbc)
 	}*/
 
 	if (gbc->cart.ram_size > 0) {
-		gbcc_log(GBCC_LOG_INFO, "\tCartridge RAM: %lu bytes\n", gbc->cart.ram_size);
+		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;
+		gbcc_log(GBCC_LOG_INFO, "\tCartridge RAM: 0x%0X bytes (%u banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
 		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
 		if (gbc->cart.ram == NULL) {
 			gbcc_log(GBCC_LOG_ERROR, "Error allocating RAM.\n");
@@ -409,14 +416,6 @@ void gbcc_print_destination_code(struct gbc *gbc)
 void gbcc_init_registers(struct gbc *gbc) {
 	switch (gbc->mode) {
 		case DMG:
-			/*
-			gbc->reg.af = 0x1180u;
-			gbc->reg.bc = 0x0000u;
-			gbc->reg.de = 0x0008u;
-			gbc->reg.hl = 0x007Cu;
-			gbc->reg.sp = 0xFFFEu;
-			gbc->reg.pc = 0x0100u;
-			*/
 			gbc->reg.af = 0x01B0u;
 			gbc->reg.bc = 0x0013u;
 			gbc->reg.de = 0x00D8u;
@@ -437,38 +436,12 @@ void gbcc_init_registers(struct gbc *gbc) {
 
 void gbcc_init_mmap(struct gbc *gbc)
 {
-	unsigned int wram_mult;
-	unsigned int vram_mult;
-	
-	switch (gbc->mode) {
-		case DMG:
-			wram_mult = 2;
-			vram_mult = 1;
-			break;
-		case GBC:
-			wram_mult = 8;
-			vram_mult = 2;
-			break;
-	}
-
-	gbc->memory.emu_wram = (uint8_t *) calloc(WRAM0_SIZE * wram_mult, 1);
-	if (gbc->memory.emu_wram == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Error allocating WRAM.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	gbc->memory.emu_vram = (uint8_t *) calloc(VRAM_SIZE * vram_mult, 1);
-	if (gbc->memory.emu_vram == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Error allocating VRAM.\n");
-		exit(EXIT_FAILURE);
-	}
-
 	gbc->memory.rom0 = gbc->cart.rom;
 	gbc->memory.romx = gbc->cart.rom + ROM0_SIZE;
-	gbc->memory.vram = gbc->memory.emu_vram;
+	gbc->memory.vram = gbc->memory.vram_bank[0];
 	gbc->memory.sram = gbc->cart.ram;
-	gbc->memory.wram0 = gbc->memory.emu_wram;
-	gbc->memory.wramx = gbc->memory.emu_wram + WRAM0_SIZE;
+	gbc->memory.wram0 = gbc->memory.wram_bank[0];
+	gbc->memory.wramx = gbc->memory.wram_bank[1];
 	gbc->memory.echo = gbc->memory.wram0;
 }
 
@@ -509,7 +482,11 @@ void gbcc_init_ioreg(struct gbc *gbc)
 	gbc->memory.ioreg[OBP1 - IOREG_START] = 0xFFu;
 	gbc->memory.ioreg[WY - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[WX - IOREG_START] = 0x00u;
+	gbc->memory.ioreg[HDMA5 - IOREG_START] = 0x80u;
 	gbc->memory.iereg = 0x00u;
+	for (size_t i = 0; i < sizeof(gbc->memory.bgp)/sizeof(gbc->memory.bgp[0]); i++) {
+		gbc->memory.bgp[i] = 0xFFu;
+	}
 }
 
 void gbcc_init_input(struct gbc *gbc)
