@@ -169,5 +169,6 @@
 enum MBC { NONE, MBC1, MBC2, MBC3, MBC5, MMM01 };
 enum BANK_MODE { ROM, RAM };
 enum CART_MODE { GBC, DMG };
+enum PALETTE_TYPE { blue, red };
 
 #endif /* GBC_CONSTANTS_H */

@@ -5,11 +5,13 @@
 #include "gbcc_debug.h"
 #include "gbcc_save.h"
 #include "gbcc_window.h"
+#include "gbcc_constants.h"
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 static struct gbc gbc;
 
@@ -34,6 +36,37 @@ int main(int argc, char **argv)
 		printf("Can't catch SIGINT!\n");
 	}
 
+	int c;
+	char *pvalue = NULL;
+	opterr = 0;
+
+	while ((c = getopt(argc, argv, "p:")) != -1)
+	    switch (c)
+	    {
+		case 'p':
+		    pvalue = optarg;
+		    break;
+		case '?':
+		    if (optopt == 'c')
+			fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+		    else if (isprint (optopt))
+			fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+		    else
+			fprintf (stderr,
+				"Unknown option character `\\x%x'.\n",
+				optopt);
+		    return 1;
+		default:
+		    abort ();
+	    }
+	enum PALETTE_TYPE pnum;
+	printf("pvalue = %s\n", pvalue);
+	if(pvalue == blue)
+	    pnum = blue;
+	else if(pvalue == red)
+	    pnum = red;
+
+
 //	struct gbc gbc;
 
 	/* FIXME: shouldn't have to do this */
@@ -43,6 +76,7 @@ int main(int argc, char **argv)
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
 	gbc.initialised = true;
+	gbc.palette = pnum;
 
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);
