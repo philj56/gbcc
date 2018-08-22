@@ -287,7 +287,7 @@ void draw_window_line(struct gbc *gbc)
 			if (colour == 0) {
 			    gbc->memory.window_buffer.attr[x] |= ATTR_COLOUR0;
 			}
-			6f (check_bit(attr, 7)) {
+			if (check_bit(attr, 7)) {
 				gbc->memory.window_buffer.attr[x] |= ATTR_PRIORITY;
 			}
 		}
