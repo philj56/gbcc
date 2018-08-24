@@ -5,6 +5,7 @@
 #include "gbcc_hdma.h"
 #include "gbcc_memory.h"
 #include "gbcc_ppu.h"
+#include "gbcc_palettes.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -474,16 +475,18 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 			(palette & 0x30u) >> 4u,
 			(palette & 0xC0u) >> 6u
 		};
-		uint32_t red_palette[4]   = {0xf8f8f8u, 0xff8096u, 0x7f3848u, 0x000000u};
-		uint32_t green_palette[4] = {0xf8f8f8u, 0x1fba1fu, 0x376019u, 0x093609u};
-		uint32_t blue_palette[4]  = {0xf8f8f8u, 0x71b6d0u, 0x0f3eaau, 0x000000u}; 
+		//uint32_t back_palette[4]    = {0xf8f8f8u, 0xff8096u, 0x7f3848u, 0x000000u};
+		//uint32_t sprite1_palette[4] = {0xf8f8f8u, 0x1fba1fu, 0x376019u, 0x093609u};
+		//uint32_t sprite2_palette[4] = {0xf8f8f8u, 0x71b6d0u, 0x0f3eaau, 0x000000u}; 
+		//gbc.palette 
+		struct palette pal = palettes.brown;
 		switch (pf) {
 			case BACKGROUND:
-				return red_palette[colours[n]];
+				return pal.background[colours[n]];
 			case SPRITE_1:
-				return blue_palette[colours[n]]; 	
+				return pal.sprite1[colours[n]]; 	
 			case SPRITE_2:
-				return green_palette[colours[n]];
+				return pal.sprite2[colours[n]];
 		}
 	}
 	uint8_t index = palette * 8;
@@ -495,9 +498,10 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 	} else {
 		lo = gbc->memory.bgp[index + 2 * n];
 		hi = gbc->memory.bgp[index + 2 * n + 1];
-	}
+	} 
 	uint8_t red = lo & 0x1Fu;
 	uint8_t green = ((lo & 0xE0u) >> 5u) | ((hi & 0x03u) << 3u);
 	uint8_t blue = (hi & 0x7Cu) >> 2u;
 	return gbcc_lerp_colour(red, green, blue);
 }
+

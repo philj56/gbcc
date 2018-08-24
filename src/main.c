@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 	}
 
 	int c;
-	char *pvalue = NULL;
+	char *pvalue = "brown";
 	opterr = 0;
 
 	while ((c = getopt(argc, argv, "p:")) != -1)
@@ -59,25 +59,34 @@ int main(int argc, char **argv)
 		default:
 		    abort ();
 	    }
+	for (int j = 0;j<argc;j++){
+	    printf("arg %d is %s\n", j,argv[j]);
+	}
+	    
+	char* PALETTE_NAME[] = { "brown", "red", "darkbrown", NULL };
 	enum PALETTE_TYPE pnum;
+	
+	printf("test = %s\n",argv[argc-1]);
 	printf("pvalue = %s\n", pvalue);
-	if(pvalue == blue)
-	    pnum = blue;
-	else if(pvalue == red)
-	    pnum = red;
 
+	pnum = brown;
+	int i=0;
+	for (i=0; PALETTE_NAME[i]!=NULL; ++i, ++pnum)
+	    if (0==strcmp(pvalue, PALETTE_NAME[i])) break;
 
+	printf("pnum = %d\n", pnum);
+	
 //	struct gbc gbc;
 
 	/* FIXME: shouldn't have to do this */
 	gbc.initialised = false;
-	gbcc_initialise(&gbc, argv[1]);
+	gbcc_initialise(&gbc, argv[argc-1]);
 	gbcc_window_initialise(&gbc);
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
 	gbc.initialised = true;
 	gbc.palette = pnum;
-
+	printf("gbc.palette = %d\n", gbc.palette);
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);
 		if (gbc.save_state > 0) {
