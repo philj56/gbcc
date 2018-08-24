@@ -6,6 +6,7 @@
 #include "gbcc_save.h"
 #include "gbcc_window.h"
 #include "gbcc_constants.h"
+#include "gbcc_palettes.h"
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -87,6 +88,23 @@ int main(int argc, char **argv)
 	gbc.initialised = true;
 	gbc.palette = pnum;
 	printf("gbc.palette = %d\n", gbc.palette);
+	switch (pnum)
+	{
+	    case brown:
+		gbc.pal = palettes.brown;
+		break;
+	    case red:
+		gbc.pal = palettes.red;
+		break;
+	    case darkbrown:
+		gbc.pal = palettes.darkbrown;
+		break;
+	    default:
+		gbc.pal = palettes.brown;
+	}
+
+	
+	
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);
 		if (gbc.save_state > 0) {

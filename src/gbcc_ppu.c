@@ -479,14 +479,14 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 		//uint32_t sprite1_palette[4] = {0xf8f8f8u, 0x1fba1fu, 0x376019u, 0x093609u};
 		//uint32_t sprite2_palette[4] = {0xf8f8f8u, 0x71b6d0u, 0x0f3eaau, 0x000000u}; 
 		//gbc.palette 
-		struct palette pal = palettes.brown;
+		//struct palette pal = palettes.brown;
 		switch (pf) {
 			case BACKGROUND:
-				return pal.background[colours[n]];
+				return gbc->pal.background[colours[n]];
 			case SPRITE_1:
-				return pal.sprite1[colours[n]]; 	
+				return gbc->pal.sprite1[colours[n]]; 	
 			case SPRITE_2:
-				return pal.sprite2[colours[n]];
+				return gbc->pal.sprite2[colours[n]];
 		}
 	}
 	uint8_t index = palette * 8;
