@@ -111,18 +111,23 @@ void gbcc_check_interrupts(struct gbc *gbc)
 		if (check_bit(interrupt, 0)) {
 			addr = INT_VBLANK;
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
+			//gbcc_log(GBCC_LOG_DEBUG, "VBLANK\n");
 		} else if (check_bit(interrupt, 1)) {
 			addr = INT_LCDSTAT;
 			gbcc_memory_clear_bit(gbc, IF, 1, true);
+			//gbcc_log(GBCC_LOG_DEBUG, "LCDSTAT\n");
 		} else if (check_bit(interrupt, 2)) {
 			addr = INT_TIMER;
 			gbcc_memory_clear_bit(gbc, IF, 2, true);
+			//gbcc_log(GBCC_LOG_DEBUG, "TIMER\n");
 		} else if (check_bit(interrupt, 3)) {
 			addr = INT_SERIAL;
 			gbcc_memory_clear_bit(gbc, IF, 3, true);
+			//gbcc_log(GBCC_LOG_DEBUG, "SERIAL\n");
 		} else if (check_bit(interrupt, 4)) {
 			addr = INT_JOYPAD;
 			gbcc_memory_clear_bit(gbc, IF, 4, true);
+			//gbcc_log(GBCC_LOG_DEBUG, "JOYPAD\n");
 		} else {
 			gbcc_log(GBCC_LOG_ERROR, "False interrupt\n");
 			addr = 0;

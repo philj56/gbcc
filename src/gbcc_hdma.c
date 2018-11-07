@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_hdma.h"
 #include "gbcc_memory.h"
 
 void gbcc_hdma_copy(struct gbc *gbc)
@@ -24,5 +25,5 @@ void gbcc_hdma_copy_block(struct gbc *gbc)
 		gbc->hdma.dest++;
 	}	
 	gbc->hdma.length -= 0x10u;
-	gbcc_memory_write(gbc, HDMA5, (gbc->hdma.length >> 4u) - 1, true);
+	gbcc_memory_write(gbc, HDMA5, (uint8_t)(gbc->hdma.length >> 4u) - 1u, true);
 }

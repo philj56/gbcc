@@ -283,7 +283,9 @@ void LD_d8(struct gbc *gbc)
 
 void LD_d16(struct gbc *gbc)
 {
-	uint16_t val = cat_bytes(gbcc_fetch_instruction(gbc), gbcc_fetch_instruction(gbc));
+	uint8_t op1 = gbcc_fetch_instruction(gbc);
+	uint8_t op2 = gbcc_fetch_instruction(gbc);
+	uint16_t val = cat_bytes(op1, op2);
 	switch (gbc->opcode / 0x10u) {
 		case 0:
 			gbc->reg.bc = val;
@@ -332,7 +334,9 @@ void LD_A(struct gbc *gbc)
 
 void LD_a16(struct gbc *gbc)
 {
-	uint16_t addr = cat_bytes(gbcc_fetch_instruction(gbc), gbcc_fetch_instruction(gbc));
+	uint8_t op1 = gbcc_fetch_instruction(gbc);
+	uint8_t op2 = gbcc_fetch_instruction(gbc);
+	uint16_t addr = cat_bytes(op1, op2);
 	switch ((gbc->opcode - 0xE0u) / 0x10u) {
 		case 0:
 			gbcc_memory_write(gbc, addr, gbc->reg.a, false);
@@ -343,7 +347,8 @@ void LD_a16(struct gbc *gbc)
 	}
 }
 
-void LD_OFFSET(struct gbc *gbc) {
+void LD_OFFSET(struct gbc *gbc)
+{
 	uint8_t op;
 	switch ((gbc->opcode % 0x10u) / 0x02u) {
 		case 0:
@@ -368,7 +373,9 @@ void LD_OFFSET(struct gbc *gbc) {
 
 void STORE_SP(struct gbc *gbc)
 {
-	uint16_t addr = cat_bytes(gbcc_fetch_instruction(gbc), gbcc_fetch_instruction(gbc));
+	uint8_t op1 = gbcc_fetch_instruction(gbc);
+	uint8_t op2 = gbcc_fetch_instruction(gbc);
+	uint16_t addr = cat_bytes(op1, op2);
 	gbcc_memory_write(gbc, addr, low_byte(gbc->reg.sp), false);
 	gbcc_memory_write(gbc, addr+1, high_byte(gbc->reg.sp), false);
 }
@@ -392,6 +399,8 @@ void LD_SP_HL(struct gbc *gbc)
 
 void PUSH_POP(struct gbc *gbc)
 {
+	uint8_t op1;
+	uint8_t op2;
 	uint16_t *op;
 	switch ((gbc->opcode % 0x40u) / 0x10u) {
 		case 0:
@@ -412,8 +421,9 @@ void PUSH_POP(struct gbc *gbc)
 	}
 	switch ((gbc->opcode % 0x10u) / 0x04u) {
 		case 0: /* POP */
-			*op = cat_bytes(gbcc_memory_read(gbc, gbc->reg.sp++, false),
-					gbcc_memory_read(gbc, gbc->reg.sp++, false));
+			op1 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+			op2 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+			*op = cat_bytes(op1, op2);
 			break;
 		case 1: /* PUSH */
 			gbcc_memory_write(gbc, --(gbc->reg.sp), high_byte(*op), false);
@@ -650,8 +660,9 @@ void SHIFT_A(struct gbc *gbc)
 
 void JP(struct gbc *gbc)
 {
-	gbc->reg.pc = cat_bytes(gbcc_fetch_instruction(gbc),
-			gbcc_fetch_instruction(gbc));
+	uint8_t op1 = gbcc_fetch_instruction(gbc);
+	uint8_t op2 = gbcc_fetch_instruction(gbc);
+	gbc->reg.pc = cat_bytes(op1, op2);
 }
 
 void JP_HL(struct gbc *gbc)
@@ -661,7 +672,10 @@ void JP_HL(struct gbc *gbc)
 
 void JP_COND(struct gbc *gbc)
 {
-	uint16_t addr = cat_bytes(gbcc_fetch_instruction(gbc), gbcc_fetch_instruction(gbc));
+
+	uint8_t op1 = gbcc_fetch_instruction(gbc);
+	uint8_t op2 = gbcc_fetch_instruction(gbc);
+	uint16_t addr = cat_bytes(op1, op2);
 	switch ((gbc->opcode - 0xC0u) / 0x08u) {
 		case 0:	/* JP NZ */
 			if (!get_flag(gbc, ZF)) {
@@ -766,7 +780,9 @@ void CALL(struct gbc *gbc)
 
 void CALL_COND(struct gbc *gbc)
 {
-	uint16_t addr = cat_bytes(gbcc_fetch_instruction(gbc), gbcc_fetch_instruction(gbc));
+	uint8_t op1 = gbcc_fetch_instruction(gbc);
+	uint8_t op2 = gbcc_fetch_instruction(gbc);
+	uint16_t addr = cat_bytes(op1, op2);
 	bool call = false;
 	switch ((gbc->opcode - 0xC0u) / 0x08u) {
 		case 0:	/* CALL NZ */
@@ -812,17 +828,21 @@ void CALL_COND(struct gbc *gbc)
 	}
 }
 
-void RET(struct gbc *gbc) {
-	gbc->reg.pc = cat_bytes(gbcc_memory_read(gbc, gbc->reg.sp++, false),
-			gbcc_memory_read(gbc, gbc->reg.sp++, false));
+void RET(struct gbc *gbc)
+{
+	uint8_t op1 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+	uint8_t op2 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+	gbc->reg.pc = cat_bytes(op1, op2);
 }
 
-void RETI(struct gbc *gbc) {
+void RETI(struct gbc *gbc)
+{
 	RET(gbc);
 	gbc->ime = true;
 }
 
-void RET_COND(struct gbc *gbc) {
+void RET_COND(struct gbc *gbc)
+{
 	bool ret = false;
 	switch ((gbc->opcode - 0xC0u) / 0x08u) {
 		case 0:	/* RET NZ */

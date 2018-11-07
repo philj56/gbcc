@@ -1,3 +1,4 @@
+#include "gbcc_colour.h"
 #include <stdbool.h>
 #include <stdint.h>
 

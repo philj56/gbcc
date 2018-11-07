@@ -1,9 +1,13 @@
 #include "gbcc.h"
+#include "gbcc_bit_utils.h"
 #include "gbcc_debug.h"
 #include "gbcc_mbc.h"
+#include "gbcc_time.h"
 #include <stdio.h>
+#include <time.h>
 
-uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr) {
+uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
+{
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
 	}
@@ -30,7 +34,8 @@ void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	}
 }
 
-uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr) {
+uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr)
+{
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
 	}
@@ -51,7 +56,8 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr) {
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+{
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
 			gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
@@ -110,14 +116,20 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	}
 }
 
-uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr) {
+uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr)
+{
+	gbcc_log(GBCC_LOG_DEBUG, "Stubbed function gbcc_mbc_mbc2_read() called");
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc2_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+void gbcc_mbc_mbc2_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+{
+	gbcc_log(GBCC_LOG_DEBUG, "Stubbed function gbcc_mbc_mbc2_write() called");
 }
 
-uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr) {
+uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr)
+{
+	struct gbcc_rtc *rtc = &gbc->cart.mbc.rtc;
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
 	}
@@ -125,6 +137,9 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr) {
 		return gbc->memory.romx[addr - ROMX_START];
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
+		if (rtc->cur_reg != NULL) {
+			return *(rtc->cur_reg);
+		}
 		if (gbc->cart.ram_size == 0) {
 			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
 			return 0xFFu;
@@ -138,8 +153,14 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr) {
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+{
+	struct gbcc_rtc *rtc = &gbc->cart.mbc.rtc;
 	if (addr >= SRAM_START && addr < SRAM_END) {
+		if (rtc->cur_reg != NULL) {
+			*(rtc->cur_reg) = val;
+			return;
+		}
 		if (gbc->cart.ram_size == 0) {
 			gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
 		} else if (gbc->cart.mbc.sram_enable) {
@@ -164,17 +185,57 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 			gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
 		}
 		gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
-		if (val >= 0x08u && val <= 0x0Cu) {
-			gbcc_log(GBCC_LOG_DEBUG, "TODO: RTC Register Select\n");
+		switch (val) {
+			case 0x08u:
+				rtc->cur_reg = &rtc->seconds;
+				break;
+			case 0x09u:
+				rtc->cur_reg = &rtc->minutes;
+				break;
+			case 0x0Au:
+				rtc->cur_reg = &rtc->hours;
+				break;
+			case 0x0Bu:
+				rtc->cur_reg = &rtc->day_low;
+				break;
+			case 0x0Cu:
+				rtc->cur_reg = &rtc->day_high;
+				break;
+			default:
+				rtc->cur_reg = NULL;
 		}
 	} else if (addr < 0x8000u) {
-		gbcc_log(GBCC_LOG_DEBUG, "TODO: Latch Clock Data\n");
+		if (rtc->latch != 0  || val != 0x01u) {
+			rtc->latch = val;
+			return;
+		}
+		rtc->latch = val;
+		uint64_t diff;
+		struct timespec cur_time;
+		rtc->base_time.tv_sec -= rtc->seconds;
+		rtc->base_time.tv_sec -= rtc->minutes * (MINUTE / SECOND);
+		rtc->base_time.tv_sec -= rtc->hours * (HOUR / SECOND);
+		rtc->base_time.tv_sec -= rtc->day_low * (DAY / SECOND);
+		rtc->base_time.tv_sec -= ((rtc->day_high & 0x01u) << 8u) * (DAY / SECOND);
+		clock_gettime(CLOCK_REALTIME, &cur_time);
+		diff = gbcc_time_diff(&cur_time, &gbc->cart.mbc.rtc.base_time);
+		rtc->seconds = (diff / SECOND) % (MINUTE / SECOND);
+		rtc->minutes = (diff / MINUTE) % (HOUR / MINUTE);
+		rtc->hours = (diff / HOUR) % (DAY / HOUR);
+		rtc->day_low = (diff / DAY) & 0xFFu;
+		rtc->day_high &= (uint8_t)(~bit(0));
+		rtc->day_high |= ((diff / DAY) >> 8u) & bit(0);
+		if (diff / DAY > 0x100u) {
+			rtc->day_high |= bit(7);
+		}
+		rtc->base_time = cur_time;
 	} else {
 		gbcc_log(GBCC_LOG_ERROR, "Writing memory address %04X out of bounds.\n", addr);
 	}
 }
 
-uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr) {
+uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr)
+{
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
 	}
@@ -195,7 +256,8 @@ uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr) {
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+{
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
 			gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
@@ -234,9 +296,13 @@ void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
 	}
 }
 
-uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr) {
+uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr)
+{
+	gbcc_log(GBCC_LOG_DEBUG, "Stubbed function gbcc_mbc_mmm01_read() called");
 	return 0xFFu;
 }
 
-void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val) {
+void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+{
+	gbcc_log(GBCC_LOG_DEBUG, "Stubbed function gbcc_mbc_mmm01_write() called");
 }
