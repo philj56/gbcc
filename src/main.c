@@ -64,7 +64,7 @@ int main(int argc, char **argv)
 	    printf("arg %d is %s\n", j,argv[j]);
 	}
 	    
-	char* PALETTE_NAME[] = { "brown", "red", "darkbrown", NULL };
+	char* PALETTE_NAME[] = { "brown", "red", "darkbrown", "pastel", "orange", "yellow", "blue", "darkblue", "grey", "green", "darkgreen", "invert", "zelda", NULL };
 	enum PALETTE_TYPE pnum;
 	
 	printf("test = %s\n",argv[argc-1]);
@@ -98,6 +98,36 @@ int main(int argc, char **argv)
 		break;
 	    case darkbrown:
 		gbc.pal = palettes.darkbrown;
+		break;
+	    case pastel:
+		gbc.pal = palettes.pastel;
+		break;
+	    case orange:
+		gbc.pal = palettes.orange;
+		break;
+	    case yellow:
+		gbc.pal = palettes.yellow;
+		break;
+	    case blue:
+		gbc.pal = palettes.blue;
+		break;
+	    case darkblue:
+		gbc.pal = palettes.darkblue;
+		break;
+	    case grey:
+		gbc.pal = palettes.grey;
+		break;
+	    case green:
+		gbc.pal = palettes.green;
+		break;
+	    case darkgreen:
+		gbc.pal = palettes.darkgreen;
+		break;
+	    case invert:
+		gbc.pal = palettes.invert;
+		break;
+	    case zelda:
+		gbc.pal = palettes.zelda;
 		break;
 	    default:
 		gbc.pal = palettes.brown;
