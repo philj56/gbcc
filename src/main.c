@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	}
 
 	int c;
-	char *pvalue = "brown";
+	char *pvalue = "classic";
 	opterr = 0;
 
 	while ((c = getopt(argc, argv, "p:")) != -1)
@@ -64,13 +64,13 @@ int main(int argc, char **argv)
 	    printf("arg %d is %s\n", j,argv[j]);
 	}
 	    
-	char* PALETTE_NAME[] = { "brown", "red", "darkbrown", "pastel", "orange", "yellow", "blue", "darkblue", "grey", "green", "darkgreen", "invert", "zelda", NULL };
+	char* PALETTE_NAME[] = { "classic", "brown", "red", "darkbrown", "pastel", "orange", "yellow", "blue", "darkblue", "grey", "green", "darkgreen", "invert", "zelda", NULL };
 	enum PALETTE_TYPE pnum;
 	
 	printf("test = %s\n",argv[argc-1]);
 	printf("pvalue = %s\n", pvalue);
 
-	pnum = brown;
+	pnum = classic;
 	int i=0;
 	for (i=0; PALETTE_NAME[i]!=NULL; ++i, ++pnum)
 	    if (0==strcmp(pvalue, PALETTE_NAME[i])) break;
@@ -90,6 +90,9 @@ int main(int argc, char **argv)
 	printf("gbc.palette = %d\n", gbc.palette);
 	switch (pnum)
 	{
+	    case classic:
+		gbc.pal = palettes.classic;
+		break;
 	    case brown:
 		gbc.pal = palettes.brown;
 		break;
@@ -130,7 +133,7 @@ int main(int argc, char **argv)
 		gbc.pal = palettes.zelda;
 		break;
 	    default:
-		gbc.pal = palettes.brown;
+		gbc.pal = palettes.classic;
 	}
 
 	

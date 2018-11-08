@@ -6,7 +6,7 @@ LIBS=-lSDL2 -lm
 
 _DEPS = gbcc.h gbcc_apu.h gbcc_audio.h gbcc_constants.h gbcc_cpu.h gbcc_ops.h gbcc_memory.h \
 	gbcc_mbc.h gbcc_window.h gbcc_input.h gbcc_bit_utils.h gbcc_debug.h \
-	gbcc_ppu.h gbcc_save.h gbcc_colour.h gbcc_hdma.h
+	gbcc_ppu.h gbcc_save.h gbcc_colour.h gbcc_hdma.h gbcc_palettes.h
 DEPS = makefile $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
 _OBJ = main.o gbcc_apu.o gbcc_audio.o gbcc_init.o gbcc_cpu.o gbcc_ops.o gbcc_memory.o \

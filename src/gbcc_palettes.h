@@ -10,6 +10,7 @@ struct palette {
 };
 
 struct palettes {
+	struct palette classic;
 	struct palette brown; //up
 	struct palette red; //up a
 	struct palette darkbrown; //up b
@@ -26,6 +27,11 @@ struct palettes {
 };
 
 static const struct palettes palettes = {
+	.classic = {
+		.background = {0xc4cfa1u, 0x8b956du, 0x6b7353u, 0x000000u},
+		.sprite1    = {0xc4cfa1u, 0x8b956du, 0x6b7353u, 0x000000u},
+		.sprite2    = {0xc4cfa1u, 0x8b956du, 0x6b7353u, 0x000000u}
+	},
 	.brown = {
 		.background = {0xffffffu, 0xffad63u, 0x833100u, 0x000000u},
 		.sprite1    = {0xffffffu, 0xffad63u, 0x833100u, 0x000000u},
