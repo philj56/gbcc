@@ -139,7 +139,8 @@ static const char* const cb_op_dissassemblies[0x100] = {
 /* 0xFC */	"SET 7,H", 	"SET 7,L", 	"SET 7,(HL)", 	"SET 7,A",
 };
 
-void gbcc_print_registers(struct gbc *gbc) {
+void gbcc_print_registers(struct gbc *gbc)
+{
 	gbcc_log(GBCC_LOG_DEBUG, "Registers:\n");
 	gbcc_log(GBCC_LOG_DEBUG, "\ta: %u\t\taf: %04X\n", gbc->reg.a, gbc->reg.af);
 	gbcc_log(GBCC_LOG_DEBUG, "\tb: %u\t\tbc: %04X\n", gbc->reg.b, gbc->reg.bc);
@@ -152,7 +153,8 @@ void gbcc_print_registers(struct gbc *gbc) {
 	gbcc_log(GBCC_LOG_DEBUG, "\tpc: %04X\n", gbc->reg.pc);
 }
 
-void gbcc_print_op(struct gbc *gbc) {
+void gbcc_print_op(struct gbc *gbc)
+{
 	uint8_t op = gbc->opcode;
 	gbcc_log(GBCC_LOG_DEBUG, "%02X", op);
 	for (uint8_t i = 0; i < gbcc_op_sizes[op] - 1; i++) {

@@ -3,16 +3,16 @@
 #include "gbcc_bit_utils.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
+#include "gbcc_time.h"
 #include <stdint.h>
 #include <time.h>
 
-#define NANOSECOND 1000000000lu
 #define SAMPLE_RATE 48000
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
-#define SLEEP_TIME (NANOSECOND / SAMPLE_RATE)
+#define SLEEP_TIME (SECOND / SAMPLE_RATE)
 #define SEQUENCER_CLOCKS 8192
 #define TIMER_RESTART (3600 * SAMPLE_RATE) /* restart after x samples */
-#define SLEEP_DETECT NANOSECOND
+#define SLEEP_DETECT SECOND
 
 static const uint8_t duty_table[4] = {
 	0x01, 	/* 00000001b */
@@ -26,8 +26,6 @@ static bool duty_clock(struct duty *duty);
 static void envelope_clock(struct envelope *envelope);
 static void sequencer_clock(struct gbc *gbc);
 static void time_sync(struct gbc *gbc);
-static uint64_t time_diff(const struct timespec *cur,
-		const struct timespec *old);
 static void ch1_trigger(struct gbc *gbc);
 static void ch2_trigger(struct gbc *gbc);
 static void ch3_trigger(struct gbc *gbc);
@@ -236,8 +234,8 @@ void sequencer_clock(struct gbc *gbc)
 void time_sync(struct gbc *gbc)
 {
 	clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
-	uint64_t diff = time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
-	if (diff > SLEEP_DETECT + (NANOSECOND * gbc->apu.sample) / SAMPLE_RATE) {
+	uint64_t diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
+	if (diff > SLEEP_DETECT + (SECOND * gbc->apu.sample) / SAMPLE_RATE) {
 		const struct timespec time = {.tv_sec = 2, .tv_nsec = 0};
 		nanosleep(&time, NULL);
 		gbc->apu.start_time.tv_sec = 0;
@@ -245,34 +243,16 @@ void time_sync(struct gbc *gbc)
 		gbc->apu.index = 0;
 		return;
 	}
-	while (diff < (NANOSECOND * gbc->apu.sample) / SAMPLE_RATE) {
+	while (diff < (SECOND * gbc->apu.sample) / SAMPLE_RATE) {
 		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
 		nanosleep(&time, NULL);
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
-		diff = time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
+		diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
 	}
 	if (!(gbc->apu.sample % TIMER_RESTART)) {
 		gbc->apu.start_time = gbc->apu.cur_time;
 		gbc->apu.sample = 0;
 	}
-}
-
-uint64_t time_diff(const struct timespec * const cur,
-		const struct timespec * const old)
-{
-	uint64_t sec = (uint64_t)(cur->tv_sec - old->tv_sec);
-	uint64_t nsec;
-	if (sec == 0) {
-		nsec = (uint64_t)(cur->tv_nsec - old->tv_nsec);
-		return nsec;
-	}
-	nsec = NANOSECOND * sec;
-	if (old->tv_nsec > cur->tv_nsec) {
-		nsec -= (uint64_t)(old->tv_nsec - cur->tv_nsec);
-	} else {
-		nsec += (uint64_t)(cur->tv_nsec - old->tv_nsec);
-	}
-	return nsec;
 }
 
 void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)

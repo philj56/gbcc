@@ -70,7 +70,10 @@ void gbcc_ppu_clock(struct gbc *gbc)
 			|| (mode == GBC_LCD_MODE_HBLANK && check_bit(stat, 3))
 			|| (mode == GBC_LCD_MODE_OAM_READ && check_bit(stat, 5))
 			|| (mode == GBC_LCD_MODE_VBLANK && check_bit(stat, 4))) {
-		gbcc_memory_set_bit(gbc, IF, 1, true);
+		if (clock == 4) {
+			/* TODO: Put the correct timings in */
+			gbcc_memory_set_bit(gbc, IF, 1, true);
+		}
 	}
 	/* VBLANK interrupt flag */
 	if (ly == 144) {
@@ -495,7 +498,7 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 		hi = gbc->memory.bgp[index + 2 * n + 1];
 	} 
 	uint8_t red = lo & 0x1Fu;
-	uint8_t green = ((lo & 0xE0u) >> 5u) | ((hi & 0x03u) << 3u);
+	uint8_t green = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);
 	uint8_t blue = (hi & 0x7Cu) >> 2u;
 	return gbcc_lerp_colour(red, green, blue);
 }

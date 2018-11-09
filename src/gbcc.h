@@ -175,14 +175,22 @@ struct gbc {
 		bool battery;
 		bool timer;
 		bool rumble;
-		bool padding; /* TODO: remove */
-		struct {
+		struct gbcc_mbc {
 			enum MBC type;
 			enum BANK_MODE bank_mode;
 			bool sram_enable;
 			uint16_t romx_bank;
 			uint8_t sram_bank;
-			bool padding;
+			struct gbcc_rtc {
+				uint8_t seconds;
+				uint8_t minutes;
+				uint8_t hours;
+				uint8_t day_low;
+				uint8_t day_high;
+				uint8_t latch;
+				uint8_t *cur_reg;
+				struct timespec base_time;
+			} rtc;
 		} mbc;
 		char title[CART_TITLE_SIZE];
 	} cart;
