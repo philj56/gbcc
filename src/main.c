@@ -28,8 +28,6 @@ void quit(int sig)
 int main(int argc, char **argv)
 {
 	if (argc == 1) {
-		printf("Usage: %s rom_file\n", argv[0]);
-		exit(EXIT_FAILURE);
 	}
 
 	if (signal(SIGINT, quit) == SIG_ERR) {
@@ -61,6 +59,10 @@ int main(int argc, char **argv)
                 abort();
 	    }
 	}
+	if (argv[optind] == NULL) {
+		printf("Usage: %s rom_file\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
 
 	int palette = -1;	
 	for (int i = sizeof(gbcc_palette_names)/sizeof(gbcc_palette_names[0]) - 1; i >= 0; i--) {
@@ -80,7 +82,7 @@ int main(int argc, char **argv)
 
 	/* FIXME: shouldn't have to do this */
 	gbc.initialised = false;
-	gbcc_initialise(&gbc, argv[argc-1]);
+	gbcc_initialise(&gbc, argv[optind]);
 	gbcc_window_initialise(&gbc);
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
