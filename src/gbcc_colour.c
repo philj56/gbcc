@@ -5,7 +5,6 @@
 
 static uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b);
 static bool lut_initialised = false;
-static uint32_t lut_calc[32][32][32];
 
 /* 
  * Dimensions are as follows:
@@ -136,6 +135,7 @@ static float lerp1d(float a, float b, float t)
 
 uint32_t gbcc_lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 {
+	static uint32_t lut_calc[32][32][32];
 	if (!lut_initialised) {
 		for (uint8_t x = 0; x < 32; x++) {
 			for (uint8_t y = 0; y < 32; y++) {
