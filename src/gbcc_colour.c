@@ -197,3 +197,13 @@ uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 
 	return (uint32_t)((uint32_t)(r << 16u) | (uint32_t)(g << 8u)) | (uint32_t)b;
 }
+
+uint32_t gbcc_colour_correct(uint32_t hex)
+{
+    uint8_t r = (uint8_t)((hex & 0xFF0000u) >> 19u);
+    uint8_t g = (uint8_t)((hex & 0x00FF00u) >> 11u);
+    uint8_t b = (uint8_t)((hex & 0x0000FFu) >> 3u);
+
+    return gbcc_lerp_colour(r,g,b);
+}
+

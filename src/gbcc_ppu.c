@@ -4,6 +4,7 @@
 #include "gbcc_debug.h"
 #include "gbcc_hdma.h"
 #include "gbcc_memory.h"
+#include "gbcc_palettes.h"
 #include "gbcc_ppu.h"
 #include <math.h>
 #include <stdio.h>
@@ -23,6 +24,8 @@
 #define ATTR_COLOUR0 (bit(1))
 #define ATTR_PRIORITY (bit(2))
 
+enum palette_flag { BACKGROUND, SPRITE_1, SPRITE_2 };
+
 static void draw_line(struct gbc *gbc);
 static void draw_background_line(struct gbc *gbc);
 static void draw_window_line(struct gbc *gbc);
@@ -30,7 +33,7 @@ static void draw_sprite_line(struct gbc *gbc);
 static void composite_line(struct gbc *gbc);
 static uint8_t gbcc_get_video_mode(struct gbc *gbc);
 static void gbcc_set_video_mode(struct gbc *gbc, uint8_t mode);
-static uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sprite);
+static uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum palette_flag pf);
 
 void gbcc_ppu_clock(struct gbc *gbc)
 {
@@ -145,7 +148,7 @@ void draw_background_line(struct gbc *gbc)
 			uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 			uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 			uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			gbc->memory.background_buffer.colour[x] = get_palette_colour(gbc, palette, colour, false);
+			gbc->memory.background_buffer.colour[x] = get_palette_colour(gbc, palette, colour, BACKGROUND);
 			gbc->memory.background_buffer.attr[x] |= ATTR_DRAWN;
 			if (colour == 0) {
 				gbc->memory.background_buffer.attr[x] |= ATTR_COLOUR0;
@@ -187,7 +190,7 @@ void draw_background_line(struct gbc *gbc)
 			} else {
 				colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 			}
-			gbc->memory.background_buffer.colour[x] = get_palette_colour(gbc, attr & 0x07u, colour, false);
+			gbc->memory.background_buffer.colour[x] = get_palette_colour(gbc, attr & 0x07u, colour, BACKGROUND);
 			gbc->memory.background_buffer.attr[x] |= ATTR_DRAWN;
 			if (colour == 0) {
 				gbc->memory.background_buffer.attr[x] |= ATTR_COLOUR0;
@@ -238,7 +241,7 @@ void draw_window_line(struct gbc *gbc)
 			uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
 			uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
 			uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			gbc->memory.window_buffer.colour[x] = get_palette_colour(gbc, palette, colour, false);
+			gbc->memory.window_buffer.colour[x] = get_palette_colour(gbc, palette, colour, BACKGROUND);
 			gbc->memory.window_buffer.attr[x] |= ATTR_DRAWN;
 			if (colour == 0) {
 				gbc->memory.window_buffer.attr[x] |= ATTR_COLOUR0;
@@ -283,10 +286,10 @@ void draw_window_line(struct gbc *gbc)
 			} else {
 				colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
 			}
-			gbc->memory.window_buffer.colour[x] = get_palette_colour(gbc, attr & 0x07u, colour, false);
+			gbc->memory.window_buffer.colour[x] = get_palette_colour(gbc, attr & 0x07u, colour, BACKGROUND);
 			gbc->memory.window_buffer.attr[x] |= ATTR_DRAWN;
 			if (colour == 0) {
-				gbc->memory.window_buffer.attr[x] |= ATTR_COLOUR0;
+			    gbc->memory.window_buffer.attr[x] |= ATTR_COLOUR0;
 			}
 			if (check_bit(attr, 7)) {
 				gbc->memory.window_buffer.attr[x] |= ATTR_PRIORITY;
@@ -303,6 +306,7 @@ void draw_sprite_line(struct gbc *gbc)
 	 */
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
+	enum palette_flag pf;
 	if (!check_bit(lcdc, 1)) {
 		return;
 	}
@@ -366,11 +370,14 @@ void draw_sprite_line(struct gbc *gbc)
 		if (gbc->mode == DMG) {
 			if (check_bit(attr, 4)) {
 				palette = gbcc_memory_read(gbc, OBP1, true);
+				pf = SPRITE_1;
 			} else {
 				palette = gbcc_memory_read(gbc, OBP0, true);
+				pf = SPRITE_2;
 			}
 		} else {
 			palette = attr & 0x07u;
+			pf = SPRITE_1;
 		}
 		uint8_t lo;
 		uint8_t hi;
@@ -396,7 +403,7 @@ void draw_sprite_line(struct gbc *gbc)
 				screen_x = sx + x - 8;
 			}
 			if (screen_x < GBC_SCREEN_WIDTH) {
-				gbc->memory.sprite_buffer.colour[screen_x] = get_palette_colour(gbc, palette, colour, true);
+				gbc->memory.sprite_buffer.colour[screen_x] = get_palette_colour(gbc, palette, colour, pf);
 				gbc->memory.sprite_buffer.attr[screen_x] |= ATTR_DRAWN;
 				if (check_bit(attr, 7)) {
 					gbc->memory.sprite_buffer.attr[screen_x] |= ATTR_PRIORITY;
@@ -462,7 +469,7 @@ void gbcc_set_video_mode(struct gbc *gbc, uint8_t mode)
 	gbcc_memory_write(gbc, STAT, stat, true);
 }
 
-uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sprite)
+uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum palette_flag pf)
 {
 	if (gbc->mode == DMG) {
 		uint8_t colours[4] = {
@@ -471,31 +478,28 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, bool sp
 			(palette & 0x30u) >> 4u,
 			(palette & 0xC0u) >> 6u
 		};
-		switch (colours[n]) {
-			case 3:
-				return 0x000000u;
-			case 2:
-				return 0x6b7353u;
-			case 1:
-				return 0x8b956du;
-			case 0:
-				return 0xc4cfa1u;
-			default:
-				return 0;
+		switch (pf) {
+			case BACKGROUND:
+				return gbc->palette.background[colours[n]];
+			case SPRITE_1:
+				return gbc->palette.sprite1[colours[n]];
+			case SPRITE_2:
+				return gbc->palette.sprite2[colours[n]];
 		}
 	}
 	uint8_t index = palette * 8;
 	uint8_t lo;
 	uint8_t hi;
-	if (sprite) {
+	if (pf != BACKGROUND) {
 		lo = gbc->memory.obp[index + 2 * n];
 		hi = gbc->memory.obp[index + 2 * n + 1];
 	} else {
 		lo = gbc->memory.bgp[index + 2 * n];
 		hi = gbc->memory.bgp[index + 2 * n + 1];
-	}
+	} 
 	uint8_t red = lo & 0x1Fu;
 	uint8_t green = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);
 	uint8_t blue = (hi & 0x7Cu) >> 2u;
 	return gbcc_lerp_colour(red, green, blue);
 }
+

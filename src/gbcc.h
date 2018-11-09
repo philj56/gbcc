@@ -3,6 +3,7 @@
 
 #include "gbcc_apu.h"
 #include "gbcc_constants.h"
+#include "gbcc_palettes.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -75,6 +76,7 @@ struct gbc {
 
 	/* Non-Register state data */
 	enum CART_MODE mode;
+	struct palette palette;
 	uint8_t opcode;
 	bool ime;
 	struct {
