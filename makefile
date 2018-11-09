@@ -11,7 +11,7 @@ DEPS = makefile $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
 _OBJ = main.o gbcc_apu.o gbcc_audio.o gbcc_init.o gbcc_cpu.o gbcc_ops.o gbcc_memory.o \
        gbcc_mbc.o gbcc_window.o gbcc_input.o gbcc_bit_utils.o gbcc_debug.o \
-       gbcc_ppu.o gbcc_save.o gbcc_colour.o gbcc_hdma.o
+       gbcc_ppu.o gbcc_save.o gbcc_colour.o gbcc_hdma.o gbcc_palettes.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS)

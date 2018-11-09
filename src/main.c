@@ -3,10 +3,9 @@
 #include "gbcc_audio.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
+#include "gbcc_palettes.h"
 #include "gbcc_save.h"
 #include "gbcc_window.h"
-#include "gbcc_constants.h"
-#include "gbcc_palettes.h"
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -41,43 +40,43 @@ int main(int argc, char **argv)
 	char *pvalue = "classic";
 	opterr = 0;
 
-	while ((c = getopt(argc, argv, "p:")) != -1)
-	    switch (c)
-	    {
-		case 'p':
-		    pvalue = optarg;
-		    break;
-		case '?':
-		    if (optopt == 'c')
-			fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-		    else if (isprint (optopt))
-			fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-		    else
-			fprintf (stderr,
-				"Unknown option character `\\x%x'.\n",
-				optopt);
-		    return 1;
-		default:
-		    abort ();
+    while ((c = getopt(argc, argv, "p:")) != -1) {
+        switch (c)
+        {
+            case 'p':
+                pvalue = optarg;
+                break;
+            case '?':
+                if (optopt == 'p') {
+                    gbcc_log(GBCC_LOG_ERROR, "Option -%c requires an argument.\n", optopt);
+                } else if (isprint (optopt)) {
+                    gbcc_log(GBCC_LOG_ERROR, "Unknown option `-%c'.\n", optopt);
+                } else {
+                    gbcc_log(GBCC_LOG_ERROR,
+                            "Unknown option character `\\x%x'.\n",
+                            optopt);
+                }
+                exit(EXIT_FAILURE);
+            default:
+                abort();
 	    }
-	for (int j = 0;j<argc;j++){
-	    printf("arg %d is %s\n", j,argv[j]);
 	}
-	    
-	char* PALETTE_NAME[] = { "classic", "brown", "red", "darkbrown", "pastel", "orange", "yellow", "blue", "darkblue", "grey", "green", "darkgreen", "invert", "zelda", NULL };
-	enum PALETTE_TYPE pnum;
-	
-	printf("test = %s\n",argv[argc-1]);
-	printf("pvalue = %s\n", pvalue);
 
-	pnum = classic;
-	int i=0;
-	for (i=0; PALETTE_NAME[i]!=NULL; ++i, ++pnum)
-	    if (0==strcmp(pvalue, PALETTE_NAME[i])) break;
+	int palette = -1;	
+	for (int i = sizeof(gbcc_palette_names)/sizeof(gbcc_palette_names[0]) - 1; i >= 0; i--) {
+	    if (strcmp(pvalue, gbcc_palette_names[i]) == 0) {
+			palette = i;
+            break;
+        }
+    }
 
-	printf("pnum = %d\n", pnum);
-	
-//	struct gbc gbc;
+	if (palette == -1) {
+		gbcc_log(GBCC_LOG_ERROR, "Invalid palette %s\n", pvalue);
+		exit(EXIT_FAILURE);
+	}
+
+    gbcc_log(GBCC_LOG_DEBUG, "Palette %s selected\n", gbcc_palette_names[palette]);	
+    //	struct gbc gbc;
 
 	/* FIXME: shouldn't have to do this */
 	gbc.initialised = false;
@@ -86,57 +85,11 @@ int main(int argc, char **argv)
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
 	gbc.initialised = true;
-	gbc.palette = pnum;
-	printf("gbc.palette = %d\n", gbc.palette);
-	switch (pnum)
-	{
-	    case classic:
-		gbc.pal = palettes.classic;
-		break;
-	    case brown:
-		gbc.pal = palettes.brown;
-		break;
-	    case red:
-		gbc.pal = palettes.red;
-		break;
-	    case darkbrown:
-		gbc.pal = palettes.darkbrown;
-		break;
-	    case pastel:
-		gbc.pal = palettes.pastel;
-		break;
-	    case orange:
-		gbc.pal = palettes.orange;
-		break;
-	    case yellow:
-		gbc.pal = palettes.yellow;
-		break;
-	    case blue:
-		gbc.pal = palettes.blue;
-		break;
-	    case darkblue:
-		gbc.pal = palettes.darkblue;
-		break;
-	    case grey:
-		gbc.pal = palettes.grey;
-		break;
-	    case green:
-		gbc.pal = palettes.green;
-		break;
-	    case darkgreen:
-		gbc.pal = palettes.darkgreen;
-		break;
-	    case invert:
-		gbc.pal = palettes.invert;
-		break;
-	    case zelda:
-		gbc.pal = palettes.zelda;
-		break;
-	    default:
-		gbc.pal = palettes.classic;
+	if (palette == 0) {
+		gbc.palette = gbcc_palettes[palette];
+	} else {
+		gbc.palette = gbcc_palette_correct(&gbcc_palettes[palette]);
 	}
-
-	
 	
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);

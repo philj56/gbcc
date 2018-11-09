@@ -169,6 +169,5 @@
 enum MBC { NONE, MBC1, MBC2, MBC3, MBC5, MMM01 };
 enum BANK_MODE { ROM, RAM };
 enum CART_MODE { GBC, DMG };
-enum PALETTE_TYPE { classic, brown, red, darkbrown, pastel, orange, yellow, blue, darkblue, grey, green, darkgreen, invert, zelda };
 
 #endif /* GBC_CONSTANTS_H */

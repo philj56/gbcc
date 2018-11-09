@@ -76,8 +76,7 @@ struct gbc {
 
 	/* Non-Register state data */
 	enum CART_MODE mode;
-	enum PALETTE_TYPE palette;
-	struct palette pal;
+	struct palette palette;
 	uint8_t opcode;
 	bool ime;
 	struct {
