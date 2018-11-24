@@ -5,6 +5,7 @@
 #include "gbcc_debug.h"
 #include "gbcc_palettes.h"
 #include "gbcc_save.h"
+#include "gbcc_vram_window.h"
 #include "gbcc_window.h"
 #include <signal.h>
 #include <stdbool.h>
@@ -84,6 +85,7 @@ int main(int argc, char **argv)
 	gbc.initialised = false;
 	gbcc_initialise(&gbc, argv[optind]);
 	gbcc_window_initialise(&gbc);
+	//gbcc_vram_window_initialise(&gbc);
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
 	gbc.initialised = true;

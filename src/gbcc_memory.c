@@ -311,6 +311,8 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 			case OBPD:
 			case SVBK:
 				return 0xFFu;
+			default:
+				;
 		}
 	}
 	return gbc->memory.ioreg[addr - IOREG_START] | (uint8_t)~mask;
@@ -348,7 +350,6 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		}
 	} else if (gbc->mode == GBC && addr == BGPD) {
 		uint8_t index = gbc->memory.ioreg[BGPI - IOREG_START];
-		//printf("BGPD[0x%02X] = 0x%02X\n", index & 0x3Fu, val);
 		gbc->memory.bgp[index & 0x3Fu] = val;
 		if (check_bit(index, 7)) {
 			index++;
@@ -375,7 +376,6 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			gbc->memory.vram = gbc->memory.vram_bank[0];
 		}
 	} else if (gbc->mode == GBC && addr == SVBK) {
-		//printf("SVBK = %u\n", val & 0x07u);
 		uint8_t bank = val & 0x07u;
 		bank += !bank;
 		gbc->memory.ioreg[addr - IOREG_START] = bank;
@@ -391,6 +391,12 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 	} else if (gbc->mode == GBC && addr == HDMA4) {
 		gbc->memory.ioreg[addr - IOREG_START] = val & 0xF0u;
 	} else if (gbc->mode == GBC && addr == HDMA5) {
+		if (!check_bit(val, 7)) {
+			if (gbc->hdma.length > 0) {
+				gbc->hdma.length = 0;
+				return;
+			}
+		}
 		uint8_t src_hi = gbc->memory.ioreg[HDMA1 - IOREG_START];
 		uint8_t src_lo = gbc->memory.ioreg[HDMA2 - IOREG_START];
 		uint8_t dst_hi = gbc->memory.ioreg[HDMA3 - IOREG_START];
@@ -398,6 +404,7 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		gbc->hdma.source = cat_bytes(src_lo, src_hi);
 		gbc->hdma.dest = cat_bytes(dst_lo, dst_hi);
 		gbc->hdma.length = ((val & 0x7Fu) + 1u) * 0x10u;
+		gbc->memory.ioreg[addr - IOREG_START] = val;
 		if (!check_bit(val, 7)) {
 			gbcc_hdma_copy(gbc);
 		}
