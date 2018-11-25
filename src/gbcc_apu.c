@@ -317,13 +317,13 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		case NR33:
 			gbc->apu.wave.freq &= ~0x00FFu;
 			gbc->apu.wave.freq |= val;
-			//gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
+			gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
 			break;
 		case NR34:
 			gbc->apu.ch3.length_enable = check_bit(val, 6);
 			gbc->apu.wave.freq &= ~0xFF00u;
 			gbc->apu.wave.freq |= (val & 0x07u) << 8u;
-			//gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
+			gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
 			if (check_bit(val, 7)) {
 				ch3_trigger(gbc);
 			}
