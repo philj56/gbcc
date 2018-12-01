@@ -39,26 +39,26 @@ int main(int argc, char **argv)
 	char *pvalue = "classic";
 	opterr = 0;
 
-    while ((c = getopt(argc, argv, "p:")) != -1) {
-        switch (c)
-        {
-            case 'p':
-                pvalue = optarg;
-                break;
-            case '?':
-                if (optopt == 'p') {
-                    gbcc_log(GBCC_LOG_ERROR, "Option -%c requires an argument.\n", optopt);
-                } else if (isprint (optopt)) {
-                    gbcc_log(GBCC_LOG_ERROR, "Unknown option `-%c'.\n", optopt);
-                } else {
-                    gbcc_log(GBCC_LOG_ERROR,
-                            "Unknown option character `\\x%x'.\n",
-                            optopt);
-                }
-                exit(EXIT_FAILURE);
-            default:
-                abort();
-	    }
+	while ((c = getopt(argc, argv, "p:")) != -1) {
+		switch (c)
+		{
+			case 'p':
+				pvalue = optarg;
+				break;
+			case '?':
+				if (optopt == 'p') {
+					gbcc_log(GBCC_LOG_ERROR, "Option -%c requires an argument.\n", optopt);
+				} else if (isprint (optopt)) {
+					gbcc_log(GBCC_LOG_ERROR, "Unknown option `-%c'.\n", optopt);
+				} else {
+					gbcc_log(GBCC_LOG_ERROR,
+							"Unknown option character `\\x%x'.\n",
+							optopt);
+				}
+				exit(EXIT_FAILURE);
+			default:
+				abort();
+		}
 	}
 	if (argv[optind] == NULL) {
 		printf("Usage: %s rom_file\n", argv[0]);
@@ -67,19 +67,19 @@ int main(int argc, char **argv)
 
 	int palette = -1;	
 	for (int i = sizeof(gbcc_palette_names)/sizeof(gbcc_palette_names[0]) - 1; i >= 0; i--) {
-	    if (strcmp(pvalue, gbcc_palette_names[i]) == 0) {
+		if (strcmp(pvalue, gbcc_palette_names[i]) == 0) {
 			palette = i;
-            break;
-        }
-    }
+			break;
+		}
+	}
 
 	if (palette == -1) {
 		gbcc_log(GBCC_LOG_ERROR, "Invalid palette %s\n", pvalue);
 		exit(EXIT_FAILURE);
 	}
 
-    gbcc_log(GBCC_LOG_DEBUG, "Palette %s selected\n", gbcc_palette_names[palette]);	
-    //	struct gbc gbc;
+	gbcc_log(GBCC_LOG_DEBUG, "Palette %s selected\n", gbcc_palette_names[palette]);	
+	//	struct gbc gbc;
 
 	/* FIXME: shouldn't have to do this */
 	gbc.initialised = false;
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 	} else {
 		gbc.palette = gbcc_palette_correct(&gbcc_palettes[palette]);
 	}
-	
+
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);
 		if (gbc.save_state > 0) {
@@ -104,8 +104,7 @@ int main(int argc, char **argv)
 		}
 		gbcc_audio_update(audio);
 	}
-	//gbcc_vram_dump(&gbc, "vram.dump");
 	gbcc_save(&gbc);
-	
+
 	return 0;
 }

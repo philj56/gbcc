@@ -422,10 +422,5 @@ uint8_t gbcc_hram_read(struct gbc *gbc, uint16_t addr, bool override)
 
 void gbcc_hram_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 {
-	/*
-	if (addr == 0xFFC8u) {
-		printf("Writing %u to 0x%04X\n", val, addr);
-	}
-	*/
 	gbc->memory.hram[addr - HRAM_START] = val;
 }

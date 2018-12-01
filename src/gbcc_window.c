@@ -79,7 +79,7 @@ static int window_thread_function(void *window)
 	win->texture = SDL_CreateTexture(
 			win->renderer,
 			SDL_PIXELFORMAT_RGB888,
-			SDL_TEXTUREACCESS_STREAMING,
+			SDL_TEXTUREACCESS_STATIC,
 			GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT
 			);
 
