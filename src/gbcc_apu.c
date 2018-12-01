@@ -217,6 +217,16 @@ void sequencer_clock(struct gbc *gbc)
 			if (gbc->apu.sweep.shift != 0 && freq < 2048) {
 				gbc->apu.sweep.freq = freq;
 				gbc->apu.ch1.duty.freq = gbc->apu.sweep.freq;
+				gbcc_memory_write(gbc, NR13, freq & 0xFFu, true);
+				uint8_t nr14 = gbcc_memory_read(gbc, NR14, true);
+				nr14 &= ~0x0Fu;
+				nr14 |= (freq & 0x0F00u) >> 8u;
+				gbcc_memory_write(gbc, NR14, nr14, true);
+			}
+			freq = gbc->apu.sweep.freq >> gbc->apu.sweep.shift;
+			freq = (uint16_t)(gbc->apu.sweep.freq + gbc->apu.sweep.dir * freq);
+			if (freq > 2047) {
+				gbc->apu.ch1.enabled = false;
 			}
 		}
 	}
