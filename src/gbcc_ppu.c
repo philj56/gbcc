@@ -6,6 +6,7 @@
 #include "gbcc_memory.h"
 #include "gbcc_palettes.h"
 #include "gbcc_ppu.h"
+#include "gbcc_screenshot.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -43,9 +44,6 @@ void gbcc_ppu_clock(struct gbc *gbc)
 	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
 	uint16_t clock = gbc->ppu_clock % 456;
 
-	if (clock == 0) {
-		gbcc_memory_increment(gbc, LY, true);
-	}
 	/* Line-drawing timings */
 	if (mode != GBC_LCD_MODE_VBLANK) {
 		if (clock == 0) {
@@ -75,11 +73,20 @@ void gbcc_ppu_clock(struct gbc *gbc)
 			gbcc_memory_set_bit(gbc, IF, 1, true);
 		}
 	}
+	if (clock == 0) {
+		ly++;
+	}
 	/* VBLANK interrupt flag */
 	if (ly == 144) {
 		if (clock == 4) {
 			gbcc_memory_set_bit(gbc, IF, 0, true);
 			gbcc_set_video_mode(gbc, GBC_LCD_MODE_VBLANK);
+			
+			/* TODO: All this should really be somewhere else */
+			if (gbc->screenshot) {
+				gbc->screenshot = false;
+				gbcc_screenshot(gbc);
+			}
 			uint32_t *tmp = gbc->memory.gbc_screen;
 			gbc->memory.gbc_screen = gbc->memory.sdl_screen;
 			gbc->memory.sdl_screen = tmp;
@@ -87,14 +94,17 @@ void gbcc_ppu_clock(struct gbc *gbc)
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
 		}
 	} else if (ly == 154) {
-		gbcc_memory_write(gbc, LY, 0, true);
+		gbc->memory.frame++;
+		ly = 0;
 		gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
 	}
+	gbcc_memory_write(gbc, LY, ly, true);
 }
 
 void draw_line(struct gbc *gbc)
 {
-	if (gbcc_memory_read(gbc, LY, true) > GBC_SCREEN_HEIGHT) {
+	uint8_t ly = gbcc_memory_read(gbc, LY, true);
+	if (ly > GBC_SCREEN_HEIGHT) {
 		return;
 	}
 	for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
@@ -102,10 +112,21 @@ void draw_line(struct gbc *gbc)
 		gbc->memory.window_buffer.attr[x] = 0;
 		gbc->memory.sprite_buffer.attr[x] = 0;
 	}
-	draw_background_line(gbc);
-	draw_window_line(gbc);
-	draw_sprite_line(gbc);
-	composite_line(gbc);
+	if (!gbc->interlace || ((gbc->memory.frame) % 2 == ly % 2)) {
+		draw_background_line(gbc);
+		draw_window_line(gbc);
+		draw_sprite_line(gbc);
+		composite_line(gbc);
+	} else {
+		for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
+			uint32_t p = gbc->memory.sdl_screen[ly * GBC_SCREEN_WIDTH + x]; 
+			uint8_t r = (p & 0xFF0000u) >> 17u;
+			uint8_t g = (p & 0x00FF00u) >> 9u;
+			uint8_t b = (p & 0x0000FFu) >> 1u;
+			p = (uint32_t)(r << 16u) | (uint32_t)(g << 8u) | b;
+			gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = p;
+		}
+	}
 }
 
 /* TODO: GBC BG-to-OAM Priority */

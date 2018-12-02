@@ -108,8 +108,8 @@ static int window_thread_function(void *window)
 	/* Main rendering loop */
 	while (!(win->quit)) {
 		/* Do the actual drawing */
-		for (size_t j = 0; j < VRAM_WINDOW_HEIGHT_TILES / 2; j++) {
-			for (size_t i = 0; i < VRAM_WINDOW_WIDTH_TILES; i++) {
+		for (int j = 0; j < VRAM_WINDOW_HEIGHT_TILES / 2; j++) {
+			for (int i = 0; i < VRAM_WINDOW_WIDTH_TILES; i++) {
 				for (int y = 0; y < 8; y++) {
 					uint8_t lo = win->gbc->memory.vram_bank[0][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y];
 					uint8_t hi = win->gbc->memory.vram_bank[0][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y + 1];

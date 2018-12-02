@@ -9,13 +9,14 @@
 
 static int window_thread_function(void *window);
 
-struct gbcc_window *gbcc_window_initialise(struct gbc *gbc)
+struct gbcc_window *gbcc_window_initialise(struct gbc *gbc, bool vsync)
 {
 	SDL_Init(0);
 
 	struct gbcc_window *win = malloc(sizeof(struct gbcc_window));
 	win->gbc = gbc;
 	win->quit = false;
+	win->vsync = vsync;
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		gbcc_log(GBCC_LOG_ERROR, "Failed to initialize SDL: %s\n", SDL_GetError());
@@ -63,6 +64,11 @@ static int window_thread_function(void *window)
 		exit(EXIT_FAILURE);
 	}
 
+	if (win->vsync) {
+		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+	} else {
+		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
+	}
 	win->renderer = SDL_CreateRenderer(
 			win->window,
 			-1,
@@ -95,6 +101,7 @@ static int window_thread_function(void *window)
 			win->renderer,
 			GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT
 			);
+	SDL_RenderSetIntegerScale(win->renderer, true);
 
 	for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
 		win->buffer[i] = 0;

@@ -37,13 +37,21 @@ int main(int argc, char **argv)
 
 	int c;
 	char *pvalue = "classic";
+	bool interlace = false;
+	bool vsync = false;
 	opterr = 0;
 
-	while ((c = getopt(argc, argv, "p:")) != -1) {
+	while ((c = getopt(argc, argv, "vip:")) != -1) {
 		switch (c)
 		{
+			case 'i':
+				interlace = true;
+				break;
 			case 'p':
 				pvalue = optarg;
+				break;
+			case 'v':
+				vsync = true;
 				break;
 			case '?':
 				if (optopt == 'p') {
@@ -84,7 +92,7 @@ int main(int argc, char **argv)
 	/* FIXME: shouldn't have to do this */
 	gbc.initialised = false;
 	gbcc_initialise(&gbc, argv[optind]);
-	gbcc_window_initialise(&gbc);
+	gbcc_window_initialise(&gbc, vsync);
 	//gbcc_vram_window_initialise(&gbc);
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
@@ -94,6 +102,7 @@ int main(int argc, char **argv)
 	} else {
 		gbc.palette = gbcc_palette_correct(&gbcc_palettes[palette]);
 	}
+	gbc.interlace = interlace;
 
 	while (!gbc.quit) {
 		gbcc_emulate_cycle(&gbc);

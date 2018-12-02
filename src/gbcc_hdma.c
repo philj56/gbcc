@@ -32,6 +32,6 @@ void gbcc_hdma_copy_block(struct gbc *gbc)
 	if (gbc->hdma.length == 0) {
 		gbcc_memory_write(gbc, HDMA5, 0xFFu, true);
 	} else {
-		gbcc_memory_write(gbc, HDMA5, (gbc->hdma.length >> 4u) - 1, true);
+		gbcc_memory_write(gbc, HDMA5, (uint8_t)((gbc->hdma.length >> 4u) - 1), true);
 	}
 }
