@@ -18,8 +18,8 @@ void gbcc_screenshot(struct gbc *gbc)
 	time_t raw_time;
 	struct tm *time_info;
 	time(&raw_time);
-	time_info = localtime(&raw_time);
-	strftime(fname, BUFSIZ, "screenshots/%G-%m-%dT%H:%M:%S.png", time_info);
+	time_info = gmtime(&raw_time);
+	strftime(fname, BUFSIZ, "screenshots/%G-%m-%dT%H:%M:%SZ.png", time_info);
 
 	if (mkdir(dir, 0755) != 0) {
 		if (errno != EEXIST) {
@@ -81,4 +81,6 @@ void gbcc_screenshot(struct gbc *gbc)
 
 	png_data_freer(png_ptr, info_ptr, PNG_DESTROY_WILL_FREE_DATA, PNG_FREE_ALL);
 	png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
+
+	gbcc_log(GBCC_LOG_INFO, "Saved screenshot %s\n", fname);
 }

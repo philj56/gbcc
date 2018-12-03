@@ -85,6 +85,7 @@ void gbcc_save_state(struct gbc *gbc)
 		fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, sav);
 	}
 	fclose(sav);
+	gbcc_log(GBCC_LOG_INFO, "Saved state %s\n", fname);
 }
 
 void gbcc_load_state(struct gbc *gbc)
@@ -155,6 +156,7 @@ void gbcc_load_state(struct gbc *gbc)
 	gbc->keys.dpad.right = false;
 	gbc->keys.turbo = false;
 	fclose(sav);
+	gbcc_log(GBCC_LOG_INFO, "Loaded state %s\n", fname);
 }
 
 void strip_ext(char *fname)
