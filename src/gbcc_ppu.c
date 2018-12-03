@@ -521,6 +521,7 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 	uint8_t red = lo & 0x1Fu;
 	uint8_t green = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);
 	uint8_t blue = (hi & 0x7Cu) >> 2u;
+	//return red << 19u | green << 11u | blue << 3u;
 	return gbcc_lerp_colour(red, green, blue);
 }
 
