@@ -287,16 +287,16 @@ uint32_t gbcc_lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 /* Trilinearly interpolate from gameboy r,g,b values to hex code */
 uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 {
-	uint8_t x0 = (r / 8);
+	uint8_t x0 = (r / 5);
 	uint8_t x1 = x0 + 1;
-	uint8_t y0 = (g / 8);
+	uint8_t y0 = (g / 5);
 	uint8_t y1 = y0 + 1;
-	uint8_t z0 = (b / 8);
+	uint8_t z0 = (b / 5);
 	uint8_t z1 = z0 + 1;
 
-	float xd = (float)r / 8 - x0;
-	float yd = (float)g / 8 - y0;
-	float zd = (float)b / 8 - z0;
+	float xd = (float)r / 5 - x0;
+	float yd = (float)g / 5 - y0;
+	float zd = (float)b / 5 - z0;
 
 	float c00r = lerp1d(lut[0][x0][y0][z0], lut[0][x1][y0][z0], xd);
 	float c01r = lerp1d(lut[0][x0][y0][z1], lut[0][x1][y0][z1], xd);
@@ -322,9 +322,10 @@ uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 	float c0b = lerp1d(c00b, c10b, yd);
 	float c1b = lerp1d(c01b, c11b, yd);
 
-	float cr = lerp1d(c0r, c1r, zd);
-	float cg = lerp1d(c0g, c1g, zd);
-	float cb = lerp1d(c0b, c1b, zd);
+	/* Factor on the end is to correct for restricted {x,y,z}0 value range */
+	float cr = lerp1d(c0r, c1r, zd) * (float)(7.0 / (31.0 / 5.0));
+	float cg = lerp1d(c0g, c1g, zd) * (float)(7.0 / (31.0 / 5.0));
+	float cb = lerp1d(c0b, c1b, zd) * (float)(7.0 / (31.0 / 5.0));
 
 	r = (uint8_t)cr;
 	g = (uint8_t)cg;
