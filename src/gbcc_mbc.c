@@ -109,6 +109,7 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbc->cart.mbc.bank_mode = ROM;
 			gbc->cart.mbc.romx_bank = (uint8_t)(gbc->cart.mbc.sram_bank << 4u); /* TODO: Are these upper 2 bits remembered? */
 			gbc->cart.mbc.sram_bank = 0x00u; /* TODO: Are these upper 2 bits remembered? */
+			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 		}
 	} else {
@@ -137,8 +138,22 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr)
 		return gbc->memory.romx[addr - ROMX_START];
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
-		if (rtc->cur_reg != NULL) {
-			return *(rtc->cur_reg);
+		if (rtc->mapped) {
+			switch (rtc->cur_reg) {
+				case 0:
+					return rtc->seconds;
+				case 1:
+					return rtc->minutes;
+				case 2:
+					return rtc->hours;
+				case 3:
+					return rtc->day_low;
+				case 4:
+					return rtc->day_high;
+				default:
+					gbcc_log(GBCC_LOG_ERROR, "Invalid rtc reg %u\n", rtc->cur_reg);
+					return 0;
+			}
 		}
 		if (gbc->cart.ram_size == 0) {
 			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
@@ -157,11 +172,22 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_rtc *rtc = &gbc->cart.mbc.rtc;
 	if (addr >= SRAM_START && addr < SRAM_END) {
-		if (rtc->cur_reg != NULL) {
-			*(rtc->cur_reg) = val;
-			return;
-		}
-		if (gbc->cart.ram_size == 0) {
+		if (rtc->mapped) {
+			switch (rtc->cur_reg) {
+				case 0:
+					rtc->seconds = val;
+				case 1:
+					rtc->minutes = val;
+				case 2:
+					rtc->hours = val;
+				case 3:
+					rtc->day_low = val;
+				case 4:
+					rtc->day_high = val;
+				default:
+					gbcc_log(GBCC_LOG_ERROR, "Invalid rtc reg %u\n", rtc->cur_reg);
+			}
+		} else if (gbc->cart.ram_size == 0) {
 			gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
 		} else if (gbc->cart.mbc.sram_enable) {
 			gbc->memory.sram[addr - SRAM_START] = val;
@@ -179,30 +205,15 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 	} else if (addr < 0x6000u) {
-		gbc->cart.mbc.sram_bank = val & 0x03u;
-		if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
-			gbcc_log(GBCC_LOG_DEBUG, "Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
-			gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
-		}
-		gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
-		switch (val) {
-			case 0x08u:
-				rtc->cur_reg = &rtc->seconds;
-				break;
-			case 0x09u:
-				rtc->cur_reg = &rtc->minutes;
-				break;
-			case 0x0Au:
-				rtc->cur_reg = &rtc->hours;
-				break;
-			case 0x0Bu:
-				rtc->cur_reg = &rtc->day_low;
-				break;
-			case 0x0Cu:
-				rtc->cur_reg = &rtc->day_high;
-				break;
-			default:
-				rtc->cur_reg = NULL;
+		if (val < 0x04u) {
+			gbc->cart.mbc.sram_bank = val & 0x03u;
+			if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
+				gbcc_log(GBCC_LOG_DEBUG, "Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
+				gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
+			}
+			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
+		} else if (val >= 0x08u && val <= 0x0Cu) {
+			rtc->cur_reg = val - 0x08u;
 		}
 	} else if (addr < 0x8000u) {
 		if (rtc->latch != 0  || val != 0x01u) {

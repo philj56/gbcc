@@ -192,8 +192,9 @@ struct gbc {
 				uint8_t day_low;
 				uint8_t day_high;
 				uint8_t latch;
-				uint8_t *cur_reg;
+				uint8_t cur_reg;
 				struct timespec base_time;
+				bool mapped;
 			} rtc;
 		} mbc;
 		char title[CART_TITLE_SIZE];

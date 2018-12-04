@@ -108,11 +108,6 @@ int main(int argc, char **argv)
 		while (gbc.pause) {
 			const struct timespec time = {.tv_sec = 0, .tv_nsec = 10000000};
 			nanosleep(&time, NULL);
-			//gbcc_audio_update(audio);
-			/* TODO: This should be handled by the emulator */
-			audio->index = 0;
-			//clock_gettime(CLOCK_REALTIME, &gbc.apu.cur_time);
-			//gbc.apu.start_time = gbc.apu.cur_time;
 		}
 		gbcc_emulate_cycle(&gbc);
 		if (gbc.save_state > 0) {

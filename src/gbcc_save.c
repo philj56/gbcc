@@ -138,23 +138,15 @@ void gbcc_load_state(struct gbc *gbc)
 			break;
 	}
 
-	gbc->memory.romx = gbc->cart.rom + (gbc->memory.romx - gbc->memory.rom0);
 	gbc->memory.rom0 = gbc->cart.rom;
+	gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 	gbc->memory.vram = gbc->memory.vram_bank[vram_bank];
-	gbc->memory.sram = gbc->cart.ram;
+	gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 	gbc->memory.wram0 = gbc->memory.wram_bank[0];
 	gbc->memory.wramx = gbc->memory.wram_bank[wram_bank];
 	gbc->memory.echo = gbc->memory.wram0;
 	
-	gbc->keys.a = false;
-	gbc->keys.b = false;
-	gbc->keys.start = false;
-	gbc->keys.select = false;
-	gbc->keys.dpad.up = false;
-	gbc->keys.dpad.down = false;
-	gbc->keys.dpad.left = false;
-	gbc->keys.dpad.right = false;
-	gbc->keys.turbo = false;
+	memset(&gbc->keys, 0, sizeof(gbc->keys));
 	fclose(sav);
 	gbcc_log(GBCC_LOG_INFO, "Loaded state %s\n", fname);
 }
