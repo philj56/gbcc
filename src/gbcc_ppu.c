@@ -93,9 +93,9 @@ void gbcc_ppu_clock(struct gbc *gbc)
 			uint32_t *tmp = gbc->memory.gbc_screen;
 			gbc->memory.gbc_screen = gbc->memory.sdl_screen;
 			gbc->memory.sdl_screen = tmp;
-		} else if (clock == 8) {
-			gbcc_memory_clear_bit(gbc, IF, 0, true);
-		}
+		} //else if (clock == 8) {
+		//	gbcc_memory_clear_bit(gbc, IF, 0, true);
+		//}
 	} else if (ly == 154) {
 		gbc->memory.frame++;
 		ly = 0;
@@ -355,7 +355,7 @@ void draw_sprite_line(struct gbc *gbc)
 				vram_bank = check_bit(attr, 3) ? gbc->memory.vram_bank[1] : gbc->memory.vram_bank[0];
 				break;
 		}
-		if (ly < (int)sy - 16 || ly >= sy) {
+		if (ly < sy - 16 || ly >= sy) {
 			continue;
 		}
 		if (size > 1) {

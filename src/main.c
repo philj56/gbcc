@@ -110,9 +110,9 @@ int main(int argc, char **argv)
 			nanosleep(&time, NULL);
 			//gbcc_audio_update(audio);
 			/* TODO: This should be handled by the emulator */
-			gbc.apu.sample = 0;
-			clock_gettime(CLOCK_REALTIME, &gbc.apu.cur_time);
-			gbc.apu.start_time = gbc.apu.cur_time;
+			audio->index = 0;
+			//clock_gettime(CLOCK_REALTIME, &gbc.apu.cur_time);
+			//gbc.apu.start_time = gbc.apu.cur_time;
 		}
 		gbcc_emulate_cycle(&gbc);
 		if (gbc.save_state > 0) {
