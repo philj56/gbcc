@@ -48,29 +48,29 @@ void gbcc_ppu_clock(struct gbc *gbc)
 	if (mode != GBC_LCD_MODE_VBLANK) {
 		if (clock == 0) {
 			gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
+			if (check_bit(stat, 5)) {
+				gbcc_memory_set_bit(gbc, IF, 1, true);
+			}
 		} else if (clock == GBC_LCD_MODE_PERIOD) {
 			gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_VRAM_READ);
 		} else if (clock == (3 * GBC_LCD_MODE_PERIOD)) {
 			draw_line(gbc);
 			gbcc_set_video_mode(gbc, GBC_LCD_MODE_HBLANK);
 			gbcc_hdma_copy_block(gbc);
+			if (check_bit(stat, 3)) {
+				gbcc_memory_set_bit(gbc, IF, 1, true);
+			}
 		}
 	}
 	/* LCD STAT Interrupt */
 	if (ly != 0 && ly == gbcc_memory_read(gbc, LYC, true)) {
 		if (clock == 4) {
 			gbcc_memory_set_bit(gbc, STAT, 2, true);
+			if (check_bit(stat, 6)) {
+				gbcc_memory_set_bit(gbc, IF, 1, true);
+			}
 		} else if (clock == 8) {
 			gbcc_memory_clear_bit(gbc, STAT, 2, true);
-		}
-	}
-	if ((check_bit(stat, 2) && check_bit(stat, 6))
-			|| (mode == GBC_LCD_MODE_HBLANK && check_bit(stat, 3))
-			|| (mode == GBC_LCD_MODE_OAM_READ && check_bit(stat, 5))
-			|| (mode == GBC_LCD_MODE_VBLANK && check_bit(stat, 4))) {
-		if (clock == 4) {
-			/* TODO: Put the correct timings in */
-			gbcc_memory_set_bit(gbc, IF, 1, true);
 		}
 	}
 	if (clock == 0) {
@@ -81,6 +81,9 @@ void gbcc_ppu_clock(struct gbc *gbc)
 		if (clock == 4) {
 			gbcc_memory_set_bit(gbc, IF, 0, true);
 			gbcc_set_video_mode(gbc, GBC_LCD_MODE_VBLANK);
+			if (check_bit(stat, 4)) {
+				gbcc_memory_set_bit(gbc, IF, 1, true);
+			}
 			
 			/* TODO: All this should really be somewhere else */
 			if (gbc->screenshot) {
