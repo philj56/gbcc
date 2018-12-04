@@ -352,21 +352,19 @@ void draw_sprite_line(struct gbc *gbc)
 				vram_bank = check_bit(attr, 3) ? gbc->memory.vram_bank[1] : gbc->memory.vram_bank[0];
 				break;
 		}
-		if (ly < sy - 16 || ly >= sy) {
-			//if (!(sy < 16u && ly < sy)) {
+		if (ly < (int)sy - 16 || ly >= sy) {
 			continue;
-			//}
 		}
 		if (size > 1) {
 			/* Check for Y-flip, and swap top & bottom tiles correspondingly */
-			if (ly < sy - 8u) {
+			if (ly < sy - 8) {
 				/* We are drawing the top tile */
 				if (check_bit(attr, 6)) {
 					tile |= 0x01u;
 				} else {
 					tile &= 0xFEu;
 				}
-				sy -= 8u;
+				sy -= 8;
 			} else {
 				/* We are drawing the bottom tile */
 				if (check_bit(attr, 6)) {
@@ -380,8 +378,8 @@ void draw_sprite_line(struct gbc *gbc)
 			 * 8x8 sprites draw as if they were the top tile of an
 			 * 8x16 sprite.
 			 */
-			if (ly < sy - 8u) {
-				sy -= 8u;
+			if (ly < sy - 8) {
+				sy -= 8;
 			} else {
 				continue;
 			}

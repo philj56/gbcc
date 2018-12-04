@@ -7,12 +7,12 @@
 #include <stdint.h>
 #include <time.h>
 
-#define SAMPLE_RATE 48000
-#define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
-#define SLEEP_TIME (SECOND / SAMPLE_RATE)
+#define SYNC_FREQ 48000
+#define CLOCKS_PER_SYNC (GBC_CLOCK_FREQ / SYNC_FREQ)
+#define SLEEP_TIME (SECOND / SYNC_FREQ)
 #define SEQUENCER_CLOCKS 8192
-#define TIMER_RESTART (3600 * SAMPLE_RATE) /* restart after x samples */
-#define SLEEP_DETECT SECOND
+#define TIMER_RESTART (3600 * SYNC_FREQ) /* restart after x samples */
+#define SLEEP_DETECT (SECOND)
 
 static const uint8_t duty_table[4] = {
 	0x01, 	/* 00000001b */
@@ -110,9 +110,9 @@ void gbcc_apu_clock(struct gbc *gbc)
 	if (!(gbc->apu.clock % SEQUENCER_CLOCKS)) {
 		sequencer_clock(gbc);
 	}
-	if (clocks >= CLOCKS_PER_SAMPLE) {
+	if (clocks >= CLOCKS_PER_SYNC) {
 		if (gbc->keys.turbo) {
-			gbc->apu.start_time.tv_sec = 0;
+			gbc->apu.start_time = gbc->apu.cur_time;
 			gbc->apu.sample = 0;
 		} else {
 			time_sync(gbc);
@@ -245,15 +245,11 @@ void time_sync(struct gbc *gbc)
 {
 	clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
 	uint64_t diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
-	if (diff > SLEEP_DETECT + (SECOND * gbc->apu.sample) / SAMPLE_RATE) {
-		const struct timespec time = {.tv_sec = 2, .tv_nsec = 0};
-		nanosleep(&time, NULL);
-		gbc->apu.start_time.tv_sec = 0;
-		gbc->apu.sample = 0;
-		gbc->apu.index = 0;
+	if (diff > SLEEP_DETECT + (SECOND * gbc->apu.sample) / SYNC_FREQ) {
+		gbc->apu.start_time = gbc->apu.cur_time;
 		return;
 	}
-	while (diff < (SECOND * gbc->apu.sample) / SAMPLE_RATE) {
+	while (diff < (SECOND * gbc->apu.sample) / SYNC_FREQ) {
 		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
 		nanosleep(&time, NULL);
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);

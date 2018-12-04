@@ -3,7 +3,7 @@
 #include "gbcc_save.h"
 #include "gbcc_window.h"
 
-static const SDL_Scancode keymap[19] = {
+static const SDL_Scancode keymap[20] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -14,6 +14,7 @@ static const SDL_Scancode keymap[19] = {
 	SDL_SCANCODE_RIGHT,	/* DPAD right */
 	SDL_SCANCODE_RSHIFT, 	/* Turbo */
 	SDL_SCANCODE_S, 	/* Screenshot */
+	SDL_SCANCODE_P, 	/* Pause */
 	SDL_SCANCODE_F1,	/* State n */
 	SDL_SCANCODE_F2,
 	SDL_SCANCODE_F3,
@@ -74,8 +75,16 @@ void gbcc_input_process_all(struct gbc *gbc)
 				gbc->keys.turbo ^= val;
 				break;
 			case 9:
-				gbc->screenshot = true;
+				gbc->screenshot = val;
+				break;
 			case 10:
+				gbc->pause ^= val;
+				if (gbc->pause) {
+					printf("Pause\n");
+				} else {
+					printf("Unpause\n");
+				}
+				break;
 			case 11:
 			case 12:
 			case 13:
@@ -84,13 +93,14 @@ void gbcc_input_process_all(struct gbc *gbc)
 			case 16:
 			case 17:
 			case 18:
+			case 19:
 				if (!val) {
 					break;
 				}
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					gbc->save_state = (int8_t)(key - 9);
+					gbc->save_state = (int8_t)(key - 10);
 				} else {
-					gbc->load_state = (int8_t)(key - 9);
+					gbc->load_state = (int8_t)(key - 10);
 				}
 				break;
 		}

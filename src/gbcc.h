@@ -111,6 +111,7 @@ struct gbc {
 		struct timespec old;
 	} real_time;
 	bool quit;
+	bool pause;
 	bool initialised;
 	bool screenshot;
 	bool interlace;

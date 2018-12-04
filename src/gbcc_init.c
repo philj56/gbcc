@@ -71,6 +71,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->memory.frame = 0;
 	timespec_get(&gbc->real_time.current, TIME_UTC);
 	gbc->quit = false;
+	gbc->pause = false;
 	gbcc_load_rom(gbc, filename);
 	gbcc_parse_header(gbc);
 	gbcc_init_mmap(gbc);
