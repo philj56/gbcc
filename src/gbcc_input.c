@@ -79,11 +79,6 @@ void gbcc_input_process_all(struct gbc *gbc)
 				break;
 			case 10:
 				gbc->pause ^= val;
-				if (gbc->pause) {
-					printf("Pause\n");
-				} else {
-					printf("Unpause\n");
-				}
 				break;
 			case 11:
 			case 12:
