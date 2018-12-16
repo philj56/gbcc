@@ -70,8 +70,12 @@ void gbcc_ppu_clock(struct gbc *gbc)
 				gbcc_memory_set_bit(gbc, IF, 1, true);
 			}
 		} else if (clock == 8) {
-			gbcc_memory_clear_bit(gbc, STAT, 2, true);
+			if (check_bit(stat, 6)) {
+				gbcc_memory_clear_bit(gbc, IF, 1, true);
+			}
 		}
+	} else {
+		gbcc_memory_clear_bit(gbc, STAT, 2, true);
 	}
 	if (clock == 0) {
 		ly++;
@@ -93,9 +97,9 @@ void gbcc_ppu_clock(struct gbc *gbc)
 			uint32_t *tmp = gbc->memory.gbc_screen;
 			gbc->memory.gbc_screen = gbc->memory.sdl_screen;
 			gbc->memory.sdl_screen = tmp;
-		} //else if (clock == 8) {
-		//	gbcc_memory_clear_bit(gbc, IF, 0, true);
-		//}
+		} else if (clock == 8) {
+			gbcc_memory_clear_bit(gbc, IF, 0, true);
+		}
 	} else if (ly == 154) {
 		gbc->memory.frame++;
 		ly = 0;
