@@ -227,3 +227,141 @@ void gbcc_vram_dump(struct gbc *gbc, const char *filename)
 	}
 	fclose(fp);
 }
+
+void gbcc_sram_dump(struct gbc *gbc, const char* filename)
+{
+	FILE *fp = fopen(filename, "wbe");
+	fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, fp);
+	fclose(fp);
+}
+
+void gbcc_print_state(struct gbc *gbc)
+{
+	gbcc_print_registers(gbc);
+	printf("mode: %d\n", gbc->mode);
+	gbcc_print_op(gbc);
+	printf("IME: %d\n", gbc->ime);
+	printf("halt:\n");
+	printf("\tset:%d\n", gbc->halt.set);
+	printf("\tno_interrupt:%d\n", gbc->halt.no_interrupt);
+	printf("\tskip:%d\n", gbc->halt.skip);
+	printf("DMA:\n");
+	printf("\tsource:%04X\n", gbc->dma.source);
+	printf("\tnew_source:%04X\n", gbc->dma.new_source);
+	printf("\ttimer:%d\n", gbc->dma.timer);
+	printf("\trequested:%d\n", gbc->dma.requested);
+	printf("HDMA:\n");
+	printf("\tsource:%04X\n", gbc->hdma.source);
+	printf("\tdest:%04X\n", gbc->hdma.dest);
+	printf("\tlength:%d\n", gbc->hdma.length);
+	printf("\thblank:%d\n", gbc->hdma.hblank);
+	printf("rst:\n");
+	printf("\taddr:%04X\n", gbc->rst.addr);
+	printf("\tdelay:%d\n", gbc->rst.delay);
+	printf("\trequest:%d\n", gbc->rst.request);
+	printf("stop:%d\n", gbc->stop);
+	printf("instruction_timer:%d\n", gbc->instruction_timer);
+	printf("div_timer:%d\n", gbc->div_timer);
+	printf("clock:%lu\n", gbc->clock);
+	printf("ppu_clock:%lu\n", gbc->ppu_clock);
+	printf("quit:%d\n", gbc->quit);
+	printf("pause:%d\n", gbc->pause);
+	printf("initialised:%d\n", gbc->initialised);
+	printf("interlace:%d\n", gbc->interlace);
+	printf("save_state:%d\n", gbc->save_state);
+	printf("load_state:%d\n", gbc->load_state);
+	printf("speed_mult:%d\n", gbc->speed_mult);
+	printf("div_timer:%d\n", gbc->div_timer);
+	/* TODO: Finish */
+}
+/*
+{
+	
+	struct palette palette;
+	struct {
+		struct timespec current;
+		struct timespec old;
+	} real_time;
+	bool quit;
+
+	
+	struct {
+		
+		uint8_t *rom0;	
+		uint8_t *romx;	
+		uint8_t *vram;	
+		uint8_t *sram;	
+		uint8_t *wram0;	
+		uint8_t *wramx;	
+		uint8_t *echo;	
+		uint8_t oam[OAM_SIZE];	
+		uint8_t unused[UNUSED_SIZE];	
+		uint8_t ioreg[IOREG_SIZE];	
+		uint8_t hram[HRAM_SIZE];	
+		uint8_t iereg;	
+		uint8_t bgp[64]; 	
+		uint8_t obp[64]; 	
+		
+		uint8_t wram_bank[8][WRAM0_SIZE];	
+		uint8_t vram_bank[2][VRAM_SIZE]; 	
+		uint32_t screen_buffer_0[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
+		uint32_t screen_buffer_1[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
+		struct line_buffer background_buffer;
+		struct line_buffer window_buffer;
+		struct line_buffer sprite_buffer;
+		uint32_t *gbc_screen;
+		uint32_t *sdl_screen;
+		size_t frame;
+	} memory;
+
+	
+	struct {
+		bool a;
+		bool b;
+		bool start;
+		bool select;
+		struct {
+			bool up;
+			bool down;
+			bool left;
+			bool right;
+		} dpad;
+		bool turbo;
+	} keys;
+	
+	
+	struct apu apu;
+
+	
+	struct {
+		const char *filename;
+		uint8_t *rom;
+		size_t rom_size;
+		size_t rom_banks;
+		uint8_t *ram;
+		size_t ram_size;
+		size_t ram_banks;
+		bool battery;
+		bool timer;
+		bool rumble;
+		struct gbcc_mbc {
+			enum MBC type;
+			enum BANK_MODE bank_mode;
+			bool sram_enable;
+			uint16_t romx_bank;
+			uint8_t sram_bank;
+			struct gbcc_rtc {
+				uint8_t seconds;
+				uint8_t minutes;
+				uint8_t hours;
+				uint8_t day_low;
+				uint8_t day_high;
+				uint8_t latch;
+				uint8_t cur_reg;
+				struct timespec base_time;
+				bool mapped;
+			} rtc;
+		} mbc;
+		char title[CART_TITLE_SIZE];
+	} cart;
+} */
