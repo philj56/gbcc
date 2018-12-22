@@ -141,31 +141,31 @@ static const char* const cb_op_dissassemblies[0x100] = {
 
 void gbcc_print_registers(struct gbc *gbc)
 {
-	gbcc_log(GBCC_LOG_DEBUG, "Registers:\n");
-	gbcc_log(GBCC_LOG_DEBUG, "\ta: %u\t\taf: %04X\n", gbc->reg.a, gbc->reg.af);
-	gbcc_log(GBCC_LOG_DEBUG, "\tb: %u\t\tbc: %04X\n", gbc->reg.b, gbc->reg.bc);
-	gbcc_log(GBCC_LOG_DEBUG, "\tc: %u\t\tde: %04X\n", gbc->reg.c, gbc->reg.de);
-	gbcc_log(GBCC_LOG_DEBUG, "\td: %u\t\thl: %04X\n", gbc->reg.d, gbc->reg.hl);
-	gbcc_log(GBCC_LOG_DEBUG, "\te: %u\t\tz: %u\n", gbc->reg.e, !!(gbc->reg.f & ZF));
-	gbcc_log(GBCC_LOG_DEBUG, "\th: %u\t\tn: %u\n", gbc->reg.h, !!(gbc->reg.f & NF));
-	gbcc_log(GBCC_LOG_DEBUG, "\tl: %u\t\th: %u\n", gbc->reg.l, !!(gbc->reg.f & HF));
-	gbcc_log(GBCC_LOG_DEBUG, "\tsp: %04X\tc: %u\n", gbc->reg.sp, !!(gbc->reg.f & CF));
-	gbcc_log(GBCC_LOG_DEBUG, "\tpc: %04X\n", gbc->reg.pc);
+	gbcc_log_debug("Registers:\n");
+	gbcc_log_debug("\ta: %u\t\taf: %04X\n", gbc->reg.a, gbc->reg.af);
+	gbcc_log_debug("\tb: %u\t\tbc: %04X\n", gbc->reg.b, gbc->reg.bc);
+	gbcc_log_debug("\tc: %u\t\tde: %04X\n", gbc->reg.c, gbc->reg.de);
+	gbcc_log_debug("\td: %u\t\thl: %04X\n", gbc->reg.d, gbc->reg.hl);
+	gbcc_log_debug("\te: %u\t\tz: %u\n", gbc->reg.e, !!(gbc->reg.f & ZF));
+	gbcc_log_debug("\th: %u\t\tn: %u\n", gbc->reg.h, !!(gbc->reg.f & NF));
+	gbcc_log_debug("\tl: %u\t\th: %u\n", gbc->reg.l, !!(gbc->reg.f & HF));
+	gbcc_log_debug("\tsp: %04X\tc: %u\n", gbc->reg.sp, !!(gbc->reg.f & CF));
+	gbcc_log_debug("\tpc: %04X\n", gbc->reg.pc);
 }
 
 void gbcc_print_op(struct gbc *gbc)
 {
 	uint8_t op = gbc->opcode;
-	gbcc_log(GBCC_LOG_DEBUG, "%02X", op);
+	gbcc_log_debug("%02X", op);
 	for (uint8_t i = 0; i < gbcc_op_sizes[op] - 1; i++) {
-		gbcc_log_append(GBCC_LOG_DEBUG, "%02X", gbcc_memory_read(gbc, gbc->reg.pc + i, true));
+		gbcc_log_append_debug("%02X", gbcc_memory_read(gbc, gbc->reg.pc + i, true));
 	}
 	if (op == 0xCB) {
 		uint8_t cb_op = gbcc_memory_read(gbc, gbc->reg.pc, true);
-		gbcc_log_append(GBCC_LOG_DEBUG, "%02X", cb_op);
-		gbcc_log_append(GBCC_LOG_DEBUG, "\t%s\n", cb_op_dissassemblies[cb_op]);
+		gbcc_log_append_debug("%02X", cb_op);
+		gbcc_log_append_debug("\t%s\n", cb_op_dissassemblies[cb_op]);
 	} else {
-		gbcc_log_append(GBCC_LOG_DEBUG, "\t%s\n", op_dissassemblies[op]);
+		gbcc_log_append_debug("\t%s\n", op_dissassemblies[op]);
 	}
 }
 
@@ -179,22 +179,71 @@ void gbcc_print_op(struct gbc *gbc)
 //#define WHT   "\x1B[37m"
 #define RESET "\x1B[0m"
 
+void gbcc_log_error(const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	fprintf(stderr, "[" RED "ERROR" RESET "]: ");
+	vfprintf(stderr, fmt, args);
+	va_end(args);
+}
+
+void gbcc_log_debug(const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	printf("[" YEL "DEBUG" RESET "]: ");
+	vprintf(fmt, args);
+	va_end(args);
+}
+
+void gbcc_log_info(const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	printf("[INFO]: ");
+	vprintf(fmt, args);
+	va_end(args);
+}
+
+void gbcc_log_append_error(const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
+}
+
+void gbcc_log_append_debug(const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+}
+
+void gbcc_log_append_info(const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+}
+
+/*
 void gbcc_log(enum GBCC_LOG_LEVEL level, const char *const fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
 	switch (level) {
 		case GBCC_LOG_ERROR:
-			fprintf(stderr, "[" RED "ERROR" RESET "]: ");
-			vfprintf(stderr, fmt, args);
+			gbcc_log_error(fmt, args);
 			break;
 		case GBCC_LOG_DEBUG:
-			printf("[" YEL "DEBUG" RESET "]: ");
-			vprintf(fmt, args);
+			gbcc_log_debug(fmt, args);
 			break;
 		case GBCC_LOG_INFO:
-			printf("[INFO]: ");
-			vprintf(fmt, args);
+			gbcc_log_info(fmt, args);
 			break;
 	}
 	va_end(args);
@@ -217,6 +266,7 @@ void gbcc_log_append(enum GBCC_LOG_LEVEL level, const char *const fmt, ...)
 	}
 	va_end(args);
 }
+*/
 
 void gbcc_vram_dump(struct gbc *gbc, const char *filename)
 {

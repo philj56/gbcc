@@ -26,7 +26,7 @@ struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc)
 	audio->quit = false;
 
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
-		gbcc_log(GBCC_LOG_ERROR, "Failed to initialize SDL: %s\n", SDL_GetError());
+		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
 	}
 
 	SDL_AudioSpec want;
@@ -40,11 +40,11 @@ struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc)
 	audio->sample_clock = 0;
 	audio->device = SDL_OpenAudioDevice(NULL, 0, &want, &audio->audiospec, 0);
 	if (audio->device == 0) {
-		gbcc_log(GBCC_LOG_ERROR, "Failed to open audio: %s\n", SDL_GetError());
+		gbcc_log_error("Failed to open audio: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
 	if (want.format != audio->audiospec.format) {
-		gbcc_log(GBCC_LOG_ERROR, "Failed to get the desired AudioSpec.\n");
+		gbcc_log_error("Failed to get the desired AudioSpec.\n");
 		exit(EXIT_FAILURE);
 	}
 	

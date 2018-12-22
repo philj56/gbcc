@@ -17,20 +17,20 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		return gbc->memory.sram[addr - SRAM_START];
 	}
-	gbcc_log(GBCC_LOG_ERROR, "Reading memory address 0x%04X out of bounds.\n", addr);
+	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
 	return 0xFFu;
 }
 
 void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	if (gbc->cart.ram_size == 0) {
-		gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
+		gbcc_log_debug("Trying to write to SRAM when there isn't any!\n", addr);
 		return;
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		gbc->memory.sram[addr - SRAM_START] = val;
 	} else {
-		gbcc_log(GBCC_LOG_ERROR, "Writing memory address 0x%04X out of bounds.\n", addr);
+		gbcc_log_error("Writing memory address 0x%04X out of bounds.\n", addr);
 	}
 }
 
@@ -44,15 +44,15 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr)
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
-			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
+			gbcc_log_debug("Trying to read SRAM when there isn't any!\n", addr);
 			return 0xFFu;
 		}
 		if (gbc->cart.mbc.sram_enable) {
 			return gbc->memory.sram[addr - SRAM_START];
 		}
-		gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
+		gbcc_log_debug("SRAM not enabled!\n");
 	}
-	gbcc_log(GBCC_LOG_ERROR, "Reading memory address 0x%04X out of bounds.\n", addr);
+	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
 	return 0xFFu;
 }
 
@@ -60,11 +60,11 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
-			gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
+			gbcc_log_debug("Trying to write to SRAM when there isn't any!\n", addr);
 		} else if (gbc->cart.mbc.sram_enable) {
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
-			gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
+			gbcc_log_debug("SRAM not enabled!\n");
 		}
 	} else if (addr < 0x2000u) {
 		gbc->cart.mbc.sram_enable = ((val & 0x0Au) == 0x0Au);
@@ -73,7 +73,7 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		gbc->cart.mbc.romx_bank |= val & 0x1Fu;
 		gbc->cart.mbc.romx_bank += !(val & 0x1Fu);
 		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
-			gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+			gbcc_log_debug("Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
 			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
 		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
@@ -82,7 +82,7 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbc->cart.mbc.romx_bank &= ~0x60u;
 			gbc->cart.mbc.romx_bank |= val & 0x60u;
 			if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
-				gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+				gbcc_log_debug("Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
 				gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
 			}
 			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
@@ -93,7 +93,7 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		} else {
 			gbc->cart.mbc.sram_bank = val & 0x03u;
 			if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
-				gbcc_log(GBCC_LOG_DEBUG, "Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
+				gbcc_log_debug("Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
 				gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
 			}
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
@@ -113,19 +113,19 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 		}
 	} else {
-		gbcc_log(GBCC_LOG_ERROR, "Writing memory address %04X out of bounds.\n", addr);
+		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
 	}
 }
 
 uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr)
 {
-	gbcc_log(GBCC_LOG_DEBUG, "Stubbed function gbcc_mbc_mbc2_read() called");
+	gbcc_log_debug("Stubbed function gbcc_mbc_mbc2_read() called");
 	return 0xFFu;
 }
 
 void gbcc_mbc_mbc2_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	gbcc_log(GBCC_LOG_DEBUG, "Stubbed function gbcc_mbc_mbc2_write() called");
+	gbcc_log_debug("Stubbed function gbcc_mbc_mbc2_write() called");
 }
 
 uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr)
@@ -151,20 +151,20 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr)
 				case 4:
 					return rtc->day_high;
 				default:
-					gbcc_log(GBCC_LOG_ERROR, "Invalid rtc reg %u\n", rtc->cur_reg);
+					gbcc_log_error("Invalid rtc reg %u\n", rtc->cur_reg);
 					return 0;
 			}
 		}
 		if (gbc->cart.ram_size == 0) {
-			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
+			gbcc_log_debug("Trying to read SRAM when there isn't any!\n", addr);
 			return 0xFFu;
 		}
 		if (!gbc->cart.mbc.sram_enable) {
-			gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
+			gbcc_log_debug("SRAM not enabled!\n");
 		}
 		return gbc->memory.sram[addr - SRAM_START];
 	}
-	gbcc_log(GBCC_LOG_ERROR, "Reading memory address 0x%04X out of bounds.\n", addr);
+	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
 	return 0xFFu;
 }
 
@@ -185,13 +185,13 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 				case 4:
 					rtc->day_high = val;
 				default:
-					gbcc_log(GBCC_LOG_ERROR, "Invalid rtc reg %u\n", rtc->cur_reg);
+					gbcc_log_error("Invalid rtc reg %u\n", rtc->cur_reg);
 			}
 		} else if (gbc->cart.ram_size == 0) {
-			gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
+			gbcc_log_debug("Trying to write to SRAM when there isn't any!\n", addr);
 		} else {
 			if (!gbc->cart.mbc.sram_enable) {
-				gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
+				gbcc_log_debug("SRAM not enabled!\n");
 			}
 			gbc->memory.sram[addr - SRAM_START] = val;
 		}
@@ -201,7 +201,7 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		gbc->cart.mbc.romx_bank = val & 0x7Fu;
 		gbc->cart.mbc.romx_bank += !(val & 0x7Fu);
 		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
-			gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+			gbcc_log_debug("Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
 			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
 		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
@@ -209,7 +209,7 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		if (val < 0x04u) {
 			gbc->cart.mbc.sram_bank = val & 0x03u;
 			if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
-				gbcc_log(GBCC_LOG_DEBUG, "Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
+				gbcc_log_debug("Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
 				gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
 			}
 			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
@@ -242,7 +242,7 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		}
 		rtc->base_time = cur_time;
 	} else {
-		gbcc_log(GBCC_LOG_ERROR, "Writing memory address %04X out of bounds.\n", addr);
+		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
 	}
 }
 
@@ -256,15 +256,15 @@ uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr)
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
-			gbcc_log(GBCC_LOG_DEBUG, "Trying to read SRAM when there isn't any!\n", addr);
+			gbcc_log_debug("Trying to read SRAM when there isn't any!\n", addr);
 			return 0xFFu;
 		}
 		if (gbc->cart.mbc.sram_enable) {
 			return gbc->memory.sram[addr - SRAM_START];
 		}
-		gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
+		gbcc_log_debug("SRAM not enabled!\n");
 	}
-	gbcc_log(GBCC_LOG_ERROR, "Reading memory address 0x%04X out of bounds.\n", addr);
+	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
 	return 0xFFu;
 }
 
@@ -272,11 +272,11 @@ void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
-			gbcc_log(GBCC_LOG_DEBUG, "Trying to write to SRAM when there isn't any!\n", addr);
+			gbcc_log_debug("Trying to write to SRAM when there isn't any!\n", addr);
 		} else if (gbc->cart.mbc.sram_enable) {
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
-			gbcc_log(GBCC_LOG_DEBUG, "SRAM not enabled!\n");
+			gbcc_log_debug("SRAM not enabled!\n");
 		}
 	} else if (addr < 0x2000u) {
 		gbc->cart.mbc.sram_enable = ((val & 0x0Fu) == 0x0Au);
@@ -284,7 +284,7 @@ void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		gbc->cart.mbc.romx_bank &= ~0x00FFu;
 		gbc->cart.mbc.romx_bank |= val;
 		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
-			gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+			gbcc_log_debug("Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
 			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
 		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
@@ -292,29 +292,29 @@ void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		gbc->cart.mbc.romx_bank &= ~0x0100u;
 		gbc->cart.mbc.romx_bank |= (val & 0x01u) << 8u;
 		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
-			gbcc_log(GBCC_LOG_DEBUG, "Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
+			gbcc_log_debug("Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
 			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
 		}
 		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
 	} else if (addr < 0x6000u) {
 		gbc->cart.mbc.sram_bank = val & 0x0Fu;
 		if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
-			gbcc_log(GBCC_LOG_DEBUG, "Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
+			gbcc_log_debug("Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
 			gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
 		}
 		gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
 	} else {
-		gbcc_log(GBCC_LOG_ERROR, "Writing memory address %04X out of bounds.\n", addr);
+		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
 	}
 }
 
 uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr)
 {
-	gbcc_log(GBCC_LOG_DEBUG, "Stubbed function gbcc_mbc_mmm01_read() called");
+	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_read() called");
 	return 0xFFu;
 }
 
 void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	gbcc_log(GBCC_LOG_DEBUG, "Stubbed function gbcc_mbc_mmm01_write() called");
+	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_write() called");
 }

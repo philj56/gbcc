@@ -176,7 +176,7 @@ const uint8_t gbcc_op_fixed[0x100] = {
 __attribute__((noreturn))
 void INVALID(struct gbc *gbc)
 {
-	gbcc_log(GBCC_LOG_ERROR, "Invalid opcode: 0x%02X\n", gbc->opcode);
+	gbcc_log_error("Invalid opcode: 0x%02X\n", gbc->opcode);
 	exit(EXIT_FAILURE);
 }
 
@@ -319,7 +319,7 @@ void LD_A(struct gbc *gbc)
 			op = gbc->reg.hl--;
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction LD_A.\n");
+			gbcc_log_error("Error in instruction LD_A.\n");
 			return;
 	}
 	switch((gbc->opcode % 0x10u) / 0x08u) {
@@ -358,7 +358,7 @@ void LD_OFFSET(struct gbc *gbc)
 			op = gbc->reg.c;
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction LD_OFFSET.\n");
+			gbcc_log_error("Error in instruction LD_OFFSET.\n");
 			return;
 	}
 	switch ((gbc->opcode - 0xE0u) / 0x10u) {
@@ -416,7 +416,7 @@ void PUSH_POP(struct gbc *gbc)
 			op = &(gbc->reg.af);
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction PUSH_POP.\n");
+			gbcc_log_error("Error in instruction PUSH_POP.\n");
 			return;
 	}
 	switch ((gbc->opcode % 0x10u) / 0x04u) {
@@ -567,7 +567,7 @@ void INC_DEC_16_BIT(struct gbc *gbc)
 			op = &(gbc->reg.sp);
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction INC_DEC_16_BIT.\n");
+			gbcc_log_error("Error in instruction INC_DEC_16_BIT.\n");
 			return;
 	}
 	switch ((gbc->opcode % 0x10u) / 0x08u) {
@@ -598,7 +598,7 @@ void ADD_HL(struct gbc *gbc)
 			op = gbc->reg.sp;
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction ADD_HL.\n");
+			gbcc_log_error("Error in instruction ADD_HL.\n");
 			return;
 	}
 	cond_flag(gbc, HF, ((gbc->reg.hl & 0x0FFFu) + (op & 0x0FFFu) & 0x1000u) == 0x1000u);
@@ -648,7 +648,7 @@ void SHIFT_A(struct gbc *gbc)
 			*op = (uint8_t)(*op >> 1u) | (uint8_t)(tmp << 7u);
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction SHIFT_A.\n");
+			gbcc_log_error("Error in instruction SHIFT_A.\n");
 			return;
 	}
 	clear_flag(gbc, ZF);
@@ -710,7 +710,7 @@ void JP_COND(struct gbc *gbc)
 			}
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction JP_COND.\n");
+			gbcc_log_error("Error in instruction JP_COND.\n");
 			return;
 	}
 }
@@ -758,7 +758,7 @@ void JR_COND(struct gbc *gbc)
 			}
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction JR_COND.\n");
+			gbcc_log_error("Error in instruction JR_COND.\n");
 			return;
 	}
 }
@@ -815,7 +815,7 @@ void CALL_COND(struct gbc *gbc)
 			}
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Error in instruction CALL_COND.\n");
+			gbcc_log_error("Error in instruction CALL_COND.\n");
 			return;
 	}
 	if (call) {

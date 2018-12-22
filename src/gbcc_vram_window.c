@@ -22,7 +22,7 @@ struct gbcc_vram_window *gbcc_vram_window_initialise(struct gbc *gbc)
 	win->quit = false;
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
-		gbcc_log(GBCC_LOG_ERROR, "Failed to initialize SDL: %s\n", SDL_GetError());
+		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
 	}
 
 	win->thread = SDL_CreateThread(
@@ -31,7 +31,7 @@ struct gbcc_vram_window *gbcc_vram_window_initialise(struct gbc *gbc)
 			(void *)(win));
 
 	if (win->thread == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Error creating rendering thread: %s\n", SDL_GetError());
+		gbcc_log_error("Error creating rendering thread: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
 	return win;
@@ -63,7 +63,7 @@ static int window_thread_function(void *window)
 			);
 
 	if (win->window == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Could not create window: %s\n", SDL_GetError());
+		gbcc_log_error("Could not create window: %s\n", SDL_GetError());
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
@@ -75,7 +75,7 @@ static int window_thread_function(void *window)
 			);
 
 	if (win->renderer == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Could not create renderer: %s\n", SDL_GetError());
+		gbcc_log_error("Could not create renderer: %s\n", SDL_GetError());
 		SDL_DestroyWindow(win->window);
 		SDL_Quit();
 		exit(EXIT_FAILURE);
@@ -89,7 +89,7 @@ static int window_thread_function(void *window)
 			);
 
 	if (win->texture == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Could not create texture: %s\n", SDL_GetError());
+		gbcc_log_error("Could not create texture: %s\n", SDL_GetError());
 		SDL_DestroyRenderer(win->renderer);
 		SDL_DestroyWindow(win->window);
 		SDL_Quit();
@@ -171,13 +171,13 @@ static int window_thread_function(void *window)
 				VRAM_WINDOW_WIDTH * sizeof(win->buffer[0])
 				);
 		if (err < 0) {
-			gbcc_log(GBCC_LOG_ERROR, "Error updating texture: %s\n", SDL_GetError());
+			gbcc_log_error("Error updating texture: %s\n", SDL_GetError());
 			exit(EXIT_FAILURE);
 		}
 
 		err = SDL_RenderClear(win->renderer);
 		if (err < 0) {
-			gbcc_log(GBCC_LOG_ERROR, "Error clearing renderer: %s\n", SDL_GetError());
+			gbcc_log_error("Error clearing renderer: %s\n", SDL_GetError());
 			if (win->renderer == NULL) {
 				printf("NULL Renderer!\n");
 			}
@@ -186,7 +186,7 @@ static int window_thread_function(void *window)
 
 		err = SDL_RenderCopy(win->renderer, win->texture, NULL, NULL);
 		if (err < 0) {
-			gbcc_log(GBCC_LOG_ERROR, "Error copying texture: %s\n", SDL_GetError());
+			gbcc_log_error("Error copying texture: %s\n", SDL_GetError());
 			exit(EXIT_FAILURE);
 		}
 

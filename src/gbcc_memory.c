@@ -133,7 +133,7 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr, bool override)
 	if (addr == IE) {
 		return gbc->memory.iereg;
 	}
-	gbcc_log(GBCC_LOG_ERROR, "Reading from unknown memory address %04X.\n", addr);
+	gbcc_log_error("Reading from unknown memory address %04X.\n", addr);
 	return 0;
 }
 
@@ -184,7 +184,7 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool overrid
 	} else if (addr == IE) {
 		gbc->memory.iereg = val;
 	} else {
-		gbcc_log(GBCC_LOG_ERROR, "Writing to unknown memory address %04X.\n", addr);
+		gbcc_log_error("Writing to unknown memory address %04X.\n", addr);
 	}
 }
 

@@ -23,21 +23,21 @@ void gbcc_screenshot(struct gbc *gbc)
 
 	if (mkdir(dir, 0755) != 0) {
 		if (errno != EEXIST) {
-			gbcc_log(GBCC_LOG_ERROR, "Couldn't create screenshots folder: %s\n", strerror(errno));
+			gbcc_log_error("Couldn't create screenshots folder: %s\n", strerror(errno));
 			return;
 		}
 	}
 	
 	FILE *fp = fopen(fname, "wbe");
 	if (!fp) {
-		gbcc_log(GBCC_LOG_ERROR, "Couldn't open %s: %s\n", fname, strerror(errno));
+		gbcc_log_error("Couldn't open %s: %s\n", fname, strerror(errno));
 		return;
 	}
 	png_structp png_ptr = png_create_write_struct(
 			PNG_LIBPNG_VER_STRING,
 			NULL, NULL, NULL);
 	if (!png_ptr) {
-		gbcc_log(GBCC_LOG_ERROR, "Couldn't create PNG write struct.\n");
+		gbcc_log_error("Couldn't create PNG write struct.\n");
 		return;
 	}
 
@@ -45,14 +45,14 @@ void gbcc_screenshot(struct gbc *gbc)
 	if (!info_ptr) {
 		png_destroy_write_struct(&png_ptr, NULL);
 		fclose(fp);
-		gbcc_log(GBCC_LOG_ERROR, "Couldn't create PNG info struct.\n");
+		gbcc_log_error("Couldn't create PNG info struct.\n");
 		return;
 	}
 
 	if (setjmp(png_jmpbuf(png_ptr)) != 0) {
 		png_destroy_write_struct(&png_ptr, NULL);
 		fclose(fp);
-		gbcc_log(GBCC_LOG_ERROR, "Couldn't setjmp for libpng.\n");
+		gbcc_log_error("Couldn't setjmp for libpng.\n");
 		return;
 	}
 
@@ -82,5 +82,5 @@ void gbcc_screenshot(struct gbc *gbc)
 	png_data_freer(png_ptr, info_ptr, PNG_DESTROY_WILL_FREE_DATA, PNG_FREE_ALL);
 	png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
 
-	gbcc_log(GBCC_LOG_INFO, "Saved screenshot %s\n", fname);
+	gbcc_log_info("Saved screenshot %s\n", fname);
 }

@@ -50,11 +50,11 @@ int main(int argc, char **argv)
 				break;
 			case '?':
 				if (optopt == 'p') {
-					gbcc_log(GBCC_LOG_ERROR, "Option -%c requires an argument.\n", optopt);
+					gbcc_log_error("Option -%c requires an argument.\n", optopt);
 				} else if (isprint(optopt)) {
-					gbcc_log(GBCC_LOG_ERROR, "Unknown option `-%c'.\n", optopt);
+					gbcc_log_error("Unknown option `-%c'.\n", optopt);
 				} else {
-					gbcc_log(GBCC_LOG_ERROR, "Unknown option character `\\x%x'.\n", optopt);
+					gbcc_log_error("Unknown option character `\\x%x'.\n", optopt);
 				}
 				exit(EXIT_FAILURE);
 			default:
@@ -75,11 +75,11 @@ int main(int argc, char **argv)
 	}
 
 	if (palette == -1) {
-		gbcc_log(GBCC_LOG_ERROR, "Invalid palette %s\n", pvalue);
+		gbcc_log_error("Invalid palette %s\n", pvalue);
 		exit(EXIT_FAILURE);
 	}
 
-	gbcc_log(GBCC_LOG_DEBUG, "Palette %s selected\n", gbcc_palette_names[palette]);	
+	gbcc_log_debug("Palette %s selected\n", gbcc_palette_names[palette]);	
 
 	struct gbc gbc;
 	gbcc_initialise(&gbc, argv[optind]);

@@ -90,27 +90,27 @@ void gbcc_free(struct gbc *gbc)
 
 void gbcc_load_rom(struct gbc *gbc, const char *filename)
 {
-	gbcc_log(GBCC_LOG_INFO, "Loading %s...\n", filename);
+	gbcc_log_info("Loading %s...\n", filename);
 	size_t read;
 	uint8_t rom_size_flag;
 
 	FILE *rom = fopen(filename, "rbe");
 	if (rom == NULL)
 	{
-		gbcc_log(GBCC_LOG_ERROR, "Error opening file: %s\n", filename);
+		gbcc_log_error("Error opening file: %s\n", filename);
 		exit(EXIT_FAILURE);
 	}
 
 	fseek(rom, CART_ROM_SIZE_FLAG, SEEK_SET);
 	if (ferror(rom)) {
-		gbcc_log(GBCC_LOG_ERROR, "Error seeking in file: %s\n", filename);
+		gbcc_log_error("Error seeking in file: %s\n", filename);
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
 
 	read = fread(&rom_size_flag, 1, 1, rom);
 	if (read == 0) {
-		gbcc_log(GBCC_LOG_ERROR, "Error reading ROM size from: %s\n", filename);
+		gbcc_log_error("Error reading ROM size from: %s\n", filename);
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
@@ -124,41 +124,41 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	} else if (rom_size_flag == 0x54u) {
 		gbc->cart.rom_size = 0x180000u;
 	} else {
-		gbcc_log(GBCC_LOG_ERROR, "Unknown ROM size flag: %u\n", rom_size_flag);
+		gbcc_log_error("Unknown ROM size flag: %u\n", rom_size_flag);
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
 	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
-	gbcc_log(GBCC_LOG_INFO, "\tCartridge size: 0x%X bytes (%u banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
+	gbcc_log_info("\tCartridge size: 0x%X bytes (%u banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
 
 	gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
 	if (gbc->cart.rom == NULL) {
-		gbcc_log(GBCC_LOG_ERROR, "Error allocating ROM.\n");
+		gbcc_log_error("Error allocating ROM.\n");
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
 
 
 	if (fseek(rom, 0, SEEK_SET) != 0) {
-		gbcc_log(GBCC_LOG_ERROR, "Error seeking in file: %s\n", filename);
+		gbcc_log_error("Error seeking in file: %s\n", filename);
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
 
 	read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
 	if (read == 0) {
-		gbcc_log(GBCC_LOG_ERROR, "Error reading from file: %s\n", filename);
+		gbcc_log_error("Error reading from file: %s\n", filename);
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
 
 	fclose(rom);
-	gbcc_log(GBCC_LOG_INFO, "\tROM loaded.\n");
+	gbcc_log_info("\tROM loaded.\n");
 }
 
 void gbcc_parse_header(struct gbc *gbc)
 {
-	gbcc_log(GBCC_LOG_INFO, "Parsing header...\n");
+	gbcc_log_info("Parsing header...\n");
 	gbcc_verify_cartridge(gbc);
 	gbcc_load_title(gbc);
 	gbcc_print_licensee_code(gbc);
@@ -167,28 +167,28 @@ void gbcc_parse_header(struct gbc *gbc)
 	gbcc_init_ram(gbc);
 	gbcc_print_destination_code(gbc);
 	gbcc_init_registers(gbc);
-	gbcc_log(GBCC_LOG_INFO, "\tHeader parsed.\n");
+	gbcc_log_info("\tHeader parsed.\n");
 }
 
 void gbcc_verify_cartridge(struct gbc *gbc)
 {
 	for (size_t i = CART_LOGO_START; i < CART_LOGO_GBC_CHECK_END; i++) {
 		if (gbc->cart.rom[i] != nintendo_logo[i - CART_LOGO_START]) {
-			gbcc_log(GBCC_LOG_ERROR, "Cartridge logo check failed on byte %04X\n", i);
+			gbcc_log_error("Cartridge logo check failed on byte %04X\n", i);
 			exit(EXIT_FAILURE);
 		}
 	}
-	gbcc_log(GBCC_LOG_INFO, "\tCartridge logo check passed.\n");
+	gbcc_log_info("\tCartridge logo check passed.\n");
 	uint16_t sum = 0;
 	for (size_t i = CART_HEADER_CHECKSUM_START; i < CART_HEADER_CHECKSUM_START + CART_HEADER_CHECKSUM_SIZE + 1; i++) {
 		sum += gbc->cart.rom[i];
 	}
 	sum = low_byte(sum + 25u);
 	if (sum) {
-		gbcc_log(GBCC_LOG_ERROR, "Cartridge checksum failed with value %04X.\n", sum);
+		gbcc_log_error("Cartridge checksum failed with value %04X.\n", sum);
 		exit(EXIT_FAILURE);
 	}	
-	gbcc_log(GBCC_LOG_INFO, "\tCartridge checksum passed.\n");
+	gbcc_log_info("\tCartridge checksum passed.\n");
 }
 
 void gbcc_load_title(struct gbc *gbc)
@@ -196,7 +196,7 @@ void gbcc_load_title(struct gbc *gbc)
 	for (size_t i = CART_TITLE_START; i < CART_TITLE_END; i++) {
 		gbc->cart.title[i - CART_TITLE_START] = (char)gbc->cart.rom[i];
 	}
-	gbcc_log(GBCC_LOG_INFO, "\tTitle: %s\n", gbc->cart.title);
+	gbcc_log_info("\tTitle: %s\n", gbc->cart.title);
 }
 
 void gbcc_print_licensee_code(struct gbc *gbc)
@@ -214,7 +214,7 @@ void gbcc_print_licensee_code(struct gbc *gbc)
 		new_code[CART_NEW_LICENSEE_CODE_SIZE] = '\0';
 		snprintf(buffer, len, "\tLicensee code: %s\n", new_code);
 	}
-	gbcc_log(GBCC_LOG_INFO, buffer);
+	gbcc_log_info(buffer);
 }
 
 void gbcc_init_mode(struct gbc *gbc)
@@ -230,10 +230,10 @@ void gbcc_init_mode(struct gbc *gbc)
 	}
 	switch (gbc->mode) {
 		case DMG:
-			gbcc_log(GBCC_LOG_INFO, "\tMode: DMG\n");
+			gbcc_log_info("\tMode: DMG\n");
 			break;
 		case GBC:
-			gbcc_log(GBCC_LOG_INFO, "\tMode: GBC\n");
+			gbcc_log_info("\tMode: GBC\n");
 			break;
 	}
 }
@@ -243,106 +243,106 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 	switch (gbc->cart.rom[CART_TYPE]) {
 		case 0x00u:	/* ROM ONLY */
 			gbc->cart.mbc.type = NONE;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: ROM only\n");
+			gbcc_log_info("\tHardware: ROM only\n");
 			break;
 		case 0x01u:	/* MBC1 */
 			gbc->cart.mbc.type = MBC1;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC1\n");
+			gbcc_log_info("\tHardware: MBC1\n");
 			break;
 		case 0x02u:	/* MBC1 + RAM */
 			gbc->cart.mbc.type = MBC1;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC1 + RAM\n");
+			gbcc_log_info("\tHardware: MBC1 + RAM\n");
 			break;
 		case 0x03u:	/* MBC1 + RAM + BATTERY */
 			gbc->cart.mbc.type = MBC1;
 			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC1 + RAM + Battery\n");
+			gbcc_log_info("\tHardware: MBC1 + RAM + Battery\n");
 			break;
 		case 0x05u:	/* MBC2 */
 			gbc->cart.mbc.type = MBC2;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC2\n");
+			gbcc_log_info("\tHardware: MBC2\n");
 			break;
 		case 0x06u:	/* MBC2 + BATTERY */
 			gbc->cart.mbc.type = MBC2;
 			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC2 + Battery\n");
+			gbcc_log_info("\tHardware: MBC2 + Battery\n");
 			break;
 		case 0x08u:	/* ROM + RAM */
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: ROM + RAM\n");
+			gbcc_log_info("\tHardware: ROM + RAM\n");
 			break;
 		case 0x09u:	/* ROM + RAM + BATTERY */
 			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: ROM + RAM + Battery\n");
+			gbcc_log_info("\tHardware: ROM + RAM + Battery\n");
 			break;
 		case 0x0Bu:	/* MMM01 */
 			gbc->cart.mbc.type = MMM01;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: ROM + RAM + Battery\n");
+			gbcc_log_info("\tHardware: ROM + RAM + Battery\n");
 			break;
 		case 0x0Cu:	/* MMM01 + RAM */
 			gbc->cart.mbc.type = MMM01;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MMM01\n");
+			gbcc_log_info("\tHardware: MMM01\n");
 			break;
 		case 0x0Du:	/* MMM01 + RAM + BATTERY */
 			gbc->cart.mbc.type = MMM01;
 			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MMM01 + Battery\n");
+			gbcc_log_info("\tHardware: MMM01 + Battery\n");
 			break;
 		case 0x0Fu:	/* MBC3 + TIMER + BATTERY */
 			gbc->cart.mbc.type = MBC3;
 			gbc->cart.timer = true;
 			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC3 + Timer + Battery\n");
+			gbcc_log_info("\tHardware: MBC3 + Timer + Battery\n");
 			break;
 		case 0x10u:	/* MBC3 + TIMER + RAM + BATTERY */
 			gbc->cart.timer = true;
 			gbc->cart.battery = true;
 			gbc->cart.mbc.type = MBC3;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC3 + Timer + RAM + Battery\n");
+			gbcc_log_info("\tHardware: MBC3 + Timer + RAM + Battery\n");
 			break;
 		case 0x11u:	/* MBC3 */
 			gbc->cart.mbc.type = MBC3;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC3\n");
+			gbcc_log_info("\tHardware: MBC3\n");
 			break;
 		case 0x12u:	/* MBC3 + RAM */
 			gbc->cart.mbc.type = MBC3;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC3 + RAM\n");
+			gbcc_log_info("\tHardware: MBC3 + RAM\n");
 			break;
 		case 0x13u:	/* MBC3 + RAM + BATTERY */
 			gbc->cart.mbc.type = MBC3;
 			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC3 + RAM + Battery\n");
+			gbcc_log_info("\tHardware: MBC3 + RAM + Battery\n");
 			break;
 		case 0x19u:	/* MBC5 */
 			gbc->cart.mbc.type = MBC5;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5\n");
+			gbcc_log_info("\tHardware: MBC5\n");
 			break;
 		case 0x1Au:	/* MBC5 + RAM */
 			gbc->cart.mbc.type = MBC5;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5 + RAM\n");
+			gbcc_log_info("\tHardware: MBC5 + RAM\n");
 			break;
 		case 0x1Bu:	/* MBC5 + RAM + BATTERY */
 			gbc->cart.mbc.type = MBC5;
 			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5 + RAM + Battery\n");
+			gbcc_log_info("\tHardware: MBC5 + RAM + Battery\n");
 			break;
 		case 0x1Cu:	/* MBC5 + RUMBLE */
 			gbc->cart.mbc.type = MBC5;
 			gbc->cart.rumble = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5 + Rumble\n");
+			gbcc_log_info("\tHardware: MBC5 + Rumble\n");
 			break;
 		case 0x1Du:	/* MBC5 + RUMBLE + RAM */
 			gbc->cart.mbc.type = MBC5;
 			gbc->cart.rumble = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5 + Rumble + RAM\n");
+			gbcc_log_info("\tHardware: MBC5 + Rumble + RAM\n");
 			break;
 		case 0x1Eu:	/* MBC5 + RUMBLE + RAM + BATTERY */
 			gbc->cart.mbc.type = MBC5;
 			gbc->cart.rumble = true;
 			gbc->cart.battery = true;
-			gbcc_log(GBCC_LOG_INFO, "\tHardware: MBC5 + Rumble + RAM + Battery\n");
+			gbcc_log_info("\tHardware: MBC5 + Rumble + RAM + Battery\n");
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Unrecognised hardware %02X\n", gbc->cart.rom[CART_TYPE]);
+			gbcc_log_error("Unrecognised hardware %02X\n", gbc->cart.rom[CART_TYPE]);
 			/* TODO: Handle Pocket Camera, TAMA5, HuC3 & HuC1 */
 			break;
 	}
@@ -382,7 +382,7 @@ void gbcc_init_ram(struct gbc *gbc)
 			}
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Unknown ram size flag: %u\n", ram_size_flag);
+			gbcc_log_error("Unknown ram size flag: %u\n", ram_size_flag);
 			exit(EXIT_FAILURE);
 	}
 
@@ -392,10 +392,10 @@ void gbcc_init_ram(struct gbc *gbc)
 
 	if (gbc->cart.ram_size > 0) {
 		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;
-		gbcc_log(GBCC_LOG_INFO, "\tCartridge RAM: 0x%0X bytes (%u banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
+		gbcc_log_info("\tCartridge RAM: 0x%0X bytes (%u banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
 		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
 		if (gbc->cart.ram == NULL) {
-			gbcc_log(GBCC_LOG_ERROR, "Error allocating RAM.\n");
+			gbcc_log_error("Error allocating RAM.\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -406,13 +406,13 @@ void gbcc_print_destination_code(struct gbc *gbc)
 	uint8_t dest_code = gbc->cart.rom[CART_DESTINATION_CODE];
 	switch (dest_code) {
 		case 0x00u:
-			gbcc_log(GBCC_LOG_INFO, "\tRegion: Japan\n");
+			gbcc_log_info("\tRegion: Japan\n");
 			break;
 		case 0x01u:
-			gbcc_log(GBCC_LOG_INFO, "\tRegion: Non-Japanese\n");
+			gbcc_log_info("\tRegion: Non-Japanese\n");
 			break;
 		default:
-			gbcc_log(GBCC_LOG_ERROR, "Unrecognised region code: 0x%02X\n", dest_code);
+			gbcc_log_error("Unrecognised region code: 0x%02X\n", dest_code);
 			exit(EXIT_FAILURE);
 	}
 }
