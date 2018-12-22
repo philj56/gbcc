@@ -14,22 +14,17 @@
 #include <time.h>
 #include <unistd.h>
 
-static struct gbc gbc;
-
 static void quit(int sig);
 
 __attribute__((noreturn))
 void quit(int sig) 
 {
 	(void) sig;
-	gbcc_save(&gbc);
 	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv)
 {
-	if (argc == 1) {
-	}
 
 	if (signal(SIGINT, quit) == SIG_ERR) {
 		printf("Can't catch SIGINT!\n");
@@ -56,12 +51,10 @@ int main(int argc, char **argv)
 			case '?':
 				if (optopt == 'p') {
 					gbcc_log(GBCC_LOG_ERROR, "Option -%c requires an argument.\n", optopt);
-				} else if (isprint (optopt)) {
+				} else if (isprint(optopt)) {
 					gbcc_log(GBCC_LOG_ERROR, "Unknown option `-%c'.\n", optopt);
 				} else {
-					gbcc_log(GBCC_LOG_ERROR,
-							"Unknown option character `\\x%x'.\n",
-							optopt);
+					gbcc_log(GBCC_LOG_ERROR, "Unknown option character `\\x%x'.\n", optopt);
 				}
 				exit(EXIT_FAILURE);
 			default:
@@ -87,16 +80,13 @@ int main(int argc, char **argv)
 	}
 
 	gbcc_log(GBCC_LOG_DEBUG, "Palette %s selected\n", gbcc_palette_names[palette]);	
-	//	struct gbc gbc;
 
-	/* FIXME: shouldn't have to do this */
-	gbc.initialised = false;
+	struct gbc gbc;
 	gbcc_initialise(&gbc, argv[optind]);
 	gbcc_window_initialise(&gbc, vsync);
 	//gbcc_vram_window_initialise(&gbc);
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
-	gbc.initialised = true;
 	if (palette == 0) {
 		gbc.palette = gbcc_palettes[palette];
 	} else {

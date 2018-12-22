@@ -112,7 +112,6 @@ struct gbc {
 	} real_time;
 	bool quit;
 	bool pause;
-	bool initialised;
 	bool screenshot;
 	bool interlace;
 	int8_t save_state;

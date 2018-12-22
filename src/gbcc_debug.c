@@ -266,7 +266,6 @@ void gbcc_print_state(struct gbc *gbc)
 	printf("ppu_clock:%lu\n", gbc->ppu_clock);
 	printf("quit:%d\n", gbc->quit);
 	printf("pause:%d\n", gbc->pause);
-	printf("initialised:%d\n", gbc->initialised);
 	printf("interlace:%d\n", gbc->interlace);
 	printf("save_state:%d\n", gbc->save_state);
 	printf("load_state:%d\n", gbc->load_state);

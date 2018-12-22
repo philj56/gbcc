@@ -767,15 +767,12 @@ void JR_COND(struct gbc *gbc)
 
 void CALL(struct gbc *gbc)
 {
-	static uint8_t low;
-	static uint8_t high;
-	static uint16_t addr;
-			low = gbcc_fetch_instruction(gbc);
-			high = gbcc_fetch_instruction(gbc);
-			addr = cat_bytes(low, high);
-			gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), false);
-			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
-			gbc->reg.pc = addr;
+	uint8_t low = gbcc_fetch_instruction(gbc);
+	uint8_t high = gbcc_fetch_instruction(gbc);
+	uint16_t addr = cat_bytes(low, high);
+	gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), false);
+	gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
+	gbc->reg.pc = addr;
 }
 
 void CALL_COND(struct gbc *gbc)

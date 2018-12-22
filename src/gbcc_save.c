@@ -15,10 +15,6 @@ void gbcc_save(struct gbc *gbc)
 	if (gbc->cart.ram_size == 0) {
 		return;
 	}
-	if (!gbc->initialised) {
-		gbcc_log(GBCC_LOG_INFO, "GBC not initialised, not saving.\n");
-		return;
-	}
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
 	FILE *sav;

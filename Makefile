@@ -1,7 +1,7 @@
 ODIR=obj
 SRCDIR=src
 CC=clang
-CFLAGS=-std=c11 -D_POSIX_C_SOURCE=200809L -O2 \
+CFLAGS=-std=c11 -D_POSIX_C_SOURCE=200809L -O2 -flto=full \
        -Weverything -Wno-unused-parameter -Wno-padded -Wno-format-nonliteral
 LIBS=-lSDL2 -lpng -lm
 
