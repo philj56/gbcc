@@ -3,6 +3,7 @@
 #include "gbcc_input.h"
 #include "gbcc_memory.h"
 #include "gbcc_window.h"
+#include "gbcc_time.h"
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,6 +108,8 @@ static int window_thread_function(void *window)
 		win->buffer[i] = 0;
 	}
 
+	//size_t last_frame = 0;
+
 	/* Main rendering loop */
 	while (!(win->quit)) {
 		gbcc_input_process_all(win->gbc);
@@ -130,7 +133,7 @@ static int window_thread_function(void *window)
 		if (err < 0) {
 			gbcc_log_error("Error clearing renderer: %s\n", SDL_GetError());
 			if (win->renderer == NULL) {
-				printf("NULL Renderer!\n");
+				gbcc_log_error("NULL Renderer!\n");
 			}
 			exit(EXIT_FAILURE);
 		}
@@ -144,7 +147,10 @@ static int window_thread_function(void *window)
 		SDL_RenderPresent(win->renderer);
 
 		SDL_Delay(16);
+		/*size_t fps = (win->gbc->frame - last_frame) * 60;
+		gbcc_log_debug("FPS: %lu\n", fps);
+		last_frame = win->gbc->frame;*/
 	}
-	printf("QUIT SDL\n");
+	//printf("QUIT SDL\n");
 	return 0;
 }

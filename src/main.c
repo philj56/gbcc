@@ -27,10 +27,12 @@ void quit(int sig)
 
 void usage()
 {
-	printf("Usage: gbcc [-hiv] [-p palette] rom_file\n"
+	printf("Usage: gbcc [-hiv] [-p palette] [-t speed] rom_file\n"
 	       "  -h, --help            Print this message and exit.\n"
 	       "  -i, --interlace       Enable interlacing (experimental).\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
+	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
+	       "                        (0 = unlimited).\n"
 	       "  -v, --vsync           Enable VSync.\n"
 	      );
 }
@@ -45,35 +47,48 @@ int main(int argc, char **argv)
 	sigfillset(&act.sa_mask);
 	sigaction(SIGINT, &act, NULL);
 
-	struct palette palette = gbcc_get_palette("classic");
-	bool interlace = false;
 	bool vsync = false;
 	opterr = 0;
 
 	struct option long_options[] = {
 		{"help", no_argument, NULL, 'h'},
 		{"interlace", no_argument, NULL, 'i'},
-		{"vsync", no_argument, NULL, 'v'},
-		{"palette", required_argument, NULL, 'p'}
+		{"palette", required_argument, NULL, 'p'},
+		{"turbo", required_argument, NULL, 't'},
+		{"vsync", no_argument, NULL, 'v'}
 	};
 
-	for (int opt; (opt = getopt_long(argc, argv, "hivp:", long_options, NULL)) != -1;) {
+	while (getopt_long(argc, argv, "hip:t:v", long_options, NULL) != -1) {
+	}
+	if (optind >= argc) {
+		usage();
+		exit(EXIT_FAILURE);
+	}
+	gbcc_initialise(&gbc, argv[optind]);
+
+	optind = 1;
+
+	for (int opt; (opt = getopt_long(argc, argv, "hip:t:v", long_options, NULL)) != -1;) {
 		switch (opt) {
 			case 'h':
 				usage();
 				exit(EXIT_SUCCESS);
 			case 'i':
-				interlace = true;
+				gbc.interlace = true;
+				break;
+			case 't':
+				/* TODO: error check */
+				gbc.turbo_speed = strtod(optarg, NULL);
 				break;
 			case 'p':
-				palette = gbcc_get_palette(optarg);
-				gbcc_log_debug("%s palette selected\n", palette.name);
+				gbc.palette = gbcc_get_palette(optarg);
+				gbcc_log_debug("%s palette selected\n", gbc.palette.name);
 				break;
 			case 'v':
 				vsync = true;
 				break;
 			case '?':
-				if (optopt == 'p') {
+				if (optopt == 'p' || optopt == 't') {
 					gbcc_log_error("Option -%c requires an argument.\n", optopt);
 				} else if (isprint(optopt)) {
 					gbcc_log_error("Unknown option `-%c'.\n", optopt);
@@ -87,18 +102,10 @@ int main(int argc, char **argv)
 				exit(EXIT_FAILURE);
 		}
 	}
-	if (optind >= argc) {
-		usage();
-		exit(EXIT_FAILURE);
-	}
-
-	gbcc_initialise(&gbc, argv[optind]);
 	gbcc_window_initialise(&gbc, vsync);
 	//gbcc_vram_window_initialise(&gbc);
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
-	gbc.palette = palette;
-	gbc.interlace = interlace;
 
 	while (!gbc.quit) {
 		while (gbc.pause) {

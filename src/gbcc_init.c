@@ -4,6 +4,7 @@
 #include "gbcc_constants.h"
 #include "gbcc_debug.h"
 #include "gbcc_memory.h"
+#include "gbcc_palettes.h"
 #include "gbcc_save.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,6 +67,8 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->save_state = 0;
 	gbc->load_state = 0;
 	gbc->speed_mult = 1;
+	gbc->turbo_speed = 0;
+	gbc->palette = gbcc_get_palette("default");
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
 	gbc->frame = 0;

@@ -117,7 +117,8 @@ struct gbc {
 	int8_t save_state;
 	int8_t load_state;
 	int8_t speed_mult;
-	size_t frame;
+	double turbo_speed;
+	uint64_t frame;
 
 	/* Memory map */
 	struct {

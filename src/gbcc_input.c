@@ -73,6 +73,9 @@ void gbcc_input_process_all(struct gbc *gbc)
 				break;
 			case 8:
 				gbc->keys.turbo ^= val;
+				/* TODO: This shouldn't really be done here */
+				gbc->apu.start_time = gbc->apu.cur_time;
+				gbc->apu.sample = 0;
 				break;
 			case 9:
 				gbc->screenshot = val;

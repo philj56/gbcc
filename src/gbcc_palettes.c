@@ -8,8 +8,8 @@
 static struct palette palette_colour_correct(const struct palette *pal);
 
 static const struct palette palettes[NUM_PALETTES] = {
-	{ /* classic */
-		.name = "Classic",
+	{ /* Default */
+		.name = "Default",
 		.background = {0xc4cfa1u, 0x8b956du, 0x6b7353u, 0x000000u},
 		.sprite1    = {0xc4cfa1u, 0x8b956du, 0x6b7353u, 0x000000u},
 		.sprite2    = {0xc4cfa1u, 0x8b956du, 0x6b7353u, 0x000000u}

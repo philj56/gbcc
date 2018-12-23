@@ -88,7 +88,7 @@ void gbcc_apu_clock(struct gbc *gbc)
 		gbc->apu.noise.lfsr >>= 1u;
 		gbc->apu.noise.lfsr |= tmp * (1u << 14u);
 		if (gbc->apu.noise.width_mode) {
-			gbc->apu.noise.lfsr |= tmp * bit(6);
+			gbc->apu.noise.lfsr |= (uint8_t)(tmp * bit(6));
 		}
 		gbc->apu.ch4.state = !(gbc->apu.noise.lfsr & bit(0));
 	}
@@ -111,8 +111,7 @@ void gbcc_apu_clock(struct gbc *gbc)
 	}
 	if (clocks >= CLOCKS_PER_SYNC) {
 		if (gbc->keys.turbo) {
-			gbc->apu.start_time = gbc->apu.cur_time;
-			gbc->apu.sample = 0;
+			time_sync(gbc);
 		} else {
 			time_sync(gbc);
 		}
@@ -249,7 +248,13 @@ void time_sync(struct gbc *gbc)
 		gbc->apu.sample = 0;
 		return;
 	}
-	while (diff < (SECOND * gbc->apu.sample) / SYNC_FREQ) {
+	double mult = 1;
+	if (gbc->keys.turbo) {
+		if (gbc->turbo_speed > 0) {
+			mult = gbc->turbo_speed;
+		}
+	}
+	while (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult)) {
 		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
 		nanosleep(&time, NULL);
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
@@ -368,6 +373,8 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch2.right = check_bit(val, 1);
 			gbc->apu.ch1.right = check_bit(val, 0);
 			break;
+		default:
+			gbcc_log_error("Invalid APU address 0x%04X\n", addr);
 	}
 }
 
