@@ -7,6 +7,7 @@
 #include "gbcc_save.h"
 #include "gbcc_vram_window.h"
 #include "gbcc_window.h"
+#include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,6 +16,7 @@
 #include <unistd.h>
 
 static void quit(int sig);
+static void usage(void);
 
 __attribute__((noreturn))
 void quit(int sig) 
@@ -23,27 +25,49 @@ void quit(int sig)
 	exit(EXIT_FAILURE);
 }
 
+void usage()
+{
+	printf("Usage: gbcc [-hiv] [-p palette] rom_file\n"
+	       "  -h, --help            Print this message and exit.\n"
+	       "  -i, --interlace       Enable interlacing (experimental).\n"
+	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
+	       "  -v, --vsync           Enable VSync.\n"
+	      );
+}
+
+static struct gbc gbc;
+
 int main(int argc, char **argv)
 {
+	struct sigaction act = {
+		.sa_handler = quit
+	};
+	sigfillset(&act.sa_mask);
+	sigaction(SIGINT, &act, NULL);
 
-	if (signal(SIGINT, quit) == SIG_ERR) {
-		printf("Can't catch SIGINT!\n");
-	}
-
-	int c;
-	char *pvalue = "classic";
+	struct palette palette = gbcc_get_palette("classic");
 	bool interlace = false;
 	bool vsync = false;
 	opterr = 0;
 
-	while ((c = getopt(argc, argv, "vip:")) != -1) {
-		switch (c)
-		{
+	struct option long_options[] = {
+		{"help", no_argument, NULL, 'h'},
+		{"interlace", no_argument, NULL, 'i'},
+		{"vsync", no_argument, NULL, 'v'},
+		{"palette", required_argument, NULL, 'p'}
+	};
+
+	for (int opt; (opt = getopt_long(argc, argv, "hivp:", long_options, NULL)) != -1;) {
+		switch (opt) {
+			case 'h':
+				usage();
+				exit(EXIT_SUCCESS);
 			case 'i':
 				interlace = true;
 				break;
 			case 'p':
-				pvalue = optarg;
+				palette = gbcc_get_palette(optarg);
+				gbcc_log_debug("%s palette selected\n", palette.name);
 				break;
 			case 'v':
 				vsync = true;
@@ -56,42 +80,24 @@ int main(int argc, char **argv)
 				} else {
 					gbcc_log_error("Unknown option character `\\x%x'.\n", optopt);
 				}
+				usage();
 				exit(EXIT_FAILURE);
 			default:
-				abort();
+				usage();
+				exit(EXIT_FAILURE);
 		}
 	}
-	if (argv[optind] == NULL) {
-		printf("Usage: %s rom_file\n", argv[0]);
+	if (optind >= argc) {
+		usage();
 		exit(EXIT_FAILURE);
 	}
 
-	int palette = -1;	
-	for (int i = sizeof(gbcc_palette_names)/sizeof(gbcc_palette_names[0]) - 1; i >= 0; i--) {
-		if (strcmp(pvalue, gbcc_palette_names[i]) == 0) {
-			palette = i;
-			break;
-		}
-	}
-
-	if (palette == -1) {
-		gbcc_log_error("Invalid palette %s\n", pvalue);
-		exit(EXIT_FAILURE);
-	}
-
-	gbcc_log_debug("Palette %s selected\n", gbcc_palette_names[palette]);	
-
-	struct gbc gbc;
 	gbcc_initialise(&gbc, argv[optind]);
 	gbcc_window_initialise(&gbc, vsync);
 	//gbcc_vram_window_initialise(&gbc);
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
-	if (palette == 0) {
-		gbc.palette = gbcc_palettes[palette];
-	} else {
-		gbc.palette = gbcc_palette_correct(&gbcc_palettes[palette]);
-	}
+	gbc.palette = palette;
 	gbc.interlace = interlace;
 
 	while (!gbc.quit) {
@@ -109,5 +115,5 @@ int main(int argc, char **argv)
 	}
 	gbcc_save(&gbc);
 
-	return 0;
+	exit(EXIT_SUCCESS);
 }

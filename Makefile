@@ -2,7 +2,8 @@ ODIR=obj
 SRCDIR=src
 CC=clang
 CFLAGS=-std=c11 -D_POSIX_C_SOURCE=200809L -O2 -flto=full \
-       -Weverything -Wno-unused-parameter -Wno-padded -Wno-format-nonliteral
+       -Weverything -Wno-unused-parameter -Wno-padded -Wno-format-nonliteral \
+       -Wno-disabled-macro-expansion
 LIBS=-lSDL2 -lpng -lm
 
 _DEPS = gbcc.h gbcc_apu.h gbcc_audio.h gbcc_constants.h gbcc_cpu.h gbcc_ops.h gbcc_memory.h \

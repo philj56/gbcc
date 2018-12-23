@@ -230,44 +230,6 @@ void gbcc_log_append_info(const char *const fmt, ...)
 	va_end(args);
 }
 
-/*
-void gbcc_log(enum GBCC_LOG_LEVEL level, const char *const fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	switch (level) {
-		case GBCC_LOG_ERROR:
-			gbcc_log_error(fmt, args);
-			break;
-		case GBCC_LOG_DEBUG:
-			gbcc_log_debug(fmt, args);
-			break;
-		case GBCC_LOG_INFO:
-			gbcc_log_info(fmt, args);
-			break;
-	}
-	va_end(args);
-}
-
-void gbcc_log_append(enum GBCC_LOG_LEVEL level, const char *const fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	switch (level) {
-		case GBCC_LOG_ERROR:
-			vfprintf(stderr, fmt, args);
-			break;
-		case GBCC_LOG_DEBUG:
-			vprintf(fmt, args);
-			break;
-		case GBCC_LOG_INFO:
-			vprintf(fmt, args);
-			break;
-	}
-	va_end(args);
-}
-*/
-
 void gbcc_vram_dump(struct gbc *gbc, const char *filename)
 {
 	FILE *fp = fopen(filename, "wbe");

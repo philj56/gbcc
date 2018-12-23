@@ -117,6 +117,7 @@ struct gbc {
 	int8_t save_state;
 	int8_t load_state;
 	int8_t speed_mult;
+	size_t frame;
 
 	/* Memory map */
 	struct {
@@ -145,7 +146,6 @@ struct gbc {
 		struct line_buffer sprite_buffer;
 		uint32_t *gbc_screen;
 		uint32_t *sdl_screen;
-		size_t frame;
 	} memory;
 
 	/* Current key states */

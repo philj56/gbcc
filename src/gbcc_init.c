@@ -68,7 +68,7 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->speed_mult = 1;
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
-	gbc->memory.frame = 0;
+	gbc->frame = 0;
 	timespec_get(&gbc->real_time.current, TIME_UTC);
 	gbc->quit = false;
 	gbc->pause = false;

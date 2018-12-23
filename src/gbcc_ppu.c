@@ -101,7 +101,7 @@ void gbcc_ppu_clock(struct gbc *gbc)
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
 		}
 	} else if (ly == 154) {
-		gbc->memory.frame++;
+		gbc->frame++;
 		ly = 0;
 		gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
 	}
@@ -119,7 +119,7 @@ void draw_line(struct gbc *gbc)
 		gbc->memory.window_buffer.attr[x] = 0;
 		gbc->memory.sprite_buffer.attr[x] = 0;
 	}
-	if (!gbc->interlace || ((gbc->memory.frame) % 2 == ly % 2)) {
+	if (!gbc->interlace || ((gbc->frame) % 2 == ly % 2)) {
 		draw_background_line(gbc);
 		draw_window_line(gbc);
 		draw_sprite_line(gbc);

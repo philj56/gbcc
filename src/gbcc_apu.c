@@ -11,7 +11,6 @@
 #define CLOCKS_PER_SYNC (GBC_CLOCK_FREQ / SYNC_FREQ)
 #define SLEEP_TIME (SECOND / SYNC_FREQ)
 #define SEQUENCER_CLOCKS 8192
-#define TIMER_RESTART (3600 * SYNC_FREQ) /* restart after x samples */
 #define SLEEP_DETECT (SECOND / 10)
 
 static const uint8_t duty_table[4] = {
@@ -256,10 +255,6 @@ void time_sync(struct gbc *gbc)
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
 		diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
 	}
-	/*if (!(gbc->apu.sample % TIMER_RESTART)) {
-		gbc->apu.start_time = gbc->apu.cur_time;
-		gbc->apu.sample = 0;
-	}*/
 }
 
 void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
