@@ -114,6 +114,7 @@
 #define NR12 0xFF12u	/* Channel 1 Volume Envelope (R/W) */
 #define NR13 0xFF13u	/* Channel 1 Frequency Low (W) */
 #define NR14 0xFF14u	/* Channel 1 Frequency High (0-2 W, 6 R/W, 7 W) */
+#define NR20 0xFF15u	/* Unused */
 #define NR21 0xFF16u	/* Channel 2 Sound Length / Wave Pattern Duty (R/W) */
 #define NR22 0xFF17u	/* Channel 2 Volume Envelope (R/W) */
 #define NR23 0xFF18u	/* Channel 2 Frequency Low (W) */
@@ -123,6 +124,7 @@
 #define NR32 0xFF1Cu	/* Channel 3 Select Output Level (R/W) */
 #define NR33 0xFF1Du	/* Channel 3 Frequency Low (W) */
 #define NR34 0xFF1Eu	/* Channel 3 Frequency High (0-2 W, 6 R/W, 7 W) */
+#define NR40 0xFF1Fu	/* Unused */
 #define NR41 0xFF20u	/* Channel 4 Sound Length (R/W) */
 #define NR42 0xFF21u	/* Channel 4 Volume Envelope (R/W) */
 #define NR43 0xFF22u	/* Channel 4 Polynomial Counter (R/W) */

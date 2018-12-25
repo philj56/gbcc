@@ -250,11 +250,9 @@ void time_sync(struct gbc *gbc)
 	}
 	double mult = 1;
 	if (gbc->keys.turbo) {
-		if (gbc->turbo_speed > 0) {
-			mult = gbc->turbo_speed;
-		}
+		mult = gbc->turbo_speed;
 	}
-	while (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult)) {
+	while ((mult > 0) && (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult))) {
 		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
 		nanosleep(&time, NULL);
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
@@ -291,6 +289,9 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 				ch1_trigger(gbc);
 			}
 			break;
+		case NR20:
+			/* Unused */
+			break;
 		case NR21:
 			gbc->apu.ch2.duty.cycle = (val & 0xC0u) >> 6u;
 			gbc->apu.ch2.counter = 64 - (val & 0x3Fu);
@@ -311,6 +312,9 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			if (check_bit(val, 7)) {
 				ch2_trigger(gbc);
 			}
+			break;
+		case NR30:
+			gbc->apu.ch3.enabled = check_bit(val, 7);
 			break;
 		case NR31:
 			gbc->apu.ch3.counter = 256 - val;
@@ -334,6 +338,9 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			if (check_bit(val, 7)) {
 				ch3_trigger(gbc);
 			}
+			break;
+		case NR40:
+			/* Unused */
 			break;
 		case NR41:
 			gbc->apu.ch4.counter = 64 - (val & 0x3Fu);
@@ -372,6 +379,9 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch3.right = check_bit(val, 2);
 			gbc->apu.ch2.right = check_bit(val, 1);
 			gbc->apu.ch1.right = check_bit(val, 0);
+			break;
+		case NR52:
+			gbcc_apu_init(gbc);
 			break;
 		default:
 			gbcc_log_error("Invalid APU address 0x%04X\n", addr);

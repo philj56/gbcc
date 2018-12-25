@@ -57,8 +57,13 @@ int main(int argc, char **argv)
 		{"turbo", required_argument, NULL, 't'},
 		{"vsync", no_argument, NULL, 'v'}
 	};
+	const char *short_options = "hip:t:v";
 
-	while (getopt_long(argc, argv, "hip:t:v", long_options, NULL) != -1) {
+	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
+		if (opt == 'h') {
+			usage();
+			exit(EXIT_SUCCESS);
+		}
 	}
 	if (optind >= argc) {
 		usage();
@@ -68,7 +73,7 @@ int main(int argc, char **argv)
 
 	optind = 1;
 
-	for (int opt; (opt = getopt_long(argc, argv, "hip:t:v", long_options, NULL)) != -1;) {
+	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		switch (opt) {
 			case 'h':
 				usage();

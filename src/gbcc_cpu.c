@@ -47,9 +47,9 @@ void gbcc_cpu_clock(struct gbc *gbc)
 	if (gbc->halt.set || gbc->stop) {
 		return;
 	}
-	if (gbcc_op_fixed[gbc->opcode]) {
+	/*if (gbcc_op_fixed[gbc->opcode]) {
 		gbcc_ops[gbc->opcode](gbc);
-	}
+	}*/
 	if (gbc->instruction_timer == 0) {
 		gbcc_execute_instruction(gbc);
 		if (gbc->rst.request) {

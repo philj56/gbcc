@@ -155,8 +155,14 @@ void draw_background_line(struct gbc *gbc)
 	}
 
 	if (!check_bit(lcdc, 0)) {
+		uint32_t colour;
+		if (gbc->mode == DMG) {
+			colour = get_palette_colour(gbc, 0, 0, BACKGROUND);
+		} else {
+			colour = 0;
+		}
 		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = 0xc4cfa1u;
+			gbc->memory.gbc_screen[ly * GBC_SCREEN_WIDTH + x] = colour;
 		}
 		return;
 	}
@@ -526,7 +532,6 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 	uint8_t red = lo & 0x1Fu;
 	uint8_t green = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);
 	uint8_t blue = (hi & 0x7Cu) >> 2u;
-	//return red << 19u | green << 11u | blue << 3u;
-	return gbcc_lerp_colour(red, green, blue);
+	return (uint32_t)((uint32_t)(red << 19u) | (uint32_t)(green << 11u)) | (uint32_t)(blue << 3u);
 }
 

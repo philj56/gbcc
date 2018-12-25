@@ -1,9 +1,10 @@
 #include "gbcc.h"
+#include "gbcc_colour.h"
 #include "gbcc_debug.h"
 #include "gbcc_input.h"
 #include "gbcc_memory.h"
-#include "gbcc_window.h"
 #include "gbcc_time.h"
+#include "gbcc_window.h"
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -114,8 +115,17 @@ static int window_thread_function(void *window)
 	while (!(win->quit)) {
 		gbcc_input_process_all(win->gbc);
 		/* Do the actual drawing */
-		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-			win->buffer[i] = win->gbc->memory.sdl_screen[i];
+		if (win->gbc->mode == GBC || !win->gbc->palette.precorrected) {
+			for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
+				uint8_t red = (uint8_t)((win->gbc->memory.sdl_screen[i] & 0xFF0000u) >> 19u);
+				uint8_t green = (uint8_t)((win->gbc->memory.sdl_screen[i] & 0x00FF00u) >> 11u);
+				uint8_t blue = (uint8_t)((win->gbc->memory.sdl_screen[i] & 0x0000FFu) >> 3u);
+				win->buffer[i] = gbcc_lerp_colour(red, green, blue);
+			}
+		} else {
+			for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
+				win->buffer[i] = win->gbc->memory.sdl_screen[i];
+			}
 		}
 		/* Draw the background */
 		err = SDL_UpdateTexture(
