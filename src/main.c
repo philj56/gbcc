@@ -27,13 +27,14 @@ void quit(int sig)
 
 void usage()
 {
-	printf("Usage: gbcc [-hiv] [-p palette] [-t speed] rom_file\n"
+	printf("Usage: gbcc [-hivV] [-p palette] [-t speed] rom_file\n"
 	       "  -h, --help            Print this message and exit.\n"
 	       "  -i, --interlace       Enable interlacing (experimental).\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
 	       "                        (0 = unlimited).\n"
 	       "  -v, --vsync           Enable VSync.\n"
+	       "  -V, --vram-window     Display a window with all vram tile data.\n"
 	      );
 }
 
@@ -55,9 +56,10 @@ int main(int argc, char **argv)
 		{"interlace", no_argument, NULL, 'i'},
 		{"palette", required_argument, NULL, 'p'},
 		{"turbo", required_argument, NULL, 't'},
-		{"vsync", no_argument, NULL, 'v'}
+		{"vsync", no_argument, NULL, 'v'},
+		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "hip:t:v";
+	const char *short_options = "hip:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -92,6 +94,9 @@ int main(int argc, char **argv)
 			case 'v':
 				vsync = true;
 				break;
+			case 'V':
+				gbcc_vram_window_initialise(&gbc);
+				break;
 			case '?':
 				if (optopt == 'p' || optopt == 't') {
 					gbcc_log_error("Option -%c requires an argument.\n", optopt);
@@ -107,8 +112,8 @@ int main(int argc, char **argv)
 				exit(EXIT_FAILURE);
 		}
 	}
+
 	gbcc_window_initialise(&gbc, vsync);
-	//gbcc_vram_window_initialise(&gbc);
 	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
 	gbcc_load(&gbc);
 

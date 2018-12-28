@@ -1,4 +1,5 @@
 #include "gbcc.h"
+#include "gbcc_debug.h"
 #include "gbcc_input.h"
 #include "gbcc_save.h"
 #include "gbcc_window.h"
@@ -36,9 +37,6 @@ void gbcc_input_process_all(struct gbc *gbc)
 		int key = gbcc_input_process(gbc, &e);
 		const uint8_t *state = SDL_GetKeyboardState(NULL);
 		bool val;
-		if (key < 0) {
-			continue;
-		}
 		if (e.type == SDL_KEYDOWN) {
 			val = true;
 			gbc->halt.set = false;
@@ -101,6 +99,8 @@ void gbcc_input_process_all(struct gbc *gbc)
 					gbc->load_state = (int8_t)(key - 10);
 				}
 				break;
+			default:
+				break;
 		}
 	}
 }
@@ -109,6 +109,16 @@ int gbcc_input_process(struct gbc *gbc, const SDL_Event *e)
 {
 	if (e->type == SDL_QUIT) {
 		gbc->quit = true;
+	} else if (e->type == SDL_WINDOWEVENT) {
+		if (e->window.event == SDL_WINDOWEVENT_CLOSE) {
+			SDL_Window *win = SDL_GetWindowFromID(e->window.windowID);
+			if (win) {
+				SDL_DestroyWindow(win);
+			} else {
+				gbcc_log_error("Couldn't close window: %s\n", SDL_GetError());
+			}
+			//gbc->quit = true;
+		}
 	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
 		for (size_t i = 0; i < sizeof(keymap) / sizeof(keymap[0]); i++) {
 			if (e->key.keysym.scancode == keymap[i]) {

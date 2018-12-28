@@ -100,6 +100,7 @@ static int window_thread_function(void *window)
 			win->renderer,
 			VRAM_WINDOW_WIDTH, VRAM_WINDOW_HEIGHT
 			);
+	SDL_RenderSetIntegerScale(win->renderer, true);
 
 	for (size_t i = 0; i < VRAM_WINDOW_SIZE; i++) {
 		win->buffer[i] = 0;
@@ -108,57 +109,31 @@ static int window_thread_function(void *window)
 	/* Main rendering loop */
 	while (!(win->quit)) {
 		/* Do the actual drawing */
-		for (int j = 0; j < VRAM_WINDOW_HEIGHT_TILES / 2; j++) {
-			for (int i = 0; i < VRAM_WINDOW_WIDTH_TILES; i++) {
-				for (int y = 0; y < 8; y++) {
-					uint8_t lo = win->gbc->memory.vram_bank[0][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y];
-					uint8_t hi = win->gbc->memory.vram_bank[0][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y + 1];
-					for (int x = 0; x < 8; x++) {
-						uint8_t colour = (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
-						uint32_t p = 0;
-						switch (colour) {
-							case 3:
-								p = 0x000000u;
-								break;
-							case 2:
-								p = 0x6b7353u;
-								break;
-							case 1:
-								p = 0x8b956du;
-								break;
-							case 0:
-								p = 0xc4cfa1u;
-								break;
+		for (int bank = 0; bank < 2; bank++) {
+			for (int j = 0; j < VRAM_WINDOW_HEIGHT_TILES / 2; j++) {
+				for (int i = 0; i < VRAM_WINDOW_WIDTH_TILES; i++) {
+					for (int y = 0; y < 8; y++) {
+						uint8_t lo = win->gbc->memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y];
+						uint8_t hi = win->gbc->memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y + 1];
+						for (uint8_t x = 0; x < 8; x++) {
+							uint8_t colour = (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
+							uint32_t p = 0;
+							switch (colour) {
+								case 3:
+									p = 0x000000u;
+									break;
+								case 2:
+									p = 0x6b7353u;
+									break;
+								case 1:
+									p = 0x8b956du;
+									break;
+								case 0:
+									p = 0xc4cfa1u;
+									break;
+							}
+							win->buffer[8 * (VRAM_WINDOW_WIDTH * (j + bank * VRAM_WINDOW_HEIGHT_TILES / 2) + i) + VRAM_WINDOW_WIDTH * y + x] = p;
 						}
-						win->buffer[8 * (VRAM_WINDOW_WIDTH * j + i) + VRAM_WINDOW_WIDTH * y + x] = p;
-					}
-				}
-			}
-		}
-		
-		for (size_t j = 0; j < VRAM_WINDOW_HEIGHT_TILES / 2; j++) {
-			for (size_t i = 0; i < VRAM_WINDOW_WIDTH_TILES; i++) {
-				for (int y = 0; y < 8; y++) {
-					uint8_t lo = win->gbc->memory.vram_bank[1][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y];
-					uint8_t hi = win->gbc->memory.vram_bank[1][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y + 1];
-					for (int x = 0; x < 8; x++) {
-						uint8_t colour = (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
-						uint32_t p = 0;
-						switch (colour) {
-							case 3:
-								p = 0x000000u;
-								break;
-							case 2:
-								p = 0x6b7353u;
-								break;
-							case 1:
-								p = 0x8b956du;
-								break;
-							case 0:
-								p = 0xc4cfa1u;
-								break;
-						}
-						win->buffer[8 * (VRAM_WINDOW_WIDTH * (j + VRAM_WINDOW_HEIGHT_TILES / 2) + i) + VRAM_WINDOW_WIDTH * y + x] = p;
 					}
 				}
 			}
