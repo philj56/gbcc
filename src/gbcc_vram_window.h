@@ -11,15 +11,14 @@
 
 struct gbcc_vram_window {
 	struct gbc *gbc;
-	SDL_Thread *thread;
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
 	uint32_t buffer[VRAM_WINDOW_SIZE];
-	bool quit;
 };
 
-struct gbcc_vram_window *gbcc_vram_window_initialise(struct gbc *gbc);
+void gbcc_vram_window_initialise(struct gbcc_vram_window *win, struct gbc *gbc);
 void gbcc_vram_window_destroy(struct gbcc_vram_window *win);
+void gbcc_vram_window_update(struct gbcc_vram_window *win);
 
 #endif /* GBCC_VRAM_WINDOW_H */

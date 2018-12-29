@@ -9,55 +9,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static int window_thread_function(void *window);
-
-struct gbcc_window *gbcc_window_initialise(struct gbc *gbc, bool vsync)
+void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 {
-	SDL_Init(0);
-
-	struct gbcc_window *win = malloc(sizeof(struct gbcc_window));
 	win->gbc = gbc;
-	win->quit = false;
-	win->vsync = vsync;
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
 	}
-
-	win->thread = SDL_CreateThread(
-			window_thread_function, 
-			"RenderingThread", 
-			(void *)(win));
-
-	if (win->thread == NULL) {
-		gbcc_log_error("Error creating rendering thread: %s\n", SDL_GetError());
-		exit(EXIT_FAILURE);
-	}
-	return win;
-}
-
-void gbcc_window_destroy(struct gbcc_window *win)
-{
-	win->quit = true;
-	SDL_WaitThread(win->thread, NULL);
-	SDL_DestroyTexture(win->texture);
-	SDL_DestroyRenderer(win->renderer);
-	SDL_DestroyWindow(win->window);
-}
-
-static int window_thread_function(void *window)
-{
-	int err;
-	struct gbcc_window *win = (struct gbcc_window *)window;
-
-
+	
 	win->window = SDL_CreateWindow(
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
 			GBC_SCREEN_WIDTH,      // width, in pixels
 			GBC_SCREEN_HEIGHT,     // height, in pixels
-			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags - see below
+			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
 			);
 
 	if (win->window == NULL) {
@@ -66,11 +32,6 @@ static int window_thread_function(void *window)
 		exit(EXIT_FAILURE);
 	}
 
-	if (win->vsync) {
-		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-	} else {
-		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
-	}
 	win->renderer = SDL_CreateRenderer(
 			win->window,
 			-1,
@@ -108,59 +69,58 @@ static int window_thread_function(void *window)
 	for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
 		win->buffer[i] = 0;
 	}
+}
 
-	//size_t last_frame = 0;
+void gbcc_window_destroy(struct gbcc_window *win)
+{
+	SDL_DestroyTexture(win->texture);
+	SDL_DestroyRenderer(win->renderer);
+	SDL_DestroyWindow(win->window);
+}
 
-	/* Main rendering loop */
-	while (!(win->quit)) {
-		gbcc_input_process_all(win->gbc);
-		/* Do the actual drawing */
-		if (win->gbc->mode == GBC || !win->gbc->palette.precorrected) {
-			for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-				uint8_t red = (uint8_t)((win->gbc->memory.sdl_screen[i] & 0xFF0000u) >> 19u);
-				uint8_t green = (uint8_t)((win->gbc->memory.sdl_screen[i] & 0x00FF00u) >> 11u);
-				uint8_t blue = (uint8_t)((win->gbc->memory.sdl_screen[i] & 0x0000FFu) >> 3u);
-				win->buffer[i] = gbcc_lerp_colour(red, green, blue);
-			}
-		} else {
-			for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-				win->buffer[i] = win->gbc->memory.sdl_screen[i];
-			}
+void gbcc_window_update(struct gbcc_window *win)
+{
+	int err;
+	uint32_t *screen = win->gbc->memory.sdl_screen;
+
+	if (win->gbc->mode == GBC || !win->gbc->palette.precorrected) {
+		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
+			uint8_t r = (uint8_t)(screen[i] >> 19u) & 0x1Fu;
+			uint8_t g = (uint8_t)(screen[i] >> 11u) & 0x1Fu;
+			uint8_t b = (uint8_t)(screen[i] >> 3u) & 0x1Fu;
+			win->buffer[i] = gbcc_lerp_colour(r, g, b);
 		}
-		/* Draw the background */
-		err = SDL_UpdateTexture(
-				win->texture, 
-				NULL, 
-				win->buffer, 
-				GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
-				);
-		if (err < 0) {
-			gbcc_log_error("Error updating texture: %s\n", SDL_GetError());
-			exit(EXIT_FAILURE);
+	} else {
+		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
+			win->buffer[i] = screen[i];
 		}
-
-		err = SDL_RenderClear(win->renderer);
-		if (err < 0) {
-			gbcc_log_error("Error clearing renderer: %s\n", SDL_GetError());
-			if (win->renderer == NULL) {
-				gbcc_log_error("NULL Renderer!\n");
-			}
-			exit(EXIT_FAILURE);
-		}
-
-		err = SDL_RenderCopy(win->renderer, win->texture, NULL, NULL);
-		if (err < 0) {
-			gbcc_log_error("Error copying texture: %s\n", SDL_GetError());
-			exit(EXIT_FAILURE);
-		}
-
-		SDL_RenderPresent(win->renderer);
-
-		SDL_Delay(16);
-		/*size_t fps = (win->gbc->frame - last_frame) * 60;
-		gbcc_log_debug("FPS: %lu\n", fps);
-		last_frame = win->gbc->frame;*/
 	}
-	//printf("QUIT SDL\n");
-	return 0;
+	/* Draw the background */
+	err = SDL_UpdateTexture(
+			win->texture,
+			NULL,
+			win->buffer,
+			GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
+			);
+	if (err < 0) {
+		gbcc_log_error("Error updating texture: %s\n", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+
+	err = SDL_RenderClear(win->renderer);
+	if (err < 0) {
+		gbcc_log_error("Error clearing renderer: %s\n", SDL_GetError());
+		if (win->renderer == NULL) {
+			gbcc_log_error("NULL Renderer!\n");
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	err = SDL_RenderCopy(win->renderer, win->texture, NULL, NULL);
+	if (err < 0) {
+		gbcc_log_error("Error copying texture: %s\n", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+
+	SDL_RenderPresent(win->renderer);
 }

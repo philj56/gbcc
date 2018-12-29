@@ -11,48 +11,14 @@
 #define VRAM_WINDOW_WIDTH_TILES (VRAM_WINDOW_WIDTH / 8)
 #define VRAM_WINDOW_HEIGHT_TILES (VRAM_WINDOW_HEIGHT / 8)
 
-static int window_thread_function(void *window);
-
-struct gbcc_vram_window *gbcc_vram_window_initialise(struct gbc *gbc)
+void gbcc_vram_window_initialise(struct gbcc_vram_window *win, struct gbc *gbc)
 {
-	SDL_Init(0);
-
-	struct gbcc_vram_window *win = malloc(sizeof(struct gbcc_vram_window));
 	win->gbc = gbc;
-	win->quit = false;
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
 	}
-
-	win->thread = SDL_CreateThread(
-			window_thread_function, 
-			"VramThread", 
-			(void *)(win));
-
-	if (win->thread == NULL) {
-		gbcc_log_error("Error creating rendering thread: %s\n", SDL_GetError());
-		exit(EXIT_FAILURE);
-	}
-	return win;
-}
-
-void gbcc_vram_window_destroy(struct gbcc_vram_window *win)
-{
-	win->quit = true;
-	SDL_WaitThread(win->thread, NULL);
-	SDL_DestroyTexture(win->texture);
-	SDL_DestroyRenderer(win->renderer);
-	SDL_DestroyWindow(win->window);
-}
-
-static int window_thread_function(void *window)
-{
-	int err;
-	struct gbcc_vram_window *win = (struct gbcc_vram_window *)window;
-
-
-	SDL_Delay(100);
+	
 	win->window = SDL_CreateWindow(
 			"GBCC VRAM data",          // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
@@ -105,70 +71,74 @@ static int window_thread_function(void *window)
 	for (size_t i = 0; i < VRAM_WINDOW_SIZE; i++) {
 		win->buffer[i] = 0;
 	}
+}
 
-	/* Main rendering loop */
-	while (!(win->quit)) {
-		/* Do the actual drawing */
-		for (int bank = 0; bank < 2; bank++) {
-			for (int j = 0; j < VRAM_WINDOW_HEIGHT_TILES / 2; j++) {
-				for (int i = 0; i < VRAM_WINDOW_WIDTH_TILES; i++) {
-					for (int y = 0; y < 8; y++) {
-						uint8_t lo = win->gbc->memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y];
-						uint8_t hi = win->gbc->memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y + 1];
-						for (uint8_t x = 0; x < 8; x++) {
-							uint8_t colour = (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
-							uint32_t p = 0;
-							switch (colour) {
-								case 3:
-									p = 0x000000u;
-									break;
-								case 2:
-									p = 0x6b7353u;
-									break;
-								case 1:
-									p = 0x8b956du;
-									break;
-								case 0:
-									p = 0xc4cfa1u;
-									break;
-							}
-							win->buffer[8 * (VRAM_WINDOW_WIDTH * (j + bank * VRAM_WINDOW_HEIGHT_TILES / 2) + i) + VRAM_WINDOW_WIDTH * y + x] = p;
+void gbcc_vram_window_destroy(struct gbcc_vram_window *win)
+{
+	SDL_DestroyTexture(win->texture);
+	SDL_DestroyRenderer(win->renderer);
+	SDL_DestroyWindow(win->window);
+}
+
+void gbcc_vram_window_update(struct gbcc_vram_window *win)
+{
+	int err;
+	/* Do the actual drawing */
+	for (int bank = 0; bank < 2; bank++) {
+		for (int j = 0; j < VRAM_WINDOW_HEIGHT_TILES / 2; j++) {
+			for (int i = 0; i < VRAM_WINDOW_WIDTH_TILES; i++) {
+				for (int y = 0; y < 8; y++) {
+					uint8_t lo = win->gbc->memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y];
+					uint8_t hi = win->gbc->memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y + 1];
+					for (uint8_t x = 0; x < 8; x++) {
+						uint8_t colour = (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
+						uint32_t p = 0;
+						switch (colour) {
+							case 3:
+								p = 0x000000u;
+								break;
+							case 2:
+								p = 0x6b7353u;
+								break;
+							case 1:
+								p = 0x8b956du;
+								break;
+							case 0:
+								p = 0xc4cfa1u;
+								break;
 						}
+						win->buffer[8 * (VRAM_WINDOW_WIDTH * (j + bank * VRAM_WINDOW_HEIGHT_TILES / 2) + i) + VRAM_WINDOW_WIDTH * y + x] = p;
 					}
 				}
 			}
 		}
-		/* Draw the background */
-		err = SDL_UpdateTexture(
-				win->texture, 
-				NULL, 
-				win->buffer, 
-				VRAM_WINDOW_WIDTH * sizeof(win->buffer[0])
-				);
-		if (err < 0) {
-			gbcc_log_error("Error updating texture: %s\n", SDL_GetError());
-			exit(EXIT_FAILURE);
-		}
-
-		err = SDL_RenderClear(win->renderer);
-		if (err < 0) {
-			gbcc_log_error("Error clearing renderer: %s\n", SDL_GetError());
-			if (win->renderer == NULL) {
-				printf("NULL Renderer!\n");
-			}
-			exit(EXIT_FAILURE);
-		}
-
-		err = SDL_RenderCopy(win->renderer, win->texture, NULL, NULL);
-		if (err < 0) {
-			gbcc_log_error("Error copying texture: %s\n", SDL_GetError());
-			exit(EXIT_FAILURE);
-		}
-
-		SDL_RenderPresent(win->renderer);
-
-		SDL_Delay(16);
 	}
-	printf("QUIT SDL\n");
-	return 0;
+	/* Draw the background */
+	err = SDL_UpdateTexture(
+			win->texture, 
+			NULL, 
+			win->buffer, 
+			VRAM_WINDOW_WIDTH * sizeof(win->buffer[0])
+			);
+	if (err < 0) {
+		gbcc_log_error("Error updating texture: %s\n", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+
+	err = SDL_RenderClear(win->renderer);
+	if (err < 0) {
+		gbcc_log_error("Error clearing renderer: %s\n", SDL_GetError());
+		if (win->renderer == NULL) {
+			printf("NULL Renderer!\n");
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	err = SDL_RenderCopy(win->renderer, win->texture, NULL, NULL);
+	if (err < 0) {
+		gbcc_log_error("Error copying texture: %s\n", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+
+	SDL_RenderPresent(win->renderer);
 }

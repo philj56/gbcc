@@ -20,7 +20,7 @@ struct gbcc_audio {
 	GBCC_AUDIO_FMT mix_buffer[GBCC_AUDIO_BUFSIZE];
 };
 
-struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc);
+void gbcc_audio_initialise(struct gbcc_audio *audio, struct gbc *gbc);
 void gbcc_audio_update(struct gbcc_audio *audio);
 
 #endif /* GBCC_AUDIO_H */

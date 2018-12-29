@@ -16,11 +16,8 @@ static void ch2_update(struct gbcc_audio *audio);
 static void ch3_update(struct gbcc_audio *audio);
 static void ch4_update(struct gbcc_audio *audio);
 
-struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc)
+void gbcc_audio_initialise(struct gbcc_audio *audio, struct gbc *gbc)
 {
-	SDL_Init(0);
-
-	struct gbcc_audio *audio = malloc(sizeof(struct gbcc_audio));
 	audio->gbc = gbc;
 	audio->index = 0;
 	audio->quit = false;
@@ -50,15 +47,19 @@ struct gbcc_audio *gbcc_audio_initialise(struct gbc *gbc)
 	
 	clock_gettime(CLOCK_REALTIME, &audio->start_time);
 	SDL_PauseAudioDevice(audio->device, 0);
-	return audio;
 }
 
 void gbcc_audio_update(struct gbcc_audio *audio)
 {
+	double mult = 1;
 	if (audio->gbc->keys.turbo) {
-		return;
+		if (audio->gbc->turbo_speed > 0) {
+			mult = audio->gbc->turbo_speed;
+		} else {
+			return;
+		}
 	}
-	if (audio->gbc->apu.clock - audio->sample_clock > CLOCKS_PER_SAMPLE) {
+	if (audio->gbc->apu.clock - audio->sample_clock > CLOCKS_PER_SAMPLE * mult) {
 		audio->sample_clock = audio->gbc->apu.clock;
 		audio->mix_buffer[audio->index] = 0;
 		audio->mix_buffer[audio->index + 1] = 0;

@@ -8,6 +8,7 @@
 #include "gbcc_save.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 static const uint8_t nintendo_logo[CART_LOGO_SIZE] = {
@@ -19,67 +20,41 @@ static const uint8_t nintendo_logo[CART_LOGO_SIZE] = {
 	0xDDu, 0xDCu, 0x99u, 0x9Fu, 0xBBu, 0xB9u, 0x33u, 0x3Eu
 };
 
-static void gbcc_load_rom(struct gbc *gbc, const char *filename);
-static void gbcc_parse_header(struct gbc *gbc);
-static void gbcc_verify_cartridge(struct gbc *gbc);
-static void gbcc_load_title(struct gbc *gbc);
-static void gbcc_init_mode(struct gbc *gbc);
-static void gbcc_print_licensee_code(struct gbc *gbc);
-static void gbcc_get_cartridge_hardware(struct gbc *gbc);
-static void gbcc_init_ram(struct gbc *gbc);
-static void gbcc_print_destination_code(struct gbc *gbc);
-static void gbcc_init_registers(struct gbc *gbc);
-static void gbcc_init_mmap(struct gbc *gbc);
-static void gbcc_init_ioreg(struct gbc *gbc);
-static void gbcc_init_input(struct gbc *gbc);
+static void load_rom(struct gbc *gbc, const char *filename);
+static void parse_header(struct gbc *gbc);
+static void verify_cartridge(struct gbc *gbc);
+static void load_title(struct gbc *gbc);
+static void init_mode(struct gbc *gbc);
+static void print_licensee_code(struct gbc *gbc);
+static void get_cartridge_hardware(struct gbc *gbc);
+static void init_ram(struct gbc *gbc);
+static void print_destination_code(struct gbc *gbc);
+static void init_registers(struct gbc *gbc);
+static void init_mmap(struct gbc *gbc);
+static void init_ioreg(struct gbc *gbc);
+static void init_input(struct gbc *gbc);
 
 void gbcc_initialise(struct gbc *gbc, const char *filename)
 {
+	*gbc = (const struct gbc){{{{0}}}};
 	gbc->cart.filename = filename;
-	gbc->cart.rom = NULL;
-	gbc->cart.ram = NULL;
 	gbc->cart.mbc.type = NONE;
-	gbc->cart.mbc.sram_enable = false;
 	gbc->cart.mbc.romx_bank = 0x01u;
 	gbc->cart.mbc.sram_bank = 0x00u;
 	gbc->cart.mbc.bank_mode = ROM;
-	gbc->cart.battery = false;
-	gbc->cart.timer = false;
-	gbc->cart.rumble = false;
-	gbc->cart.ram_size = 0;
-	gbc->mode = DMG;
 	gbc->ime = true;
-	gbc->halt.set = false;
-	gbc->halt.no_interrupt = false;
-	gbc->halt.skip = 0;
-	gbc->dma.source = 0;
-	gbc->dma.timer = 0;
-	gbc->hdma.source = 0;
-	gbc->hdma.dest = 0;
-	gbc->hdma.length = 0;
-	gbc->hdma.hblank = 0;
-	gbc->stop = false;
-	gbc->instruction_timer = 0;
 	gbc->clock = GBC_LCD_MODE_PERIOD;
 	gbc->ppu_clock = gbc->clock;
-	gbc->screenshot = false;
-	gbc->interlace = false;
-	gbc->save_state = 0;
-	gbc->load_state = 0;
 	gbc->speed_mult = 1;
-	gbc->turbo_speed = 0;
 	gbc->palette = gbcc_get_palette("default");
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
-	gbc->frame = 0;
 	timespec_get(&gbc->real_time.current, TIME_UTC);
-	gbc->quit = false;
-	gbc->pause = false;
-	gbcc_load_rom(gbc, filename);
-	gbcc_parse_header(gbc);
-	gbcc_init_mmap(gbc);
-	gbcc_init_ioreg(gbc);
-	gbcc_init_input(gbc);
+	load_rom(gbc, filename);
+	parse_header(gbc);
+	init_mmap(gbc);
+	init_ioreg(gbc);
+	init_input(gbc);
 	gbcc_apu_init(gbc);
 }
 
@@ -91,7 +66,7 @@ void gbcc_free(struct gbc *gbc)
 	}
 }
 
-void gbcc_load_rom(struct gbc *gbc, const char *filename)
+void load_rom(struct gbc *gbc, const char *filename)
 {
 	gbcc_log_info("Loading %s...\n", filename);
 	size_t read;
@@ -159,21 +134,21 @@ void gbcc_load_rom(struct gbc *gbc, const char *filename)
 	gbcc_log_info("\tROM loaded.\n");
 }
 
-void gbcc_parse_header(struct gbc *gbc)
+void parse_header(struct gbc *gbc)
 {
 	gbcc_log_info("Parsing header...\n");
-	gbcc_verify_cartridge(gbc);
-	gbcc_load_title(gbc);
-	gbcc_print_licensee_code(gbc);
-	gbcc_init_mode(gbc);
-	gbcc_get_cartridge_hardware(gbc);
-	gbcc_init_ram(gbc);
-	gbcc_print_destination_code(gbc);
-	gbcc_init_registers(gbc);
+	verify_cartridge(gbc);
+	load_title(gbc);
+	print_licensee_code(gbc);
+	init_mode(gbc);
+	get_cartridge_hardware(gbc);
+	init_ram(gbc);
+	print_destination_code(gbc);
+	init_registers(gbc);
 	gbcc_log_info("\tHeader parsed.\n");
 }
 
-void gbcc_verify_cartridge(struct gbc *gbc)
+void verify_cartridge(struct gbc *gbc)
 {
 	for (size_t i = CART_LOGO_START; i < CART_LOGO_GBC_CHECK_END; i++) {
 		if (gbc->cart.rom[i] != nintendo_logo[i - CART_LOGO_START]) {
@@ -194,7 +169,7 @@ void gbcc_verify_cartridge(struct gbc *gbc)
 	gbcc_log_info("\tCartridge checksum passed.\n");
 }
 
-void gbcc_load_title(struct gbc *gbc)
+void load_title(struct gbc *gbc)
 {
 	for (size_t i = CART_TITLE_START; i < CART_TITLE_END; i++) {
 		gbc->cart.title[i - CART_TITLE_START] = (char)gbc->cart.rom[i];
@@ -202,7 +177,7 @@ void gbcc_load_title(struct gbc *gbc)
 	gbcc_log_info("\tTitle: %s\n", gbc->cart.title);
 }
 
-void gbcc_print_licensee_code(struct gbc *gbc)
+void print_licensee_code(struct gbc *gbc)
 {
 	uint8_t old_code = gbc->cart.rom[CART_OLD_LICENSEE_CODE];
 	char buffer[CART_NEW_LICENSEE_CODE_SIZE + 21];
@@ -220,13 +195,15 @@ void gbcc_print_licensee_code(struct gbc *gbc)
 	gbcc_log_info(buffer);
 }
 
-void gbcc_init_mode(struct gbc *gbc)
+void init_mode(struct gbc *gbc)
 {
 	uint8_t mode_flag;
 
 	mode_flag = gbc->cart.rom[CART_GBC_FLAG];
 	if (mode_flag == 0x80u || mode_flag == 0xC0u) {
 		gbc->mode = GBC;
+	} else {
+		gbc->mode = DMG;
 	}
 	if ((mode_flag & (1u << 6u)) && (mode_flag & (3u << 2u))) {
 		/* TODO: Handle this */
@@ -241,7 +218,7 @@ void gbcc_init_mode(struct gbc *gbc)
 	}
 }
 
-void gbcc_get_cartridge_hardware(struct gbc *gbc)
+void get_cartridge_hardware(struct gbc *gbc)
 {
 	switch (gbc->cart.rom[CART_TYPE]) {
 		case 0x00u:	/* ROM ONLY */
@@ -351,7 +328,7 @@ void gbcc_get_cartridge_hardware(struct gbc *gbc)
 	}
 }
 
-void gbcc_init_ram(struct gbc *gbc)
+void init_ram(struct gbc *gbc)
 {
 	uint8_t ram_size_flag;
 
@@ -404,7 +381,7 @@ void gbcc_init_ram(struct gbc *gbc)
 	}
 }
 
-void gbcc_print_destination_code(struct gbc *gbc)
+void print_destination_code(struct gbc *gbc)
 {
 	uint8_t dest_code = gbc->cart.rom[CART_DESTINATION_CODE];
 	switch (dest_code) {
@@ -420,7 +397,7 @@ void gbcc_print_destination_code(struct gbc *gbc)
 	}
 }
 
-void gbcc_init_registers(struct gbc *gbc) {
+void init_registers(struct gbc *gbc) {
 	switch (gbc->mode) {
 		case DMG:
 			gbc->reg.af = 0x01B0u;
@@ -441,7 +418,7 @@ void gbcc_init_registers(struct gbc *gbc) {
 	}
 }
 
-void gbcc_init_mmap(struct gbc *gbc)
+void init_mmap(struct gbc *gbc)
 {
 	gbc->memory.rom0 = gbc->cart.rom;
 	gbc->memory.romx = gbc->cart.rom + ROM0_SIZE;
@@ -452,7 +429,7 @@ void gbcc_init_mmap(struct gbc *gbc)
 	gbc->memory.echo = gbc->memory.wram0;
 }
 
-void gbcc_init_ioreg(struct gbc *gbc)
+void init_ioreg(struct gbc *gbc)
 {
 	/* Values taken from the pandocs and mooneye tests*/
 	gbc->memory.ioreg[JOYP - IOREG_START] = 0xCFu;
@@ -497,7 +474,7 @@ void gbcc_init_ioreg(struct gbc *gbc)
 	}
 }
 
-void gbcc_init_input(struct gbc *gbc)
+void init_input(struct gbc *gbc)
 {
 	gbc->keys.a = false;
 	gbc->keys.b = false;

@@ -529,9 +529,14 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 		lo = gbc->memory.bgp[index + 2 * n];
 		hi = gbc->memory.bgp[index + 2 * n + 1];
 	} 
-	uint8_t red = lo & 0x1Fu;
-	uint8_t green = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);
-	uint8_t blue = (hi & 0x7Cu) >> 2u;
-	return (uint32_t)((uint32_t)(red << 19u) | (uint32_t)(green << 11u)) | (uint32_t)(blue << 3u);
+	uint8_t r = lo & 0x1Fu;
+	uint8_t g = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);
+	uint8_t b = (hi & 0x7Cu) >> 2u;
+	uint32_t res = 0;
+	res |= (uint32_t)(r << 19u);
+	res |= (uint32_t)(g << 11u);
+	res |= (uint32_t)(b << 3u);
+
+	return res;
 }
 

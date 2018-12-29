@@ -3,6 +3,7 @@
 #include "gbcc_audio.h"
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
+#include "gbcc_input.h"
 #include "gbcc_palettes.h"
 #include "gbcc_save.h"
 #include "gbcc_vram_window.h"
@@ -12,11 +13,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <threads.h>
 #include <time.h>
 #include <unistd.h>
 
 static void quit(int sig);
 static void usage(void);
+static int emulation_loop(void *_audio);
 
 __attribute__((noreturn))
 void quit(int sig) 
@@ -38,7 +41,27 @@ void usage()
 	      );
 }
 
-static struct gbc gbc;
+int emulation_loop(void *_audio)
+{
+	struct gbcc_audio *audio = (struct gbcc_audio *)_audio;
+	struct gbc *gbc = audio->gbc;
+	gbcc_load(gbc);
+	while (!gbc->quit) {
+		while (gbc->pause) {
+			const struct timespec time = {.tv_sec = 0, .tv_nsec = 10000000};
+			nanosleep(&time, NULL);
+		}
+		gbcc_emulate_cycle(gbc);
+		if (gbc->load_state > 0) {
+			gbcc_load_state(gbc);
+		} else if (gbc->save_state > 0) {
+			gbcc_save_state(gbc);
+		}
+		gbcc_audio_update(audio);
+	}
+	gbcc_save(gbc);
+	return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -48,7 +71,11 @@ int main(int argc, char **argv)
 	sigfillset(&act.sa_mask);
 	sigaction(SIGINT, &act, NULL);
 
-	bool vsync = false;
+	struct gbc gbc;
+	struct gbcc_audio audio = {0};
+	struct gbcc_window win = {0};
+	struct gbcc_vram_window vwin = {0};
+	bool vram_window = false;
 	opterr = 0;
 
 	struct option long_options[] = {
@@ -72,6 +99,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	gbcc_initialise(&gbc, argv[optind]);
+	SDL_Init(0);
 
 	optind = 1;
 
@@ -92,10 +120,10 @@ int main(int argc, char **argv)
 				gbcc_log_debug("%s palette selected\n", gbc.palette.name);
 				break;
 			case 'v':
-				vsync = true;
+				SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 				break;
 			case 'V':
-				gbcc_vram_window_initialise(&gbc);
+				vram_window = true;
 				break;
 			case '?':
 				if (optopt == 'p' || optopt == 't') {
@@ -113,24 +141,24 @@ int main(int argc, char **argv)
 		}
 	}
 
-	gbcc_window_initialise(&gbc, vsync);
-	struct gbcc_audio *audio = gbcc_audio_initialise(&gbc);
-	gbcc_load(&gbc);
+       	gbcc_audio_initialise(&audio, &gbc);
+	gbcc_window_initialise(&win, &gbc);
+	if (vram_window) {
+		gbcc_vram_window_initialise(&vwin, &gbc);
+	}
+
+	thrd_t emu_thread;
+	thrd_create(&emu_thread, emulation_loop, &audio);
 
 	while (!gbc.quit) {
-		while (gbc.pause) {
-			const struct timespec time = {.tv_sec = 0, .tv_nsec = 10000000};
-			nanosleep(&time, NULL);
+		gbcc_input_process_all(&gbc);
+		gbcc_window_update(&win);
+		if (vram_window) {
+			gbcc_vram_window_update(&vwin);
 		}
-		gbcc_emulate_cycle(&gbc);
-		if (gbc.save_state > 0) {
-			gbcc_save_state(&gbc);
-		} else if (gbc.load_state > 0) {
-			gbcc_load_state(&gbc);
-		}
-		gbcc_audio_update(audio);
+		SDL_Delay(16);
 	}
-	gbcc_save(&gbc);
+	thrd_join(emu_thread, NULL);
 
 	exit(EXIT_SUCCESS);
 }
