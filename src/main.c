@@ -4,6 +4,7 @@
 #include "gbcc_cpu.h"
 #include "gbcc_debug.h"
 #include "gbcc_input.h"
+#include "gbcc_memory.h"
 #include "gbcc_palettes.h"
 #include "gbcc_save.h"
 #include "gbcc_vram_window.h"
@@ -151,7 +152,7 @@ int main(int argc, char **argv)
 	thrd_create(&emu_thread, emulation_loop, &audio);
 
 	while (!gbc.quit) {
-		gbcc_input_process_all(&gbc);
+		gbcc_input_process_all(&win);
 		gbcc_window_update(&win);
 		if (vram_window) {
 			gbcc_vram_window_update(&vwin);

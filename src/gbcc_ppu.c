@@ -89,11 +89,6 @@ void gbcc_ppu_clock(struct gbc *gbc)
 				gbcc_memory_set_bit(gbc, IF, 1, true);
 			}
 			
-			/* TODO: All this should really be somewhere else */
-			if (gbc->screenshot) {
-				gbc->screenshot = false;
-				gbcc_screenshot(gbc);
-			}
 			uint32_t *tmp = gbc->memory.gbc_screen;
 			gbc->memory.gbc_screen = gbc->memory.sdl_screen;
 			gbc->memory.sdl_screen = tmp;

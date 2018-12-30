@@ -4,7 +4,7 @@
 #include "gbcc_save.h"
 #include "gbcc_window.h"
 
-static const SDL_Scancode keymap[20] = {
+static const SDL_Scancode keymap[21] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -16,6 +16,7 @@ static const SDL_Scancode keymap[20] = {
 	SDL_SCANCODE_RSHIFT, 	/* Turbo */
 	SDL_SCANCODE_S, 	/* Screenshot */
 	SDL_SCANCODE_P, 	/* Pause */
+	SDL_SCANCODE_F, 	/* FPS Counter */
 	SDL_SCANCODE_F1,	/* State n */
 	SDL_SCANCODE_F2,
 	SDL_SCANCODE_F3,
@@ -28,13 +29,14 @@ static const SDL_Scancode keymap[20] = {
 };
 
 // Returns key that changed, or -1 for a non-emulated key
-static int gbcc_input_process(struct gbc *gbc, const SDL_Event *e);
+static int process_input(struct gbc *gbc, const SDL_Event *e);
 
-void gbcc_input_process_all(struct gbc *gbc)
+void gbcc_input_process_all(struct gbcc_window *win)
 {
+	struct gbc *gbc = win->gbc;
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0) {
-		int key = gbcc_input_process(gbc, &e);
+		int key = process_input(gbc, &e);
 		const uint8_t *state = SDL_GetKeyboardState(NULL);
 		bool val;
 		if (e.type == SDL_KEYDOWN) {
@@ -76,12 +78,14 @@ void gbcc_input_process_all(struct gbc *gbc)
 				gbc->apu.sample = 0;
 				break;
 			case 9:
-				gbc->screenshot = val;
+				win->screenshot = val;
 				break;
 			case 10:
 				gbc->pause ^= val;
 				break;
 			case 11:
+				win->fps_counter.show ^= val;
+				break;
 			case 12:
 			case 13:
 			case 14:
@@ -90,6 +94,7 @@ void gbcc_input_process_all(struct gbc *gbc)
 			case 17:
 			case 18:
 			case 19:
+			case 20:
 				if (!val) {
 					break;
 				}
@@ -105,7 +110,7 @@ void gbcc_input_process_all(struct gbc *gbc)
 	}
 }
 
-int gbcc_input_process(struct gbc *gbc, const SDL_Event *e)
+int process_input(struct gbc *gbc, const SDL_Event *e)
 {
 	if (e->type == SDL_QUIT) {
 		gbc->quit = true;
@@ -114,10 +119,10 @@ int gbcc_input_process(struct gbc *gbc, const SDL_Event *e)
 			SDL_Window *win = SDL_GetWindowFromID(e->window.windowID);
 			if (win) {
 				SDL_DestroyWindow(win);
+				/* TODO: Should quit if main window is closed */
 			} else {
 				gbcc_log_error("Couldn't close window: %s\n", SDL_GetError());
 			}
-			//gbc->quit = true;
 		}
 	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
 		for (size_t i = 0; i < sizeof(keymap) / sizeof(keymap[0]); i++) {

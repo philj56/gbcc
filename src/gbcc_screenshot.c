@@ -1,6 +1,7 @@
 #include "gbcc.h"
 #include "gbcc_debug.h"
 #include "gbcc_screenshot.h"
+#include "gbcc_window.h"
 #include <errno.h>
 #include <png.h>
 #include <stdio.h>
@@ -10,7 +11,7 @@
 #include <sys/types.h>
 #include <time.h>
 
-void gbcc_screenshot(struct gbc *gbc)
+void gbcc_screenshot(struct gbcc_window *win)
 {
 	char dir[] = "screenshots";
 	char fname[BUFSIZ];
@@ -63,7 +64,7 @@ void gbcc_screenshot(struct gbc *gbc)
 		row_pointers[y] = row;
 		for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
 			int idx = y * GBC_SCREEN_WIDTH + x;
-			uint32_t pixel = gbc->memory.gbc_screen[idx];
+			uint32_t pixel = win->buffer[idx];
 			*row++ = (pixel & 0xFF0000u) >> 16u;
 			*row++ = (pixel & 0x00FF00u) >> 8u;
 			*row++ = (pixel & 0x0000FFu) >> 0u;
@@ -86,4 +87,5 @@ void gbcc_screenshot(struct gbc *gbc)
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 
 	gbcc_log_info("Saved screenshot %s\n", fname);
+	gbcc_window_show_message(win, "Saved screenshot", 1);
 }

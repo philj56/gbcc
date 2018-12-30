@@ -11,9 +11,9 @@
 #include <sys/time.h>
 #include <time.h>
 
-static void gbcc_update_timers(struct gbc *gbc);
-static void gbcc_check_interrupts(struct gbc *gbc);
-static void gbcc_execute_instruction(struct gbc *gbc);
+static void update_timers(struct gbc *gbc);
+static void check_interrupts(struct gbc *gbc);
+static void execute_instruction(struct gbc *gbc);
 static void gbcc_cpu_clock(struct gbc *gbc);
 
 /* TODO: Check order of all of these */
@@ -42,8 +42,8 @@ void gbcc_cpu_clock(struct gbc *gbc)
 		gbc->dma.requested = false;
 		gbc->dma.source = gbc->dma.new_source;
 	}
-	gbcc_update_timers(gbc);
-	gbcc_check_interrupts(gbc);
+	update_timers(gbc);
+	check_interrupts(gbc);
 	if (gbc->halt.set || gbc->stop) {
 		return;
 	}
@@ -51,7 +51,7 @@ void gbcc_cpu_clock(struct gbc *gbc)
 		gbcc_ops[gbc->opcode](gbc);
 	}*/
 	if (gbc->instruction_timer == 0) {
-		gbcc_execute_instruction(gbc);
+		execute_instruction(gbc);
 		if (gbc->rst.request) {
 			if (--gbc->rst.delay == 0) {
 				gbc->rst.request = 0;
@@ -62,7 +62,7 @@ void gbcc_cpu_clock(struct gbc *gbc)
 	gbc->instruction_timer--;
 }
 
-void gbcc_update_timers(struct gbc *gbc)
+void update_timers(struct gbc *gbc)
 {
 	gbc->div_timer++;
 	if (gbc->div_timer == 64u) {
@@ -100,7 +100,7 @@ void gbcc_update_timers(struct gbc *gbc)
 	}
 }
 
-void gbcc_check_interrupts(struct gbc *gbc)
+void check_interrupts(struct gbc *gbc)
 {
 	uint8_t int_enable = gbcc_memory_read(gbc, IE, true);
 	uint8_t int_flags = gbcc_memory_read(gbc, IF, true);
@@ -111,23 +111,18 @@ void gbcc_check_interrupts(struct gbc *gbc)
 		if (check_bit(interrupt, 0)) {
 			addr = INT_VBLANK;
 			gbcc_memory_clear_bit(gbc, IF, 0, true);
-			//gbcc_log_debug("VBLANK\n");
 		} else if (check_bit(interrupt, 1)) {
 			addr = INT_LCDSTAT;
 			gbcc_memory_clear_bit(gbc, IF, 1, true);
-			//gbcc_log_debug("LCDSTAT\n");
 		} else if (check_bit(interrupt, 2)) {
 			addr = INT_TIMER;
 			gbcc_memory_clear_bit(gbc, IF, 2, true);
-			//gbcc_log_debug("TIMER\n");
 		} else if (check_bit(interrupt, 3)) {
 			addr = INT_SERIAL;
 			gbcc_memory_clear_bit(gbc, IF, 3, true);
-			//gbcc_log_debug("SERIAL\n");
 		} else if (check_bit(interrupt, 4)) {
 			addr = INT_JOYPAD;
 			gbcc_memory_clear_bit(gbc, IF, 4, true);
-			//gbcc_log_debug("JOYPAD\n");
 		} else {
 			gbcc_log_error("False interrupt\n");
 			addr = 0;
@@ -150,7 +145,7 @@ void gbcc_check_interrupts(struct gbc *gbc)
 	}
 }
 
-void gbcc_execute_instruction(struct gbc *gbc)
+void execute_instruction(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
 	/*printf("%04X\n", gbc->reg.pc);

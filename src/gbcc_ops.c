@@ -25,7 +25,7 @@ static void set_flag(struct gbc *gbc, uint8_t flag)
 
 static void clear_flag(struct gbc *gbc, uint8_t flag)
 {
-	gbc->reg.f &= ~flag;
+	gbc->reg.f &= (uint8_t)~flag;
 }
 
 static void toggle_flag(struct gbc *gbc, uint8_t flag)
@@ -42,7 +42,7 @@ static void cond_flag(struct gbc *gbc, uint8_t flag, bool cond) {
 }
 
 /* Main opcode jump table */
-void (*gbcc_ops[0x100])(struct gbc *gbc) = {
+void (*const gbcc_ops[0x100])(struct gbc *gbc) = {
 /* 0x00 */	NOP,		LD_d16,		LD_A,		INC_DEC_16_BIT,
 /* 0x04 */	INC_DEC_8_BIT,	INC_DEC_8_BIT,	LD_d8,		SHIFT_A,
 /* 0x08 */	STORE_SP,	ADD_HL,		LD_A,		INC_DEC_16_BIT,
@@ -278,6 +278,9 @@ void LD_d16(struct gbc *gbc)
 		case 3:
 			gbc->reg.sp = val;
 			break;
+		default:
+			gbcc_log_error("Impossible case in LD_d16\n");
+			return;
 	}
 }
 
@@ -298,7 +301,7 @@ void LD_A(struct gbc *gbc)
 			op = gbc->reg.hl--;
 			break;
 		default:
-			gbcc_log_error("Error in instruction LD_A.\n");
+			gbcc_log_error("Impossible case in LD_A\n");
 			return;
 	}
 	switch((gbc->opcode % 0x10u) / 0x08u) {
@@ -308,6 +311,9 @@ void LD_A(struct gbc *gbc)
 		case 1:
 			gbc->reg.a = gbcc_memory_read(gbc, op, false);
 			break;
+		default:
+			gbcc_log_error("Impossible case in LD_A\n");
+			return;
 	}
 }
 
@@ -323,6 +329,9 @@ void LD_a16(struct gbc *gbc)
 		case 1:
 			gbc->reg.a = gbcc_memory_read(gbc, addr, false);
 			break;
+		default:
+			gbcc_log_error("Impossible case in LD_a16\n");
+			break;
 	}
 }
 
@@ -337,7 +346,7 @@ void LD_OFFSET(struct gbc *gbc)
 			op = gbc->reg.c;
 			break;
 		default:
-			gbcc_log_error("Error in instruction LD_OFFSET.\n");
+			gbcc_log_error("Impossible case in LD_OFFSET\n");
 			return;
 	}
 	switch ((gbc->opcode - 0xE0u) / 0x10u) {
@@ -347,6 +356,9 @@ void LD_OFFSET(struct gbc *gbc)
 		case 1:
 			gbc->reg.a = gbcc_memory_read(gbc, 0xFF00u + op, false);
 			break;
+		default:
+			gbcc_log_error("Impossible case in LD_OFFSET\n");
+			return;
 	}
 }
 
@@ -395,7 +407,7 @@ void PUSH_POP(struct gbc *gbc)
 			op = &(gbc->reg.af);
 			break;
 		default:
-			gbcc_log_error("Error in instruction PUSH_POP.\n");
+			gbcc_log_error("Impossible case in PUSH_POP\n");
 			return;
 	}
 	switch ((gbc->opcode % 0x10u) / 0x04u) {
@@ -508,6 +520,9 @@ void ALU_OP(struct gbc *gbc)
 			set_flag(gbc, NF);
 			cond_flag(gbc, CF, tmp > *op1);
 			break;
+		default:
+			gbcc_log_error("Impossible case in ALU_OP\n");
+			return;
 	}
 }
 
@@ -525,6 +540,9 @@ void INC_DEC_8_BIT(struct gbc *gbc)
 			cond_flag(gbc, HF, (((op & 0x0Fu) - 1) & 0x10u) == 0x10u);
 			WRITE_OPERAND_DIV(gbc, 0x00u, --op);
 			break;
+		default:
+			gbcc_log_error("Impossible case in INC_DEC_8_BIT\n");
+			return;
 	}
 	cond_flag(gbc, ZF, (op == 0));
 }
@@ -546,7 +564,7 @@ void INC_DEC_16_BIT(struct gbc *gbc)
 			op = &(gbc->reg.sp);
 			break;
 		default:
-			gbcc_log_error("Error in instruction INC_DEC_16_BIT.\n");
+			gbcc_log_error("Impossible case in INC_DEC_16_BIT\n");
 			return;
 	}
 	switch ((gbc->opcode % 0x10u) / 0x08u) {
@@ -556,6 +574,9 @@ void INC_DEC_16_BIT(struct gbc *gbc)
 		case 1:	/* DEC */
 			*op -= 1u;
 			break;
+		default:
+			gbcc_log_error("Impossible case in INC_DEC_16_BIT\n");
+			return;
 	}
 }
 
@@ -577,7 +598,7 @@ void ADD_HL(struct gbc *gbc)
 			op = gbc->reg.sp;
 			break;
 		default:
-			gbcc_log_error("Error in instruction ADD_HL.\n");
+			gbcc_log_error("Impossible case in ADD_HL\n");
 			return;
 	}
 	cond_flag(gbc, HF, ((gbc->reg.hl & 0x0FFFu) + (op & 0x0FFFu) & 0x1000u) == 0x1000u);
@@ -627,7 +648,7 @@ void SHIFT_A(struct gbc *gbc)
 			*op = (uint8_t)(*op >> 1u) | (uint8_t)(tmp << 7u);
 			break;
 		default:
-			gbcc_log_error("Error in instruction SHIFT_A.\n");
+			gbcc_log_error("Impossible case in SHIFT_A\n");
 			return;
 	}
 	clear_flag(gbc, ZF);
@@ -689,7 +710,7 @@ void JP_COND(struct gbc *gbc)
 			}
 			break;
 		default:
-			gbcc_log_error("Error in instruction JP_COND.\n");
+			gbcc_log_error("Impossible case in JP_COND\n");
 			return;
 	}
 }
@@ -737,7 +758,7 @@ void JR_COND(struct gbc *gbc)
 			}
 			break;
 		default:
-			gbcc_log_error("Error in instruction JR_COND.\n");
+			gbcc_log_error("Impossible case in JR_COND\n");
 			return;
 	}
 }
@@ -794,7 +815,7 @@ void CALL_COND(struct gbc *gbc)
 			}
 			break;
 		default:
-			gbcc_log_error("Error in instruction CALL_COND.\n");
+			gbcc_log_error("Impossible case in CALL_COND\n");
 			return;
 	}
 	if (call) {
@@ -853,6 +874,9 @@ void RET_COND(struct gbc *gbc)
 				gbcc_add_instruction_cycles(gbc, 2);
 			}
 			break;
+		default:
+			gbcc_log_error("Impossible case in RET_COND\n");
+			return;
 	}
 	if (ret) {
 		RET(gbc);
@@ -923,6 +947,9 @@ void CB_SHIFT_OP(struct gbc *gbc)
 			cond_flag(gbc, CF, check_bit(op, 0));
 			op >>= 1u;
 			break;
+		default:
+			gbcc_log_error("Impossible case in CB_SHIFT_OP\n");
+			return;
 	}
 	cond_flag(gbc, ZF, (op == 0));
 	clear_flag(gbc, NF);
@@ -951,12 +978,15 @@ void CB_BIT_OP(struct gbc *gbc)
 			set_flag(gbc, HF);
 			break;
 		case 2:	/* RES */
-			op &= ~rmask;
+			op &= (uint8_t)~rmask;
 			WRITE_OPERAND_MOD(gbc, op);
 			break;
 		case 3:	/* SET */
 			op |= smask;
 			WRITE_OPERAND_MOD(gbc, op);
+			break;
+		default:
+			gbcc_log_error("Impossible case in CB_BIT_OP\n");
 			break;
 	}
 
