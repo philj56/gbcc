@@ -78,7 +78,11 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				gbc->apu.sample = 0;
 				break;
 			case 9:
-				win->screenshot = val;
+				if (state[SDL_SCANCODE_LSHIFT]) {
+					win->raw_screenshot ^= val;
+				} else {
+					win->screenshot ^= val;
+				}
 				break;
 			case 10:
 				gbc->pause ^= val;

@@ -11,16 +11,18 @@
 #include <sys/types.h>
 #include <time.h>
 
+#define MAX_NAME_LEN 4096
+
 void gbcc_screenshot(struct gbcc_window *win)
 {
 	char dir[] = "screenshots";
-	char fname[BUFSIZ];
+	char fname[MAX_NAME_LEN];
 
 	time_t raw_time;
 	struct tm *time_info;
 	time(&raw_time);
 	time_info = gmtime(&raw_time);
-	strftime(fname, BUFSIZ, "screenshots/%G-%m-%dT%H:%M:%SZ.png", time_info);
+	strftime(fname, MAX_NAME_LEN, "screenshots/%G-%m-%dT%H:%M:%SZ.png", time_info);
 
 	if (mkdir(dir, 0755) != 0) {
 		if (errno != EEXIST) {
@@ -28,7 +30,7 @@ void gbcc_screenshot(struct gbcc_window *win)
 			return;
 		}
 	}
-	
+
 	FILE *fp = fopen(fname, "wbe");
 	if (!fp) {
 		gbcc_log_error("Couldn't open %s: %s\n", fname, strerror(errno));
@@ -64,7 +66,12 @@ void gbcc_screenshot(struct gbcc_window *win)
 		row_pointers[y] = row;
 		for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
 			int idx = y * GBC_SCREEN_WIDTH + x;
-			uint32_t pixel = win->buffer[idx];
+			uint32_t pixel;
+			if (win->raw_screenshot) {
+				pixel = win->gbc->memory.sdl_screen[idx];
+			} else {
+				pixel = win->buffer[idx];
+			}
 			*row++ = (pixel & 0xFF0000u) >> 16u;
 			*row++ = (pixel & 0x00FF00u) >> 8u;
 			*row++ = (pixel & 0x0000FFu) >> 0u;
@@ -87,5 +94,7 @@ void gbcc_screenshot(struct gbcc_window *win)
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 
 	gbcc_log_info("Saved screenshot %s\n", fname);
-	gbcc_window_show_message(win, "Saved screenshot", 1);
+	char message[MAX_NAME_LEN];
+	snprintf(message, MAX_NAME_LEN, "Saved screenshot: %s ", fname);
+	gbcc_window_show_message(win, message, 2);
 }

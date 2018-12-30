@@ -7,6 +7,8 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 
+#define MSG_BUF_SIZE 128
+
 struct gbcc_window {
 	struct gbc *gbc;
 	struct gbcc_fontmap font;
@@ -22,10 +24,12 @@ struct gbcc_window {
 		bool show;
 	} fps_counter;
 	struct {
-		const char *text;
+		char text[MSG_BUF_SIZE];
+		int lines;
 		int64_t time_left;
 	} msg;
 	bool screenshot;
+	bool raw_screenshot;
 };
 
 void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc);

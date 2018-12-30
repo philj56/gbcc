@@ -11,6 +11,7 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
@@ -104,10 +105,10 @@ void gbcc_window_update(struct gbcc_window *win)
 			win->buffer[i] = screen[i];
 		}
 	}
-	/* TODO: All this should really be somewhere else */
-	if (win->screenshot) {
-		win->screenshot = false;
+	if (win->screenshot || win->raw_screenshot) {
 		gbcc_screenshot(win);
+		win->screenshot = false;
+		win->raw_screenshot = false;
 	}
 	update_text(win);
 	if (win->fps_counter.show) {
@@ -116,7 +117,7 @@ void gbcc_window_update(struct gbcc_window *win)
 		render_text(win, fps_text, 0, 0);
 	}
 	if (win->msg.time_left > 0) {
-		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->font.tile_height);
+		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
 	}
 	err = SDL_UpdateTexture(
 			win->texture,
@@ -149,7 +150,8 @@ void gbcc_window_update(struct gbcc_window *win)
 
 void gbcc_window_show_message(struct gbcc_window *win, const char *msg, int seconds)
 {
-	win->msg.text = msg;
+	strncpy(win->msg.text, msg, MSG_BUF_SIZE);
+	win->msg.lines = 1 + strlen(win->msg.text) / (GBC_SCREEN_WIDTH / win->font.tile_width);
 	win->msg.time_left = seconds * 1000000000;
 }
 
