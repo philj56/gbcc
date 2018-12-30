@@ -79,8 +79,11 @@ void gbcc_screenshot(struct gbc *gbc)
 	png_set_rows(png_ptr, info_ptr, row_pointers);
 	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
 
-	png_data_freer(png_ptr, info_ptr, PNG_DESTROY_WILL_FREE_DATA, PNG_FREE_ALL);
-	png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
+	for (int y = 0; y < GBC_SCREEN_HEIGHT; y++) {
+		png_free(png_ptr, row_pointers[y]);
+	}
+	png_free(png_ptr, row_pointers);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
 
 	gbcc_log_info("Saved screenshot %s\n", fname);
 }
