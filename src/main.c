@@ -31,10 +31,11 @@ void quit(int sig)
 
 void usage()
 {
-	printf("Usage: gbcc [-hivV] [-p palette] [-t speed] rom_file\n"
+	printf("Usage: gbcc [-hisvV] [-p palette] [-t speed] rom_file\n"
 	       "  -h, --help            Print this message and exit.\n"
 	       "  -i, --interlace       Enable interlacing (experimental).\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
+	       "  -s, --subpixel        Enable subpixel scaling (GBC mode only).\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
 	       "                        (0 = unlimited).\n"
 	       "  -v, --vsync           Enable VSync.\n"
@@ -77,17 +78,19 @@ int main(int argc, char **argv)
 	struct gbcc_window win = {0};
 	struct gbcc_vram_window vwin = {0};
 	bool vram_window = false;
+	enum scaling_type scaling = SCALING_NONE;
 	opterr = 0;
 
 	struct option long_options[] = {
 		{"help", no_argument, NULL, 'h'},
 		{"interlace", no_argument, NULL, 'i'},
 		{"palette", required_argument, NULL, 'p'},
+		{"subpixel", no_argument, NULL, 's'},
 		{"turbo", required_argument, NULL, 't'},
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "hip:t:vV";
+	const char *short_options = "hip:st:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -112,13 +115,16 @@ int main(int argc, char **argv)
 			case 'i':
 				gbc.interlace = true;
 				break;
-			case 't':
-				/* TODO: error check */
-				gbc.turbo_speed = strtod(optarg, NULL);
-				break;
 			case 'p':
 				gbc.palette = gbcc_get_palette(optarg);
 				gbcc_log_debug("%s palette selected\n", gbc.palette.name);
+				break;
+			case 's':
+				scaling = SCALING_SUBPIXEL;
+				break;
+			case 't':
+				/* TODO: error check */
+				gbc.turbo_speed = strtod(optarg, NULL);
 				break;
 			case 'v':
 				SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
@@ -143,7 +149,7 @@ int main(int argc, char **argv)
 	}
 
        	gbcc_audio_initialise(&audio, &gbc);
-	gbcc_window_initialise(&win, &gbc);
+	gbcc_window_initialise(&win, &gbc, scaling);
 	if (vram_window) {
 		gbcc_vram_window_initialise(&vwin, &gbc);
 	}

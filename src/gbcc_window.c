@@ -16,9 +16,52 @@
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
 static void update_text(struct gbcc_window *win);
+static uint32_t subpixel_lut[32][32][32][6];
 
-void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
+static void fill_lookup()
 {
+	const uint32_t red = 0xFF7145;
+	const uint32_t green = 0xC1D650;
+	const uint32_t blue = 0x3BCEFF;
+	static bool done = false;
+	if (done) {
+		return;
+	}
+	for (uint32_t r = 0; r < 32; r++) {
+		for (uint32_t g = 0; g < 32; g++) {
+			for (uint32_t b = 0; b < 32; b++) {
+				uint32_t r2 = gbcc_add_colours(0, red, r / 32.0);
+				uint32_t g2 = gbcc_add_colours(0, green, g / 32.0);
+				uint32_t b2 = gbcc_add_colours(0, blue, b / 32.0);
+				subpixel_lut[r][g][b][0] = gbcc_add_colours(r2, b2, 0.7);
+				subpixel_lut[r][g][b][1] = gbcc_add_colours(r2, g2, 0.7);
+				subpixel_lut[r][g][b][2] = gbcc_add_colours(g2, r2, 0.7);
+				subpixel_lut[r][g][b][3] = gbcc_add_colours(g2, b2, 0.7);
+				subpixel_lut[r][g][b][4] = gbcc_add_colours(b2, g2, 0.7);
+				subpixel_lut[r][g][b][5] = gbcc_add_colours(b2, r2, 0.7);
+			}
+		}
+	}
+	done = true;
+}
+
+void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scaling_type scaling)
+{
+	uint8_t size_mult;
+
+	win->scaling = scaling;
+	switch (scaling) {
+		case SCALING_NONE:
+			size_mult = 1;
+			break;
+		case SCALING_SUBPIXEL:
+			size_mult = 6;
+			break;
+		default:
+			gbcc_log_error("Invalid scaling type\n");
+			exit(EXIT_FAILURE);
+	}
+	win->buffer = calloc(size_mult * size_mult * GBC_SCREEN_SIZE, sizeof(*win->buffer));
 	win->gbc = gbc;
 	clock_gettime(CLOCK_REALTIME, &win->fps_counter.last_time);
 	gbcc_fontmap_load(&win->font, "tileset.png");
@@ -26,13 +69,21 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
 	}
+	if (scaling == SCALING_SUBPIXEL){
+		SDL_DisplayMode dm;
+		SDL_GetDesktopDisplayMode(0, &dm);
+		if (dm.w < 6 * GBC_SCREEN_WIDTH || dm.h < 6 * GBC_SCREEN_HEIGHT) {
+			gbcc_log_warning("Minimum recommended screen size for subpixel scaling is %dx%d\n",
+					6 * GBC_SCREEN_WIDTH, 6 * GBC_SCREEN_HEIGHT);
+		}
+	}
 	
 	win->window = SDL_CreateWindow(
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
-			GBC_SCREEN_WIDTH,      // width, in pixels
-			GBC_SCREEN_HEIGHT,     // height, in pixels
+			size_mult * GBC_SCREEN_WIDTH,      // width, in pixels
+			size_mult * GBC_SCREEN_HEIGHT,     // height, in pixels
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
 			);
 
@@ -42,6 +93,14 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 		exit(EXIT_FAILURE);
 	}
 
+	switch (scaling) {
+		case SCALING_NONE:
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+			break;
+		case SCALING_SUBPIXEL:
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
+			break;
+	}
 	win->renderer = SDL_CreateRenderer(
 			win->window,
 			-1,
@@ -59,7 +118,8 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 			win->renderer,
 			SDL_PIXELFORMAT_RGB888,
 			SDL_TEXTUREACCESS_STATIC,
-			GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT
+			size_mult * GBC_SCREEN_WIDTH,
+			size_mult * GBC_SCREEN_HEIGHT
 			);
 
 	if (win->texture == NULL) {
@@ -72,17 +132,21 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 
 	SDL_RenderSetLogicalSize(
 			win->renderer,
-			GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT
+			GBC_SCREEN_WIDTH,
+			GBC_SCREEN_HEIGHT
 			);
 	SDL_RenderSetIntegerScale(win->renderer, true);
 
-	for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
+	for (size_t i = 0; i < size_mult * size_mult * GBC_SCREEN_SIZE; i++) {
 		win->buffer[i] = 0;
 	}
+	fill_lookup();
 }
 
 void gbcc_window_destroy(struct gbcc_window *win)
 {
+	free(win->buffer);
+	gbcc_fontmap_destroy(&win->font);
 	SDL_DestroyTexture(win->texture);
 	SDL_DestroyRenderer(win->renderer);
 	SDL_DestroyWindow(win->window);
@@ -93,17 +157,51 @@ void gbcc_window_update(struct gbcc_window *win)
 	int err;
 	uint32_t *screen = win->gbc->memory.sdl_screen;
 
-	if (win->gbc->mode == GBC || !win->gbc->palette.precorrected) {
-		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-			uint8_t r = (uint8_t)(screen[i] >> 19u) & 0x1Fu;
-			uint8_t g = (uint8_t)(screen[i] >> 11u) & 0x1Fu;
-			uint8_t b = (uint8_t)(screen[i] >> 3u) & 0x1Fu;
-			win->buffer[i] = gbcc_lerp_colour(r, g, b);
-		}
-	} else {
-		for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-			win->buffer[i] = screen[i];
-		}
+	switch (win->scaling) {
+		case SCALING_NONE:
+			if (win->gbc->mode == GBC || !win->gbc->palette.precorrected) {
+				for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
+					uint8_t r = (uint8_t)(screen[i] >> 19u) & 0x1Fu;
+					uint8_t g = (uint8_t)(screen[i] >> 11u) & 0x1Fu;
+					uint8_t b = (uint8_t)(screen[i] >> 3u) & 0x1Fu;
+					win->buffer[i] = gbcc_lerp_colour(r, g, b);
+				}
+			} else {
+				for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
+					win->buffer[i] = screen[i];
+				}
+			}
+			break;
+		case SCALING_SUBPIXEL:
+			for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
+				size_t x = (i % GBC_SCREEN_WIDTH) * 6;
+				size_t y = (i / GBC_SCREEN_WIDTH) * 6;
+				uint8_t r = (screen[i] >> 19u) & 0x1Fu;
+				uint8_t g = (screen[i] >> 11u) & 0x1Fu;
+				uint8_t b = (screen[i] >> 3u) & 0x1Fu;
+				uint8_t r2 = 0;
+				uint8_t b2 = 0;
+				if (x < GBC_SCREEN_WIDTH - 1) {
+					r2 = (screen[i + 1] >> 19u) & 0x1Fu;
+				}
+				if (x > 0) {
+					b2 = (screen[i - 1] >> 3u) & 0x1Fu;
+				}
+				for (int n = 0; n < 5; n++) {
+					size_t j = (y + n) * 6 * GBC_SCREEN_WIDTH + x;
+					win->buffer[j++] = subpixel_lut[r][g][b2][0];
+					win->buffer[j++] = subpixel_lut[r][g][b][1];
+					win->buffer[j++] = subpixel_lut[r][g][b][2];
+					win->buffer[j++] = subpixel_lut[r][g][b][3];
+					win->buffer[j++] = subpixel_lut[r][g][b][4];
+					win->buffer[j++] = subpixel_lut[r2][g][b][5];
+				}
+				for (int m = 0; m < 6; m++) {
+					size_t j = (y + 5) * 6 * GBC_SCREEN_WIDTH + x + m;
+					win->buffer[j] = 0;
+				}
+			}
+			break;
 	}
 	if (win->screenshot || win->raw_screenshot) {
 		gbcc_screenshot(win);
@@ -119,12 +217,24 @@ void gbcc_window_update(struct gbcc_window *win)
 	if (win->msg.time_left > 0) {
 		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
 	}
-	err = SDL_UpdateTexture(
-			win->texture,
-			NULL,
-			win->buffer,
-			GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
-			);
+	switch (win->scaling) {
+		case SCALING_NONE:
+			err = SDL_UpdateTexture(
+					win->texture,
+					NULL,
+					win->buffer,
+					GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
+					);
+			break;
+		case SCALING_SUBPIXEL:
+			err = SDL_UpdateTexture(
+					win->texture,
+					NULL,
+					win->buffer,
+					6 * GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
+					);
+			break;
+	}
 	if (err < 0) {
 		gbcc_log_error("Error updating texture: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
@@ -183,16 +293,16 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 			if (win->font.bitmap[src_px] > 0) {
 				win->buffer[dst_px] = 0xFFFFFFu;
 			} else {
-				uint8_t r = (win->buffer[dst_px] >> 0x16u) & 0xFFu;
-				uint8_t g = (win->buffer[dst_px] >> 0x08u) & 0xFFu;
-				uint8_t b = (win->buffer[dst_px] >> 0x00u) & 0xFFu;
+				uint8_t r = (win->buffer[dst_px] >> 16u) & 0xFFu;
+				uint8_t g = (win->buffer[dst_px] >> 8u) & 0xFFu;
+				uint8_t b = (win->buffer[dst_px] >> 0u) & 0xFFu;
 				uint32_t res = 0;
 				r = (uint8_t)round(r / 4.0);
 				g = (uint8_t)round(g / 4.0);
 				b = (uint8_t)round(b / 4.0);
-				res |= (uint32_t)(r << 0x16u);
-				res |= (uint32_t)(g << 0x08u);
-				res |= (uint32_t)(b << 0x00u);
+				res |= (uint32_t)(r << 16u);
+				res |= (uint32_t)(g << 8u);
+				res |= (uint32_t)(b << 0u);
 				win->buffer[dst_px] = res;
 			}
 		}

@@ -71,3 +71,8 @@ void gbcc_fontmap_load(struct gbcc_fontmap *fontmap, const char *filename)
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	free(row_pointers);
 }
+
+void gbcc_fontmap_destroy(struct gbcc_fontmap *fontmap)
+{
+	free(fontmap->bitmap);
+}

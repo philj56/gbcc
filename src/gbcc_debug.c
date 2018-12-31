@@ -173,7 +173,7 @@ void gbcc_print_op(struct gbc *gbc)
 #define RED   "\x1B[31m"
 //#define GRN   "\x1B[32m"
 #define YEL   "\x1B[33m"
-//#define BLU   "\x1B[34m"
+#define BLU   "\x1B[34m"
 //#define MAG   "\x1B[35m"
 //#define CYN   "\x1B[36m"
 //#define WHT   "\x1B[37m"
@@ -188,11 +188,20 @@ void gbcc_log_error(const char *const fmt, ...)
 	va_end(args);
 }
 
+void gbcc_log_warning(const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	fprintf(stderr, "[" YEL "WARNING" RESET "]: ");
+	vfprintf(stderr, fmt, args);
+	va_end(args);
+}
+
 void gbcc_log_debug(const char *const fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	printf("[" YEL "DEBUG" RESET "]: ");
+	printf("[" BLU "DEBUG" RESET "]: ");
 	vprintf(fmt, args);
 	va_end(args);
 }
@@ -207,6 +216,14 @@ void gbcc_log_info(const char *const fmt, ...)
 }
 
 void gbcc_log_append_error(const char *const fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
+}
+
+void gbcc_log_append_warning(const char *const fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
