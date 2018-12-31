@@ -68,10 +68,14 @@ void gbcc_apu_init(struct gbc *gbc)
 	gbc->apu.ch2.enabled = false;
 	gbc->apu.ch3.enabled = false;
 	gbc->apu.ch4.enabled = false;
+	gbc->apu.enabled = false;
 }
 
 void gbcc_apu_clock(struct gbc *gbc)
 {
+	if (!gbc->apu.enabled) {
+		return;
+	}
 	gbc->apu.clock += 4;
 	if (gbc->apu.start_time.tv_sec == 0) {
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
@@ -382,6 +386,12 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			break;
 		case NR52:
 			gbcc_apu_init(gbc);
+			gbc->apu.enabled = check_bit(val, 7);
+			if (!gbc->apu.enabled) {
+				for (size_t i = NR10; i < NR52; i++) {
+					gbc->memory.ioreg[i - IOREG_START] = 0;
+				}
+			}
 			break;
 		default:
 			gbcc_log_error("Invalid APU address 0x%04X\n", addr);

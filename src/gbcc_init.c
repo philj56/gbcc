@@ -455,7 +455,7 @@ void init_ioreg(struct gbc *gbc)
 	gbc->memory.ioreg[NR43 - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[NR50 - IOREG_START] = 0x77u;
 	gbc->memory.ioreg[NR51 - IOREG_START] = 0xF3u;
-	gbc->memory.ioreg[NR52 - IOREG_START] = 0xF1u;
+	gbc->memory.ioreg[NR52 - IOREG_START] = 0xF0u;
 	gbc->memory.ioreg[LCDC - IOREG_START] = 0x91u;
 	gbc->memory.ioreg[SCY - IOREG_START] = 0x00u;
 	gbc->memory.ioreg[SCX - IOREG_START] = 0x00u;
