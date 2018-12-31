@@ -35,7 +35,7 @@ void usage()
 	       "  -h, --help            Print this message and exit.\n"
 	       "  -i, --interlace       Enable interlacing (experimental).\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
-	       "  -s, --subpixel        Enable subpixel scaling (GBC mode only).\n"
+	       "  -s, --subpixel        Enable subpixel scaling.\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
 	       "                        (0 = unlimited).\n"
 	       "  -v, --vsync           Enable VSync.\n"

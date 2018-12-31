@@ -59,13 +59,17 @@ void gbcc_screenshot(struct gbcc_window *win)
 		return;
 	}
 
+	int size_mult = win->scaling.factor;
+	if (win->raw_screenshot) {
+		size_mult = 1;
+	}
 	/* Initialize rows of PNG. */
-	png_bytepp row_pointers = png_malloc(png_ptr, GBC_SCREEN_HEIGHT * sizeof(png_bytep));
-	for (int y = 0; y < GBC_SCREEN_HEIGHT; y++) {
-		png_bytep row = png_malloc(png_ptr, GBC_SCREEN_WIDTH * 3);
+	png_bytepp row_pointers = png_malloc(png_ptr, size_mult * GBC_SCREEN_HEIGHT * sizeof(png_bytep));
+	for (int y = 0; y < size_mult * GBC_SCREEN_HEIGHT; y++) {
+		png_bytep row = png_malloc(png_ptr, size_mult * GBC_SCREEN_WIDTH * 3);
 		row_pointers[y] = row;
-		for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			int idx = y * GBC_SCREEN_WIDTH + x;
+		for (int x = 0; x < size_mult * GBC_SCREEN_WIDTH; x++) {
+			int idx = y * size_mult * GBC_SCREEN_WIDTH + x;
 			uint32_t pixel;
 			if (win->raw_screenshot) {
 				pixel = win->gbc->memory.sdl_screen[idx];
@@ -80,14 +84,14 @@ void gbcc_screenshot(struct gbcc_window *win)
 
 	png_init_io(png_ptr, fp);
 	png_set_IHDR(png_ptr, info_ptr,
-			GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT,
+			size_mult * GBC_SCREEN_WIDTH, size_mult * GBC_SCREEN_HEIGHT,
 			8, PNG_COLOR_TYPE_RGB,
 			PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
 			PNG_FILTER_TYPE_DEFAULT);
 	png_set_rows(png_ptr, info_ptr, row_pointers);
 	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
 
-	for (int y = 0; y < GBC_SCREEN_HEIGHT; y++) {
+	for (int y = 0; y < size_mult * GBC_SCREEN_HEIGHT; y++) {
 		png_free(png_ptr, row_pointers[y]);
 	}
 	png_free(png_ptr, row_pointers);

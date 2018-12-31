@@ -33,12 +33,12 @@ static void fill_lookup()
 				uint32_t r2 = gbcc_add_colours(0, red, r / 32.0);
 				uint32_t g2 = gbcc_add_colours(0, green, g / 32.0);
 				uint32_t b2 = gbcc_add_colours(0, blue, b / 32.0);
-				subpixel_lut[r][g][b][0] = gbcc_add_colours(r2, b2, 0.7);
-				subpixel_lut[r][g][b][1] = gbcc_add_colours(r2, g2, 0.7);
-				subpixel_lut[r][g][b][2] = gbcc_add_colours(g2, r2, 0.7);
-				subpixel_lut[r][g][b][3] = gbcc_add_colours(g2, b2, 0.7);
-				subpixel_lut[r][g][b][4] = gbcc_add_colours(b2, g2, 0.7);
-				subpixel_lut[r][g][b][5] = gbcc_add_colours(b2, r2, 0.7);
+				subpixel_lut[r][g][b][0] = gbcc_add_colours(r2, b2, 0.5);
+				subpixel_lut[r][g][b][1] = gbcc_add_colours(r2, g2, 0.5);
+				subpixel_lut[r][g][b][2] = gbcc_add_colours(g2, r2, 0.5);
+				subpixel_lut[r][g][b][3] = gbcc_add_colours(g2, b2, 0.5);
+				subpixel_lut[r][g][b][4] = gbcc_add_colours(b2, g2, 0.5);
+				subpixel_lut[r][g][b][5] = gbcc_add_colours(b2, r2, 0.5);
 			}
 		}
 	}
@@ -47,21 +47,19 @@ static void fill_lookup()
 
 void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scaling_type scaling)
 {
-	uint8_t size_mult;
-
-	win->scaling = scaling;
+	win->scaling.type = scaling;
 	switch (scaling) {
 		case SCALING_NONE:
-			size_mult = 1;
+			win->scaling.factor = 1;
 			break;
 		case SCALING_SUBPIXEL:
-			size_mult = 6;
+			win->scaling.factor = 6;
 			break;
 		default:
 			gbcc_log_error("Invalid scaling type\n");
 			exit(EXIT_FAILURE);
 	}
-	win->buffer = calloc(size_mult * size_mult * GBC_SCREEN_SIZE, sizeof(*win->buffer));
+	win->buffer = calloc((win->scaling.factor * win->scaling.factor) * GBC_SCREEN_SIZE, sizeof(*win->buffer));
 	win->gbc = gbc;
 	clock_gettime(CLOCK_REALTIME, &win->fps_counter.last_time);
 	gbcc_fontmap_load(&win->font, "tileset.png");
@@ -72,9 +70,9 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 	if (scaling == SCALING_SUBPIXEL){
 		SDL_DisplayMode dm;
 		SDL_GetDesktopDisplayMode(0, &dm);
-		if (dm.w < 6 * GBC_SCREEN_WIDTH || dm.h < 6 * GBC_SCREEN_HEIGHT) {
+		if (dm.w < 3 * GBC_SCREEN_WIDTH || dm.h < 3 * GBC_SCREEN_HEIGHT) {
 			gbcc_log_warning("Minimum recommended screen size for subpixel scaling is %dx%d\n",
-					6 * GBC_SCREEN_WIDTH, 6 * GBC_SCREEN_HEIGHT);
+					3 * GBC_SCREEN_WIDTH, 3 * GBC_SCREEN_HEIGHT);
 		}
 	}
 	
@@ -82,8 +80,8 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
-			size_mult * GBC_SCREEN_WIDTH,      // width, in pixels
-			size_mult * GBC_SCREEN_HEIGHT,     // height, in pixels
+			win->scaling.factor * GBC_SCREEN_WIDTH,      // width, in pixels
+			win->scaling.factor * GBC_SCREEN_HEIGHT,     // height, in pixels
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
 			);
 
@@ -118,8 +116,8 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 			win->renderer,
 			SDL_PIXELFORMAT_RGB888,
 			SDL_TEXTUREACCESS_STATIC,
-			size_mult * GBC_SCREEN_WIDTH,
-			size_mult * GBC_SCREEN_HEIGHT
+			win->scaling.factor * GBC_SCREEN_WIDTH,
+			win->scaling.factor * GBC_SCREEN_HEIGHT
 			);
 
 	if (win->texture == NULL) {
@@ -137,7 +135,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 			);
 	SDL_RenderSetIntegerScale(win->renderer, true);
 
-	for (size_t i = 0; i < size_mult * size_mult * GBC_SCREEN_SIZE; i++) {
+	for (size_t i = 0; i < win->scaling.factor * win->scaling.factor * GBC_SCREEN_SIZE; i++) {
 		win->buffer[i] = 0;
 	}
 	fill_lookup();
@@ -157,7 +155,7 @@ void gbcc_window_update(struct gbcc_window *win)
 	int err;
 	uint32_t *screen = win->gbc->memory.sdl_screen;
 
-	switch (win->scaling) {
+	switch (win->scaling.type) {
 		case SCALING_NONE:
 			if (win->gbc->mode == GBC || !win->gbc->palette.precorrected) {
 				for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
@@ -181,7 +179,7 @@ void gbcc_window_update(struct gbcc_window *win)
 				uint8_t b = (screen[i] >> 3u) & 0x1Fu;
 				uint8_t r2 = 0;
 				uint8_t b2 = 0;
-				if (x < GBC_SCREEN_WIDTH - 1) {
+				if (x < 6 * (GBC_SCREEN_WIDTH - 1)) {
 					r2 = (screen[i + 1] >> 19u) & 0x1Fu;
 				}
 				if (x > 0) {
@@ -217,7 +215,7 @@ void gbcc_window_update(struct gbcc_window *win)
 	if (win->msg.time_left > 0) {
 		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
 	}
-	switch (win->scaling) {
+	switch (win->scaling.type) {
 		case SCALING_NONE:
 			err = SDL_UpdateTexture(
 					win->texture,
@@ -289,21 +287,25 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 	for (uint32_t j = 0; j < th; j++) {
 		for (uint32_t i = 0; i < tw; i++) {
 			uint32_t src_px = char_y + j * (16 * tw) + char_x + i;
-			uint32_t dst_px = (y + j) * GBC_SCREEN_WIDTH + x + i;
-			if (win->font.bitmap[src_px] > 0) {
-				win->buffer[dst_px] = 0xFFFFFFu;
-			} else {
-				uint8_t r = (win->buffer[dst_px] >> 16u) & 0xFFu;
-				uint8_t g = (win->buffer[dst_px] >> 8u) & 0xFFu;
-				uint8_t b = (win->buffer[dst_px] >> 0u) & 0xFFu;
-				uint32_t res = 0;
-				r = (uint8_t)round(r / 4.0);
-				g = (uint8_t)round(g / 4.0);
-				b = (uint8_t)round(b / 4.0);
-				res |= (uint32_t)(r << 16u);
-				res |= (uint32_t)(g << 8u);
-				res |= (uint32_t)(b << 0u);
-				win->buffer[dst_px] = res;
+			for (uint32_t n = 0; n < win->scaling.factor; n++) {
+				for (uint32_t m = 0; m < win->scaling.factor; m++) {
+					uint32_t dst_px = (n + (j + y) * win->scaling.factor) * win->scaling.factor * GBC_SCREEN_WIDTH + m + (i + x) * win->scaling.factor;
+					if (win->font.bitmap[src_px] > 0) {
+						win->buffer[dst_px] = 0xFFFFFFu;
+					} else {
+						uint8_t r = (win->buffer[dst_px] >> 16u) & 0xFFu;
+						uint8_t g = (win->buffer[dst_px] >> 8u) & 0xFFu;
+						uint8_t b = (win->buffer[dst_px] >> 0u) & 0xFFu;
+						uint32_t res = 0;
+						r = (uint8_t)round(r / 4.0);
+						g = (uint8_t)round(g / 4.0);
+						b = (uint8_t)round(b / 4.0);
+						res |= (uint32_t)(r << 16u);
+						res |= (uint32_t)(g << 8u);
+						res |= (uint32_t)(b << 0u);
+						win->buffer[dst_px] = res;
+					}
+				}
 			}
 		}
 	}

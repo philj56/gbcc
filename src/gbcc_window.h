@@ -18,7 +18,10 @@ struct gbcc_window {
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
 	uint32_t *buffer;
-	enum scaling_type scaling;
+	struct {
+		enum scaling_type type;
+		uint32_t factor;
+	} scaling;
 	struct {
 		uint64_t last_frame;
 		struct timespec last_time;
