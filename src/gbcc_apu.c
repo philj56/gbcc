@@ -32,11 +32,7 @@ static void ch4_trigger(struct gbc *gbc);
 
 void gbcc_apu_init(struct gbc *gbc)
 {
-	gbc->apu.sample_clock = 0;
-	gbc->apu.sample = 0;
-	gbc->apu.index = 0;
-	gbc->apu.start_time.tv_sec = 0;
-	gbc->apu.start_time.tv_nsec = 0;
+	gbc->apu = (struct apu){0};
 	gbc->apu.sequencer_timer.period = 8;
 	timer_reset(&gbc->apu.sequencer_timer);
 	gbc->apu.ch1.duty.duty_timer.period = 8;
@@ -49,11 +45,6 @@ void gbcc_apu_init(struct gbc *gbc)
 	timer_reset(&gbc->apu.ch1.envelope.timer);
 	timer_reset(&gbc->apu.ch2.envelope.timer);
 	timer_reset(&gbc->apu.ch4.envelope.timer);
-	gbc->apu.ch1.length_enable = false;
-	gbc->apu.ch2.length_enable = false;
-	gbc->apu.ch3.length_enable = false;
-	gbc->apu.ch4.length_enable = false;
-	gbc->apu.sweep.enabled = false;
 	gbc->apu.sweep.timer.period = 8;
 	timer_reset(&gbc->apu.sweep.timer);
 	gbc->apu.noise.timer.period = 8;
@@ -61,14 +52,6 @@ void gbcc_apu_init(struct gbc *gbc)
 	gbc->apu.wave.timer.period = 8;
 	timer_reset(&gbc->apu.wave.timer);
 	gbc->apu.wave.addr = WAVE_START;
-	gbc->apu.noise.width_mode = false;
-	gbc->apu.left_vol = 0;
-	gbc->apu.right_vol = 0;
-	gbc->apu.ch1.enabled = false;
-	gbc->apu.ch2.enabled = false;
-	gbc->apu.ch3.enabled = false;
-	gbc->apu.ch4.enabled = false;
-	gbc->apu.enabled = false;
 }
 
 void gbcc_apu_clock(struct gbc *gbc)
@@ -385,12 +368,13 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch1.right = check_bit(val, 0);
 			break;
 		case NR52:
-			gbcc_apu_init(gbc);
+			//gbcc_apu_init(gbc);
 			gbc->apu.enabled = check_bit(val, 7);
 			if (!gbc->apu.enabled) {
 				for (size_t i = NR10; i < NR52; i++) {
 					gbc->memory.ioreg[i - IOREG_START] = 0;
 				}
+				gbcc_apu_init(gbc);
 			}
 			break;
 		default:
