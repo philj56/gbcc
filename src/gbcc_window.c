@@ -33,12 +33,12 @@ static void fill_lookup()
 				uint32_t r2 = gbcc_add_colours(0, red, r / 32.0);
 				uint32_t g2 = gbcc_add_colours(0, green, g / 32.0);
 				uint32_t b2 = gbcc_add_colours(0, blue, b / 32.0);
-				subpixel_lut[r][g][b][0] = gbcc_add_colours(r2, b2, 0.5);
-				subpixel_lut[r][g][b][1] = gbcc_add_colours(r2, g2, 0.5);
-				subpixel_lut[r][g][b][2] = gbcc_add_colours(g2, r2, 0.5);
-				subpixel_lut[r][g][b][3] = gbcc_add_colours(g2, b2, 0.5);
-				subpixel_lut[r][g][b][4] = gbcc_add_colours(b2, g2, 0.5);
-				subpixel_lut[r][g][b][5] = gbcc_add_colours(b2, r2, 0.5);
+				subpixel_lut[r][g][b][0] = gbcc_add_colours(r2, 0, 0.7);
+				subpixel_lut[r][g][b][1] = gbcc_add_colours(r2, g2, 0.7);
+				subpixel_lut[r][g][b][2] = gbcc_add_colours(g2, r2, 0.7);
+				subpixel_lut[r][g][b][3] = gbcc_add_colours(g2, b2, 0.7);
+				subpixel_lut[r][g][b][4] = gbcc_add_colours(b2, g2, 0.7);
+				subpixel_lut[r][g][b][5] = gbcc_add_colours(b2, 0, 0.7);
 			}
 		}
 	}
@@ -53,7 +53,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 			win->scaling.factor = 1;
 			break;
 		case SCALING_SUBPIXEL:
-			win->scaling.factor = 6;
+			win->scaling.factor = 7;
 			break;
 		default:
 			gbcc_log_error("Invalid scaling type\n");
@@ -172,30 +172,32 @@ void gbcc_window_update(struct gbcc_window *win)
 			break;
 		case SCALING_SUBPIXEL:
 			for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-				size_t x = (i % GBC_SCREEN_WIDTH) * 6;
-				size_t y = (i / GBC_SCREEN_WIDTH) * 6;
+				size_t x = (i % GBC_SCREEN_WIDTH) * 7;
+				size_t y = (i / GBC_SCREEN_WIDTH) * 7;
 				uint8_t r = (screen[i] >> 19u) & 0x1Fu;
 				uint8_t g = (screen[i] >> 11u) & 0x1Fu;
 				uint8_t b = (screen[i] >> 3u) & 0x1Fu;
 				uint8_t r2 = 0;
 				uint8_t b2 = 0;
-				if (x < 6 * (GBC_SCREEN_WIDTH - 1)) {
+				if (x < 7 * (GBC_SCREEN_WIDTH - 1)) {
 					r2 = (screen[i + 1] >> 19u) & 0x1Fu;
 				}
 				if (x > 0) {
 					b2 = (screen[i - 1] >> 3u) & 0x1Fu;
 				}
-				for (int n = 0; n < 5; n++) {
-					size_t j = (y + n) * 6 * GBC_SCREEN_WIDTH + x;
+				for (int n = 0; n < 6; n++) {
+					size_t j = (y + n) * 7 * GBC_SCREEN_WIDTH + x;
 					win->buffer[j++] = subpixel_lut[r][g][b2][0];
 					win->buffer[j++] = subpixel_lut[r][g][b][1];
 					win->buffer[j++] = subpixel_lut[r][g][b][2];
 					win->buffer[j++] = subpixel_lut[r][g][b][3];
 					win->buffer[j++] = subpixel_lut[r][g][b][4];
 					win->buffer[j++] = subpixel_lut[r2][g][b][5];
+					win->buffer[j] = gbcc_add_colours(0, subpixel_lut[r2][g][b][0], 0.7);
+					win->buffer[j] = gbcc_add_colours(win->buffer[j], subpixel_lut[r][g][b][5], 0.7);
 				}
-				for (int m = 0; m < 6; m++) {
-					size_t j = (y + 5) * 6 * GBC_SCREEN_WIDTH + x + m;
+				for (int m = 0; m < 7; m++) {
+					size_t j = (y + 6) * 7 * GBC_SCREEN_WIDTH + x + m;
 					win->buffer[j] = 0;
 				}
 			}
@@ -229,7 +231,7 @@ void gbcc_window_update(struct gbcc_window *win)
 					win->texture,
 					NULL,
 					win->buffer,
-					6 * GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
+					7 * GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
 					);
 			break;
 	}

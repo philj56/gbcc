@@ -7,6 +7,7 @@
 #include "gbcc_memory.h"
 #include "gbcc_palettes.h"
 #include "gbcc_save.h"
+#include "gbcc_time.h"
 #include "gbcc_vram_window.h"
 #include "gbcc_window.h"
 #include <getopt.h>
@@ -157,13 +158,21 @@ int main(int argc, char **argv)
 	thrd_t emu_thread;
 	thrd_create(&emu_thread, emulation_loop, &audio);
 
+	struct timespec t1;
+	struct timespec t2;
+	int time_to_sleep;
 	while (!gbc.quit) {
+		clock_gettime(CLOCK_REALTIME, &t2);
 		gbcc_input_process_all(&win);
 		gbcc_window_update(&win);
 		if (vram_window) {
 			gbcc_vram_window_update(&vwin);
 		}
-		SDL_Delay(16);
+		clock_gettime(CLOCK_REALTIME, &t1);
+		time_to_sleep = 14 - (int)(gbcc_time_diff(&t1, &t2) / 1e6);
+		if (time_to_sleep > 0) {
+			SDL_Delay(time_to_sleep);
+		}
 	}
 	thrd_join(emu_thread, NULL);
 
