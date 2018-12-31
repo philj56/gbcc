@@ -96,6 +96,7 @@ void gbcc_screenshot(struct gbcc_window *win)
 	}
 	png_free(png_ptr, row_pointers);
 	png_destroy_write_struct(&png_ptr, &info_ptr);
+	fclose(fp);
 
 	gbcc_log_info("Saved screenshot %s\n", fname);
 	char message[MAX_NAME_LEN];
