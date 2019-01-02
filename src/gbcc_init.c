@@ -32,7 +32,6 @@ static void print_destination_code(struct gbc *gbc);
 static void init_registers(struct gbc *gbc);
 static void init_mmap(struct gbc *gbc);
 static void init_ioreg(struct gbc *gbc);
-static void init_input(struct gbc *gbc);
 
 void gbcc_initialise(struct gbc *gbc, const char *filename)
 {
@@ -45,7 +44,6 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->ime = true;
 	gbc->clock = GBC_LCD_MODE_PERIOD;
 	gbc->ppu_clock = gbc->clock;
-	gbc->speed_mult = 1;
 	gbc->palette = gbcc_get_palette("default");
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
@@ -54,7 +52,6 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	parse_header(gbc);
 	init_mmap(gbc);
 	init_ioreg(gbc);
-	init_input(gbc);
 	gbcc_apu_init(gbc);
 }
 
@@ -472,17 +469,4 @@ void init_ioreg(struct gbc *gbc)
 	for (size_t i = 0; i < sizeof(gbc->memory.bgp)/sizeof(gbc->memory.bgp[0]); i++) {
 		gbc->memory.bgp[i] = 0xFFu;
 	}
-}
-
-void init_input(struct gbc *gbc)
-{
-	gbc->keys.a = false;
-	gbc->keys.b = false;
-	gbc->keys.start = false;
-	gbc->keys.select = false;
-	gbc->keys.dpad.up = false;
-	gbc->keys.dpad.down = false;
-	gbc->keys.dpad.left = false;
-	gbc->keys.dpad.right = false;
-	gbc->keys.turbo = false;
 }

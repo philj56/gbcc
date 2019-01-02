@@ -158,10 +158,10 @@ void gbcc_print_op(struct gbc *gbc)
 	uint8_t op = gbc->opcode;
 	gbcc_log_debug("%02X", op);
 	for (uint8_t i = 0; i < gbcc_op_sizes[op] - 1; i++) {
-		gbcc_log_append_debug("%02X", gbcc_memory_read(gbc, gbc->reg.pc + i, true));
+		gbcc_log_append_debug("%02X", gbcc_memory_read(gbc, gbc->reg.pc + i, false));
 	}
 	if (op == 0xCB) {
-		uint8_t cb_op = gbcc_memory_read(gbc, gbc->reg.pc, true);
+		uint8_t cb_op = gbcc_memory_read(gbc, gbc->reg.pc, false);
 		gbcc_log_append_debug("%02X", cb_op);
 		gbcc_log_append_debug("\t%s\n", cb_op_dissassemblies[cb_op]);
 	} else {
@@ -298,7 +298,7 @@ void gbcc_print_state(struct gbc *gbc)
 	printf("interlace:%d\n", gbc->interlace);
 	printf("save_state:%d\n", gbc->save_state);
 	printf("load_state:%d\n", gbc->load_state);
-	printf("speed_mult:%d\n", gbc->speed_mult);
+	printf("double_speed:%d\n", gbc->double_speed);
 	printf("div_timer:%d\n", gbc->div_timer);
 	/* TODO: Finish */
 }

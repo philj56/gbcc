@@ -115,7 +115,7 @@ struct gbc {
 	bool interlace;
 	int8_t save_state;
 	int8_t load_state;
-	int8_t speed_mult;
+	bool double_speed;
 	uint64_t frame;
 	float turbo_speed;
 

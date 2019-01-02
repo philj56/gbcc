@@ -19,12 +19,13 @@ static void gbcc_cpu_clock(struct gbc *gbc);
 /* TODO: Check order of all of these */
 void gbcc_emulate_cycle(struct gbc *gbc)
 {
+	if (gbc->double_speed && gbc->clock % 8) {
+		gbcc_cpu_clock(gbc);
+		return;
+	}
+	gbcc_cpu_clock(gbc);
 	gbcc_ppu_clock(gbc);
 	gbcc_apu_clock(gbc);
-	gbcc_cpu_clock(gbc);
-	if (gbc->speed_mult == 2) {
-		gbcc_cpu_clock(gbc);
-	}
 }
 
 void gbcc_cpu_clock(struct gbc *gbc)
@@ -47,9 +48,6 @@ void gbcc_cpu_clock(struct gbc *gbc)
 	if (gbc->halt.set || gbc->stop) {
 		return;
 	}
-	/*if (gbcc_op_fixed[gbc->opcode]) {
-		gbcc_ops[gbc->opcode](gbc);
-	}*/
 	if (gbc->instruction_timer == 0) {
 		execute_instruction(gbc);
 		if (gbc->rst.request) {

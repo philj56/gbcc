@@ -22,9 +22,11 @@ struct duty {
 struct sweep {
 	uint16_t freq;
 	struct timer timer;
+	uint16_t period;
 	uint8_t shift;
 	int8_t dir;
 	bool enabled;
+	bool calculated;
 };
 
 struct noise {
@@ -56,6 +58,7 @@ struct channel {
 	bool length_enable;
 	bool state;
 	bool enabled;
+	bool dac;
 	bool left;
 	bool right;
 	struct envelope envelope;
@@ -64,12 +67,15 @@ struct channel {
 
 struct apu {
 	uint64_t clock;
-	uint64_t sample_clock;
+	struct {
+		uint64_t prev;
+		uint64_t cur;
+	} sync_clock;
 	uint64_t sample;
 	size_t index;
 	uint8_t left_vol;
 	uint8_t right_vol;
-	bool enabled;
+	bool disabled;
 	struct timespec cur_time;
 	struct timespec start_time;
 	struct channel ch1; 	/* Tone & Sweep */
@@ -82,7 +88,6 @@ struct apu {
 	struct timer sequencer_timer;
 };
 
-void timer_reset(struct timer *timer);
 void gbcc_apu_init(struct gbc *gbc);
 void gbcc_apu_clock(struct gbc *gbc);
 void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val);

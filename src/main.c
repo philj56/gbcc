@@ -169,7 +169,7 @@ int main(int argc, char **argv)
 			gbcc_vram_window_update(&vwin);
 		}
 		clock_gettime(CLOCK_REALTIME, &t1);
-		time_to_sleep = 14 - (int)(gbcc_time_diff(&t1, &t2) / 1e6);
+		time_to_sleep = 8 - (int)(gbcc_time_diff(&t1, &t2) / 1e6);
 		if (time_to_sleep > 0) {
 			SDL_Delay(time_to_sleep);
 		}

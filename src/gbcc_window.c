@@ -322,7 +322,7 @@ void update_text(struct gbcc_window *win)
 	/* Update FPS counter */
 	win->fps_counter.last_time = cur_time;
 	float df = win->gbc->frame - win->fps_counter.last_frame;
-	uint8_t ly = gbcc_memory_read(win->gbc, LY, true);
+	uint8_t ly = gbcc_memory_read(win->gbc, LY, false);
 	if (ly < win->fps_counter.last_ly) {
 		df -= 1;
 		ly += (154 - win->fps_counter.last_ly);
@@ -331,7 +331,7 @@ void update_text(struct gbcc_window *win)
 	}
 	df += ly / 154.0;
 	win->fps_counter.last_frame = win->gbc->frame;
-	win->fps_counter.last_ly = gbcc_memory_read(win->gbc, LY, true);
+	win->fps_counter.last_ly = gbcc_memory_read(win->gbc, LY, false);
 	win->fps_counter.fps = df / (dt / 1e9);
 
 	/* Update message timer */

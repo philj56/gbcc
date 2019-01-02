@@ -114,42 +114,44 @@ void (*const gbcc_ops[0x100])(struct gbc *gbc) = {
  * duration of the instruction is conditional
  */
 const uint8_t gbcc_op_times[0x100] = {
-/* 0x00 */ 	1, 3, 2, 2, 1, 1, 2, 1, 5, 2, 2, 2, 1, 1, 2, 1,
-/* 0x10 */ 	1, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1,
-/* 0x20 */ 	0, 3, 2, 2, 1, 1, 2, 1, 0, 2, 2, 2, 1, 1, 2, 1,
-/* 0x30 */ 	0, 3, 2, 2, 3, 3, 3, 1, 0, 2, 2, 2, 1, 1, 2, 1,
-/* 0x40 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
-/* 0x50 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
-/* 0x60 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
-/* 0x70 */ 	2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1,
-/* 0x80 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
-/* 0x90 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
-/* 0xA0 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
-/* 0xB0 */ 	1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
-/* 0xC0 */ 	0, 3, 0, 4, 0, 4, 2, 4, 0, 4, 0, 1, 0, 6, 2, 4,
-/* 0xD0 */ 	0, 3, 0, 0, 0, 4, 2, 4, 0, 4, 0, 0, 0, 0, 2, 4,
-/* 0xE0 */ 	3, 3, 2, 0, 0, 4, 2, 4, 4, 1, 4, 0, 0, 0, 2, 4,
-/* 0xF0 */ 	3, 3, 2, 1, 0, 4, 2, 4, 3, 2, 4, 1, 0, 0, 2, 4
+           /* 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
+/* 0x00 */    1, 3, 2, 2, 1, 1, 2, 1, 5, 2, 2, 2, 1, 1, 2, 1,
+/* 0x10 */    1, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1,
+/* 0x20 */    0, 3, 2, 2, 1, 1, 2, 1, 0, 2, 2, 2, 1, 1, 2, 1,
+/* 0x30 */    0, 3, 2, 2, 1, 1, 2, 1, 0, 2, 2, 2, 1, 1, 2, 1,
+/* 0x40 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x50 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x60 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x70 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x80 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x90 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0xA0 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0xB0 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0xC0 */    0, 3, 0, 4, 0, 4, 2, 4, 0, 4, 0, 1, 0, 6, 2, 4,
+/* 0xD0 */    0, 3, 0, 0, 0, 4, 2, 4, 0, 4, 0, 0, 0, 0, 2, 4,
+/* 0xE0 */    3, 3, 2, 0, 0, 4, 2, 4, 4, 1, 4, 0, 0, 0, 2, 4,
+/* 0xF0 */    3, 3, 2, 1, 0, 4, 2, 4, 3, 2, 4, 1, 0, 0, 2, 4
 };
 
 /* Instruction sizes, in bytes. 0 means invalid instruction */
 const uint8_t gbcc_op_sizes[0x100] = {
-/* 0x00 */	1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1,
-/* 0x10 */	2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
-/* 0x20 */	2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
-/* 0x30 */	2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
-/* 0x40 */	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-/* 0x50 */	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-/* 0x60 */	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-/* 0x70 */	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-/* 0x80 */	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-/* 0x90 */	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-/* 0xA0 */	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-/* 0xB0 */	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-/* 0xC0 */	1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 1, 3, 3, 2, 1,
-/* 0xD0 */	1, 1, 3, 0, 3, 1, 2, 1, 1, 1, 3, 0, 3, 0, 2, 1,
-/* 0xE0 */	2, 1, 2, 0, 0, 1, 2, 1, 2, 1, 3, 0, 0, 0, 2, 1,
-/* 0xF0 */	2, 1, 2, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1
+           /* 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
+/* 0x00 */    1, 3, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 2, 1,
+/* 0x10 */    2, 3, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+/* 0x20 */    2, 3, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+/* 0x30 */    2, 3, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+/* 0x40 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x50 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x60 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x70 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x80 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0x90 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0xA0 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0xB0 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 0xC0 */    1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 1, 3, 3, 2, 1,
+/* 0xD0 */    1, 1, 3, 0, 3, 1, 2, 1, 1, 1, 3, 0, 3, 0, 2, 1,
+/* 0xE0 */    2, 1, 2, 0, 0, 1, 2, 1, 2, 1, 3, 0, 0, 0, 2, 1,
+/* 0xF0 */    2, 1, 2, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1
 };
 
 /* Miscellaneous */
@@ -168,15 +170,12 @@ void NOP(struct gbc *gbc)
 
 void STOP(struct gbc *gbc)
 {
-	if (gbc->mode == GBC && check_bit(gbcc_memory_read(gbc, KEY1, true), 0)) {
-		gbcc_memory_clear_bit(gbc, KEY1, 0, true);
-		if (gbc->speed_mult == 1) {
-			gbcc_memory_set_bit(gbc, KEY1, 7, true);
-			gbc->speed_mult = 2;
-		} else {
-			gbcc_memory_clear_bit(gbc, KEY1, 7, true);
-			gbc->speed_mult = 1;
-		}
+	uint8_t key1 = gbcc_memory_read(gbc, KEY1, false);
+	if (gbc->mode == GBC && check_bit(key1, 0)) {
+		key1 = clear_bit(key1, 0);
+		gbc->double_speed = !gbc->double_speed;
+		toggle_bit(key1, 7);
+		gbcc_memory_write(gbc, KEY1, key1, true);
 	} else {
 		gbc->stop = true;
 	}
@@ -257,7 +256,9 @@ void LD_REG_REG(struct gbc *gbc)
 
 void LD_d8(struct gbc *gbc)
 {
-	WRITE_OPERAND_DIV(gbc, 0x00u, gbcc_fetch_instruction(gbc));
+	uint8_t op = gbcc_fetch_instruction(gbc);
+	gbcc_emulate_cycle(gbc);
+	WRITE_OPERAND_DIV(gbc, 0x00u, op);
 }
 
 void LD_d16(struct gbc *gbc)
@@ -320,7 +321,9 @@ void LD_A(struct gbc *gbc)
 void LD_a16(struct gbc *gbc)
 {
 	uint8_t op1 = gbcc_fetch_instruction(gbc);
+	gbcc_emulate_cycle(gbc);
 	uint8_t op2 = gbcc_fetch_instruction(gbc);
+	gbcc_emulate_cycle(gbc);
 	uint16_t addr = cat_bytes(op1, op2);
 	switch ((gbc->opcode - 0xE0u) / 0x10u) {
 		case 0:
@@ -341,6 +344,7 @@ void LD_OFFSET(struct gbc *gbc)
 	switch ((gbc->opcode % 0x10u) / 0x02u) {
 		case 0:
 			op = gbcc_fetch_instruction(gbc);
+			gbcc_emulate_cycle(gbc);
 			break;
 		case 1:
 			op = gbc->reg.c;
@@ -899,6 +903,9 @@ void RST(struct gbc *gbc)
 void PREFIX_CB(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
+	gbcc_add_instruction_cycles(gbc, 1);
+	gbcc_emulate_cycle(gbc);
+	
 	if (gbc->opcode < 0x40u) {
 		CB_SHIFT_OP(gbc);
 	} else {
@@ -956,11 +963,6 @@ void CB_SHIFT_OP(struct gbc *gbc)
 	clear_flag(gbc, HF);
 
 	WRITE_OPERAND_MOD(gbc, op);
-
-	gbcc_add_instruction_cycles(gbc, 1);
-	if ((gbc->opcode % 0x08u) == 6) {	/* Operating on (hl) */
-		gbcc_add_instruction_cycles(gbc, 2);
-	}
 }
 
 void CB_BIT_OP(struct gbc *gbc)
@@ -970,6 +972,7 @@ void CB_BIT_OP(struct gbc *gbc)
 	uint8_t rmask = (uint8_t)(1u << ((gbc->opcode - 0x80u) / 0x08u));
 	uint8_t smask = (uint8_t)(1u << ((gbc->opcode - 0xC0u) / 0x08u));
 	uint8_t operation = ((gbc->opcode & 0xF0u) / 0x40u);
+	
 
 	switch (operation) {
 		case 1: /* BIT */
@@ -989,22 +992,13 @@ void CB_BIT_OP(struct gbc *gbc)
 			gbcc_log_error("Impossible case in CB_BIT_OP\n");
 			break;
 	}
-
-
-	gbcc_add_instruction_cycles(gbc, 1);
-	if ((gbc->opcode % 0x08u) == 6) {	/* Operating on (hl) */
-		if (operation == 1) {
-			gbcc_add_instruction_cycles(gbc, 1);
-		} else {
-			gbcc_add_instruction_cycles(gbc, 2);
-		}
-	}
 }
 
 /* Helper functions */
 
 uint8_t READ_OPERAND_MOD(struct gbc *gbc)
 {
+	uint8_t ret;
 	switch (gbc->opcode % 0x08u) {
 		case 0:
 			return gbc->reg.b;
@@ -1019,7 +1013,10 @@ uint8_t READ_OPERAND_MOD(struct gbc *gbc)
 		case 5:
 			return gbc->reg.l;
 		case 6:
-			return gbcc_memory_read(gbc, gbc->reg.hl, false);
+			ret = gbcc_memory_read(gbc, gbc->reg.hl, false);
+			gbcc_add_instruction_cycles(gbc, 1);
+			gbcc_emulate_cycle(gbc);
+			return ret;
 		case 7:
 			return gbc->reg.a;
 		default:
@@ -1050,6 +1047,8 @@ void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val)
 			break;
 		case 6:
 			gbcc_memory_write(gbc, gbc->reg.hl, val, false);
+			gbcc_add_instruction_cycles(gbc, 1);
+			gbcc_emulate_cycle(gbc);
 			break;
 		case 7:
 			gbc->reg.a = val;
@@ -1059,6 +1058,7 @@ void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val)
 
 uint8_t READ_OPERAND_DIV(struct gbc *gbc, uint8_t offset)
 {
+	uint8_t ret;
 	switch ((gbc->opcode - offset) / 0x08u) {
 		case 0:
 			return gbc->reg.b;
@@ -1073,7 +1073,10 @@ uint8_t READ_OPERAND_DIV(struct gbc *gbc, uint8_t offset)
 		case 5:
 			return gbc->reg.l;
 		case 6:
-			return gbcc_memory_read(gbc, gbc->reg.hl, false);
+			ret = gbcc_memory_read(gbc, gbc->reg.hl, false);
+			gbcc_add_instruction_cycles(gbc, 1);
+			gbcc_emulate_cycle(gbc);
+			return ret;
 		case 7:
 			return gbc->reg.a;
 		default:
@@ -1104,6 +1107,8 @@ void WRITE_OPERAND_DIV(struct gbc *gbc, uint8_t offset, uint8_t val)
 			break;
 		case 6:
 			gbcc_memory_write(gbc, gbc->reg.hl, val, false);
+			gbcc_add_instruction_cycles(gbc, 1);
+			gbcc_emulate_cycle(gbc);
 			break;
 		case 7:
 			gbc->reg.a = val;
