@@ -32,10 +32,14 @@ void gbcc_cpu_clock(struct gbc *gbc)
 {
 	gbc->clock += 4;
 	if (gbc->dma.timer > 0) {
+		gbc->dma.running = true;
 		gbc->dma.timer--;
 		if (low_byte(gbc->dma.source) < OAM_SIZE) {
 			gbcc_memory_copy(gbc, gbc->dma.source, OAM_START + low_byte(gbc->dma.source), true);
 			gbc->dma.source++;
+		}
+		if (gbc->dma.timer == 0) {
+			gbc->dma.running = false;
 		}
 	}
 	if (gbc->dma.requested) {
@@ -146,14 +150,8 @@ void check_interrupts(struct gbc *gbc)
 void execute_instruction(struct gbc *gbc)
 {
 	gbc->opcode = gbcc_fetch_instruction(gbc);
-	/*printf("%04X\n", gbc->reg.pc);
-	printf("LY %d\n", gbcc_memory_read(gbc, LY, true));
-	printf("MODE %d\n", gbcc_memory_read(gbc, STAT, true) & 0x03u);
-	*/
-	//gbcc_print_op(gbc);
 	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
 	gbcc_ops[gbc->opcode](gbc);
-	//gbcc_print_registers(gbc);
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)

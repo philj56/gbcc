@@ -614,9 +614,6 @@ void ADD_HL(struct gbc *gbc)
 
 void ADD_SP(struct gbc *gbc)
 {
-	/*if (gbc->instruction_timer != 3) {
-		return;
-	}*/
 	uint16_t tmp = gbc->reg.sp;
 	int8_t op = (int8_t)gbcc_fetch_instruction(gbc);
 	gbc->reg.sp += op;

@@ -78,6 +78,7 @@ struct gbc {
 	enum CART_MODE mode;
 	struct palette palette;
 	uint8_t opcode;
+	bool instruction_running;
 	bool ime;
 	struct {
 		bool set;
@@ -89,6 +90,7 @@ struct gbc {
 		uint16_t new_source;
 		uint16_t timer;
 		bool requested;
+		bool running;
 	} dma;
 	struct {
 		uint16_t source;
