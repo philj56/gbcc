@@ -32,14 +32,33 @@ static void draw_background_line(struct gbc *gbc);
 static void draw_window_line(struct gbc *gbc);
 static void draw_sprite_line(struct gbc *gbc);
 static void composite_line(struct gbc *gbc);
-static uint8_t gbcc_get_video_mode(struct gbc *gbc);
-static void gbcc_set_video_mode(struct gbc *gbc, uint8_t mode);
+static uint8_t get_video_mode(struct gbc *gbc);
+static void set_video_mode(struct gbc *gbc, uint8_t mode);
 static uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum palette_flag pf);
+
+void gbcc_disable_lcd(struct gbc *gbc)
+{
+	gbc->lcd_disabled = true;
+}
+
+void gbcc_enable_lcd(struct gbc *gbc)
+{
+	if (!gbc->lcd_disabled) {
+		return;
+	}
+	gbc->lcd_disabled = false;
+	gbc->ppu_clock = 4;
+	set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
+	gbcc_memory_write(gbc, LY, 0, true);
+}
 
 void gbcc_ppu_clock(struct gbc *gbc)
 {
+	if (gbc->lcd_disabled) {
+		return;
+	}
 	gbc->ppu_clock += 4;
-	uint8_t mode = gbcc_get_video_mode(gbc);
+	uint8_t mode = get_video_mode(gbc);
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
 	uint16_t clock = gbc->ppu_clock % 456;
@@ -47,15 +66,15 @@ void gbcc_ppu_clock(struct gbc *gbc)
 	/* Line-drawing timings */
 	if (mode != GBC_LCD_MODE_VBLANK) {
 		if (clock == 0) {
-			gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
+			set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
 			if (check_bit(stat, 5)) {
 				gbcc_memory_set_bit(gbc, IF, 1, true);
 			}
 		} else if (clock == GBC_LCD_MODE_PERIOD) {
-			gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_VRAM_READ);
+			set_video_mode(gbc, GBC_LCD_MODE_OAM_VRAM_READ);
 		} else if (clock == (3 * GBC_LCD_MODE_PERIOD)) {
 			draw_line(gbc);
-			gbcc_set_video_mode(gbc, GBC_LCD_MODE_HBLANK);
+			set_video_mode(gbc, GBC_LCD_MODE_HBLANK);
 			gbcc_hdma_copy_block(gbc);
 			if (check_bit(stat, 3)) {
 				gbcc_memory_set_bit(gbc, IF, 1, true);
@@ -71,7 +90,7 @@ void gbcc_ppu_clock(struct gbc *gbc)
 			}
 		} else if (clock == 8) {
 			if (check_bit(stat, 6)) {
-				gbcc_memory_clear_bit(gbc, IF, 1, true);
+				//gbcc_memory_clear_bit(gbc, IF, 1, true);
 			}
 		}
 	} else {
@@ -84,7 +103,7 @@ void gbcc_ppu_clock(struct gbc *gbc)
 	if (ly == 144) {
 		if (clock == 4) {
 			gbcc_memory_set_bit(gbc, IF, 0, true);
-			gbcc_set_video_mode(gbc, GBC_LCD_MODE_VBLANK);
+			set_video_mode(gbc, GBC_LCD_MODE_VBLANK);
 			if (check_bit(stat, 4)) {
 				gbcc_memory_set_bit(gbc, IF, 1, true);
 			}
@@ -93,12 +112,12 @@ void gbcc_ppu_clock(struct gbc *gbc)
 			gbc->memory.gbc_screen = gbc->memory.sdl_screen;
 			gbc->memory.sdl_screen = tmp;
 		} else if (clock == 8) {
-			gbcc_memory_clear_bit(gbc, IF, 0, true);
+			//gbcc_memory_clear_bit(gbc, IF, 0, true);
 		}
 	} else if (ly == 154) {
 		gbc->frame++;
 		ly = 0;
-		gbcc_set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
+		set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
 	}
 	gbcc_memory_write(gbc, LY, ly, true);
 }
@@ -479,12 +498,12 @@ void composite_line(struct gbc *gbc)
 	}
 }
 
-uint8_t gbcc_get_video_mode(struct gbc *gbc)
+uint8_t get_video_mode(struct gbc *gbc)
 {
 	return gbcc_memory_read(gbc, STAT, true) & 0x03u;
 }
 
-void gbcc_set_video_mode(struct gbc *gbc, uint8_t mode)
+void set_video_mode(struct gbc *gbc, uint8_t mode)
 {
 	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
 	stat &= 0xFCu;

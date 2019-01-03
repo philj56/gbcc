@@ -5,6 +5,7 @@
 #include "gbcc_hdma.h"
 #include "gbcc_mbc.h"
 #include "gbcc_memory.h"
+#include "gbcc_ppu.h"
 #include <stdio.h>
 
 static const uint8_t ioreg_read_masks[0x80] = {
@@ -285,6 +286,7 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 	uint8_t ret = gbc->memory.ioreg[addr - IOREG_START];
 
 	if (addr >= WAVE_START && addr < WAVE_END) {
+		printf("Reading wave from %04X\n", gbc->apu.wave.addr);
 		if (gbc->apu.ch3.enabled) {
 			return gbc->memory.ioreg[gbc->apu.wave.addr - IOREG_START];
 		}
@@ -381,7 +383,7 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			break;
 		case SC:
 			if (check_bit(val, 7)) {
-				//fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
+				fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
 			}
 			break;
 		case DIV:
@@ -390,6 +392,11 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			break;
 		case LCDC:
 			/* TODO: handle properly */
+			if (check_bit(val, 7)) {
+				gbcc_enable_lcd(gbc);
+			} else {
+				gbcc_disable_lcd(gbc);
+			}
 			*dest = tmp | (uint8_t)(val & mask);
 			break;
 		case DMA:

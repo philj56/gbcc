@@ -13,8 +13,8 @@ struct timer {
 };
 
 struct duty {
-	struct timer freq_timer;
-	struct timer duty_timer;
+	struct timer timer;
+	uint8_t counter;
 	uint8_t cycle;
 	uint16_t freq;
 };
@@ -40,7 +40,7 @@ struct wave {
 	struct timer timer;
 	uint16_t addr;
 	uint8_t buffer;
-	uint8_t nibble;
+	uint8_t position;
 	uint8_t shift;
 	uint16_t freq;
 };
@@ -85,7 +85,7 @@ struct apu {
 	struct sweep sweep;
 	struct noise noise;
 	struct wave wave;
-	struct timer sequencer_timer;
+	uint8_t sequencer_counter;
 };
 
 void gbcc_apu_init(struct gbc *gbc);

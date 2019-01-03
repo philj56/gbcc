@@ -1,6 +1,7 @@
 #include "gbcc.h"
 #include "gbcc_debug.h"
 #include "gbcc_input.h"
+#include "gbcc_memory.h"
 #include "gbcc_save.h"
 #include "gbcc_window.h"
 
@@ -41,35 +42,43 @@ void gbcc_input_process_all(struct gbcc_window *win)
 		bool val;
 		if (e.type == SDL_KEYDOWN) {
 			val = true;
-			gbc->halt.set = false;
-			gbc->stop = false;
+		//	gbc->halt.set = false;
+		//	gbc->stop = false;
 		} else {
 			val = false;
 		}
 		switch(key) {
 			case 0:
 				gbc->keys.a = val;
+				gbcc_memory_set_bit(gbc, IF, 4, true);
 				break;
 			case 1:
 				gbc->keys.b = val;
+				gbcc_memory_set_bit(gbc, IF, 4, true);
 				break;
 			case 2:
 				gbc->keys.start = val;
+				gbcc_memory_set_bit(gbc, IF, 4, true);
 				break;
 			case 3:
 				gbc->keys.select = val;
+				gbcc_memory_set_bit(gbc, IF, 4, true);
 				break;
 			case 4:
 				gbc->keys.dpad.up = val;
+				gbcc_memory_set_bit(gbc, IF, 4, true);
 				break;
 			case 5:
 				gbc->keys.dpad.down = val;
+				gbcc_memory_set_bit(gbc, IF, 4, true);
 				break;
 			case 6:
 				gbc->keys.dpad.left = val;
+				gbcc_memory_set_bit(gbc, IF, 4, true);
 				break;
 			case 7:
 				gbc->keys.dpad.right = val;
+				gbcc_memory_set_bit(gbc, IF, 4, true);
 				break;
 			case 8:
 				gbc->keys.turbo ^= val;

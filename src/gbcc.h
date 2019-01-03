@@ -78,12 +78,11 @@ struct gbc {
 	enum CART_MODE mode;
 	struct palette palette;
 	uint8_t opcode;
-	bool instruction_running;
 	bool ime;
 	struct {
 		bool set;
 		bool no_interrupt;
-		uint8_t skip;
+		bool skip;
 	} halt;
 	struct {
 		uint16_t source;
@@ -103,11 +102,23 @@ struct gbc {
 		uint8_t delay;
 		bool request;
 	} rst;
+	struct {
+		uint16_t addr;
+		uint8_t request;
+	} interrupt;
+	struct {
+		uint16_t addr;
+		uint8_t op1;
+		uint8_t op2;
+		uint8_t step;
+		bool running;
+		bool prefix_cb;
+	} instruction;
 	bool stop;
-	uint8_t instruction_timer;
 	uint8_t div_timer;
 	uint64_t clock;
 	uint64_t ppu_clock;
+	bool lcd_disabled;
 	struct {
 		struct timespec current;
 		struct timespec old;

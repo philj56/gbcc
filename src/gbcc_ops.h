@@ -6,6 +6,9 @@
 extern void (*const gbcc_ops[0x100])(struct gbc *gbc);
 extern const uint8_t gbcc_op_times[0x100];
 
+/* Not really an opcode, but behaves like a cpu instruction */
+void INTERRUPT(struct gbc *gbc);
+
 /* Miscellaneous */
 void INVALID(struct gbc *gbc);
 void NOP(struct gbc *gbc);
@@ -20,19 +23,23 @@ void DI(struct gbc *gbc);
 
 /* Loads */
 void LD_REG_REG(struct gbc *gbc);
+void LD_REG_HL(struct gbc *gbc);
 void LD_d8(struct gbc *gbc);
 void LD_d16(struct gbc *gbc);
 void LD_A(struct gbc *gbc);
 void LD_a16(struct gbc *gbc);
-void LD_OFFSET(struct gbc *gbc);
+void LDH_a8(struct gbc *gbc);
+void LDH_C(struct gbc *gbc);
 void STORE_SP(struct gbc *gbc);
 void LD_HL_SP(struct gbc *gbc);
 void LD_SP_HL(struct gbc *gbc);
-void PUSH_POP(struct gbc *gbc);
+void POP(struct gbc *gbc);
+void PUSH(struct gbc *gbc);
 
 /* ALU */
 void ALU_OP(struct gbc *gbc);
-void INC_DEC_8_BIT(struct gbc *gbc);
+void INC_DEC_REG(struct gbc *gbc);
+void INC_DEC_HL(struct gbc *gbc);
 void INC_DEC_16_BIT(struct gbc *gbc);
 void ADD_HL(struct gbc *gbc);
 void ADD_SP(struct gbc *gbc);
@@ -56,6 +63,8 @@ void RST(struct gbc *gbc);
 /* CB-prefix */
 void PREFIX_CB(struct gbc *gbc);
 void CB_SHIFT_OP(struct gbc *gbc);
-void CB_BIT_OP(struct gbc *gbc);
+void CB_BIT(struct gbc *gbc);
+void CB_RES(struct gbc *gbc);
+void CB_SET(struct gbc *gbc);
 
 #endif /* GBCC_OPS_H */

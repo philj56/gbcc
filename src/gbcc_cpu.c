@@ -13,15 +13,13 @@
 
 static void update_timers(struct gbc *gbc);
 static void check_interrupts(struct gbc *gbc);
-static void execute_instruction(struct gbc *gbc);
 static void gbcc_cpu_clock(struct gbc *gbc);
 
 /* TODO: Check order of all of these */
 void gbcc_emulate_cycle(struct gbc *gbc)
 {
-	if (gbc->double_speed && gbc->clock % 8) {
+	if (gbc->double_speed) {
 		gbcc_cpu_clock(gbc);
-		return;
 	}
 	gbcc_cpu_clock(gbc);
 	gbcc_ppu_clock(gbc);
@@ -49,19 +47,28 @@ void gbcc_cpu_clock(struct gbc *gbc)
 	}
 	update_timers(gbc);
 	check_interrupts(gbc);
-	if (gbc->halt.set || gbc->stop) {
-		return;
-	}
-	if (gbc->instruction_timer == 0) {
-		execute_instruction(gbc);
+	if (!gbc->instruction.running) {
+		if (gbc->interrupt.addr && gbc->ime) {
+			INTERRUPT(gbc);
+			return;
+		}
+		if (gbc->halt.set || gbc->stop) {
+			return;
+		}
 		if (gbc->rst.request) {
 			if (--gbc->rst.delay == 0) {
 				gbc->rst.request = 0;
 				gbc->reg.pc = gbc->rst.addr;
 			}
 		}
+		gbc->opcode = gbcc_fetch_instruction(gbc);
+		gbc->instruction.running = true;
 	}
-	gbc->instruction_timer--;
+	if (gbc->instruction.prefix_cb) {
+		gbcc_ops[0xCB](gbc);
+	} else {
+		gbcc_ops[gbc->opcode](gbc);
+	}
 }
 
 void update_timers(struct gbc *gbc)
@@ -87,6 +94,9 @@ void update_timers(struct gbc *gbc)
 			case 3:
 				clock_div = 4u;
 				break;
+			default:
+				gbcc_log_error("Impossible clock div\n");
+				break;
 		}
 		if (!(gbc->clock % (0x400u / clock_div))) {
 			uint8_t tima = gbcc_memory_read(gbc, TIMA, true);
@@ -104,65 +114,36 @@ void update_timers(struct gbc *gbc)
 
 void check_interrupts(struct gbc *gbc)
 {
-	uint8_t int_enable = gbcc_memory_read(gbc, IE, true);
-	uint8_t int_flags = gbcc_memory_read(gbc, IF, true);
-	uint8_t interrupt = (uint8_t)(int_enable & int_flags) & 0x1Fu;
-	if (interrupt && gbc->ime) {
-		uint16_t addr;
-
+	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
+	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
+	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
+	if (interrupt) {
+		gbc->halt.set = false;
+		if (!gbc->ime) {
+			return;
+		}
 		if (check_bit(interrupt, 0)) {
-			addr = INT_VBLANK;
-			gbcc_memory_clear_bit(gbc, IF, 0, true);
+			gbc->interrupt.addr = INT_VBLANK;
 		} else if (check_bit(interrupt, 1)) {
-			addr = INT_LCDSTAT;
-			gbcc_memory_clear_bit(gbc, IF, 1, true);
+			gbc->interrupt.addr = INT_LCDSTAT;
 		} else if (check_bit(interrupt, 2)) {
-			addr = INT_TIMER;
-			gbcc_memory_clear_bit(gbc, IF, 2, true);
+			gbc->interrupt.addr = INT_TIMER;
 		} else if (check_bit(interrupt, 3)) {
-			addr = INT_SERIAL;
-			gbcc_memory_clear_bit(gbc, IF, 3, true);
+			gbc->interrupt.addr = INT_SERIAL;
 		} else if (check_bit(interrupt, 4)) {
-			addr = INT_JOYPAD;
-			gbcc_memory_clear_bit(gbc, IF, 4, true);
+			gbc->interrupt.addr = INT_JOYPAD;
 		} else {
 			gbcc_log_error("False interrupt\n");
-			addr = 0;
+			gbc->interrupt.addr = 0;
 		}
-
-		gbcc_add_instruction_cycles(gbc, 5);
-		if (gbc->halt.set) {
-			gbcc_add_instruction_cycles(gbc, 1);
-		}
-		/* 
-		 * FIXME: EI instr. should take a full cycle to execute, but
-		 * here it gets done instantly.
-		 */
-		gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), true);
-		gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), true);
-		gbc->reg.pc = addr;
-		gbc->ime = false;
-		gbc->halt.set = false;
-		gbc->stop = false;
 	}
-}
-
-void execute_instruction(struct gbc *gbc)
-{
-	gbc->opcode = gbcc_fetch_instruction(gbc);
-	gbcc_add_instruction_cycles(gbc, gbcc_op_times[gbc->opcode]);
-	gbcc_ops[gbc->opcode](gbc);
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)
 {
-	uint8_t tmp = gbcc_memory_read(gbc, gbc->reg.pc, false);
-	gbc->reg.pc += 1 - gbc->halt.skip;
-	return tmp;
+	if (gbc->halt.skip) {
+		gbc->halt.skip = false;
+		return gbcc_memory_read(gbc, gbc->reg.pc, false);
+	} 
+	return gbcc_memory_read(gbc, gbc->reg.pc++, false);
 }
-
-void gbcc_add_instruction_cycles(struct gbc *gbc, uint8_t cycles)
-{
-	gbc->instruction_timer += cycles;
-}
-

@@ -310,7 +310,6 @@ void gbcc_print_state(struct gbc *gbc)
 	printf("\tdelay:%d\n", gbc->rst.delay);
 	printf("\trequest:%d\n", gbc->rst.request);
 	printf("stop:%d\n", gbc->stop);
-	printf("instruction_timer:%d\n", gbc->instruction_timer);
 	printf("div_timer:%d\n", gbc->div_timer);
 	printf("clock:%lu\n", gbc->clock);
 	printf("ppu_clock:%lu\n", gbc->ppu_clock);
