@@ -11,42 +11,54 @@
 #include <sys/time.h>
 #include <time.h>
 
-static void update_timers(struct gbc *gbc);
+static void clock_div(struct gbc *gbc);
 static void check_interrupts(struct gbc *gbc);
 static void gbcc_cpu_clock(struct gbc *gbc);
 
 /* TODO: Check order of all of these */
 void gbcc_emulate_cycle(struct gbc *gbc)
 {
+	gbc->debug_clock++;
+	gbc->clock++;
+	gbc->clock &= 3u;
+	check_interrupts(gbc);
+	gbcc_apu_clock(gbc);
+	gbcc_ppu_clock(gbc);
+	gbcc_cpu_clock(gbc);
+	clock_div(gbc);
 	if (gbc->double_speed) {
 		gbcc_cpu_clock(gbc);
+		clock_div(gbc);
 	}
-	gbcc_cpu_clock(gbc);
-	gbcc_ppu_clock(gbc);
-	gbcc_apu_clock(gbc);
 }
 
 void gbcc_cpu_clock(struct gbc *gbc)
 {
-	gbc->clock += 4;
+	/* CPU clocks every 4 cycles */
+	gbc->cpu_clock++;
+	gbc->cpu_clock &= 3u;
+	if (gbc->cpu_clock != 0) {
+		return;
+	}
+	if (gbc->ime_timer.timer > 0) {
+		gbc->ime_timer.timer--;
+		if (gbc->ime_timer.timer == 1) {
+			gbc->ime = gbc->ime_timer.target_state;
+		}
+	}
 	if (gbc->dma.timer > 0) {
 		gbc->dma.running = true;
+		gbc->memory.oam[low_byte(gbc->dma.source)] = gbcc_memory_read(gbc, gbc->dma.source, false);
 		gbc->dma.timer--;
-		if (low_byte(gbc->dma.source) < OAM_SIZE) {
-			gbcc_memory_copy(gbc, gbc->dma.source, OAM_START + low_byte(gbc->dma.source), true);
-			gbc->dma.source++;
-		}
-		if (gbc->dma.timer == 0) {
-			gbc->dma.running = false;
-		}
+		gbc->dma.source++;
+	} else {
+		gbc->dma.running = false;
 	}
 	if (gbc->dma.requested) {
-		gbc->dma.timer = DMA_TIMER;
 		gbc->dma.requested = false;
+		gbc->dma.timer = DMA_TIMER;
 		gbc->dma.source = gbc->dma.new_source;
 	}
-	update_timers(gbc);
-	check_interrupts(gbc);
 	if (!gbc->instruction.running) {
 		if (gbc->interrupt.addr && gbc->ime) {
 			INTERRUPT(gbc);
@@ -61,7 +73,9 @@ void gbcc_cpu_clock(struct gbc *gbc)
 				gbc->reg.pc = gbc->rst.addr;
 			}
 		}
+		//printf("%04X\n", gbc->reg.pc);
 		gbc->opcode = gbcc_fetch_instruction(gbc);
+		//gbcc_print_op(gbc);
 		gbc->instruction.running = true;
 	}
 	if (gbc->instruction.prefix_cb) {
@@ -71,44 +85,83 @@ void gbcc_cpu_clock(struct gbc *gbc)
 	}
 }
 
-void update_timers(struct gbc *gbc)
+void clock_div(struct gbc *gbc)
 {
+	//printf("Div clock = %04X\n", gbc->div_timer);
 	gbc->div_timer++;
-	if (gbc->div_timer == 64u) {
-		gbcc_memory_increment(gbc, DIV, true);
-		gbc->div_timer = 0;
+	uint8_t tac = gbcc_memory_read(gbc, TAC, false);
+	uint16_t mask;
+	switch (tac & 0x03u) {
+		/* 
+		 * TIMA register detects the falling edge of a bit in
+		 * the internal DIV timer, which is selected by TAC.
+		 */
+		case 0:
+			mask = bit16(9);
+			break;
+		case 1:
+			mask = bit16(3);
+			break;
+		case 2:
+			mask = bit16(5);
+			break;
+		case 3:
+			mask = bit16(7);
+			break;
 	}
-	if (check_bit(gbcc_memory_read(gbc, TAC, true), 2)) {
-		uint8_t speed = gbcc_memory_read(gbc, TAC, true) & 0x03u;
-		uint64_t clock_div = 1u;
-		switch (speed) {
-			case 0:
-				clock_div = 1u;
-				break;
-			case 1:
-				clock_div = 64u;
-				break;
-			case 2:
-				clock_div = 16u;
-				break;
-			case 3:
-				clock_div = 4u;
-				break;
-			default:
-				gbcc_log_error("Impossible clock div\n");
-				break;
+	/* If TAC is disabled, this will always see 0 */
+	mask *= check_bit(tac, 2);
+	if (!(gbc->div_timer & mask) && gbc->tac_bit) {
+		/* 
+		 * The selected bit was previously high, and is now low, so
+		 * the tima increment logic triggers.
+		 */
+		uint8_t tima = gbcc_memory_read(gbc, TIMA, false);
+		tima++;
+		if (tima == 0) {
+			/* 
+			 * TIMA overflow
+			 * Rather than being reloaded immediately, TIMA takes
+			 * 4 cycles to be reloaded, and another 4 to write, 
+			 * so we just queue it here. This also affects the
+			 * interrupt.
+			 */
+			gbc->tima_reload = 8;
 		}
-		if (!(gbc->clock % (0x400u / clock_div))) {
-			uint8_t tima = gbcc_memory_read(gbc, TIMA, true);
-			uint8_t tmp = tima;
-			tima += 1;
-			gbcc_memory_increment(gbc, TIMA, true);
-			if (tmp > tima) {
-				gbcc_memory_copy(gbc, TMA, TIMA, true);
-				gbcc_memory_set_bit(gbc, IF, 2, true);
-				gbc->halt.set = false;
+		gbcc_memory_write(gbc, TIMA, tima, false);
+	}
+	gbc->tac_bit = gbc->div_timer & mask;
+	if (gbc->tima_reload > 0) {
+		gbc->tima_reload--;
+		if (gbc->tima_reload == 4) {
+			/*
+			 * Some more weird behaviour here: if TIMA has been
+			 * written to while this copy & interrupt are waiting,
+			 * they get cancelled, and everything proceeds as
+			 * normal.
+			 */
+			if (gbcc_memory_read(gbc, TIMA, false) != 0) {
+				gbc->tima_reload = 0;
+			} else {
+				gbcc_memory_copy(gbc, TMA, TIMA, false);
+				gbcc_memory_set_bit(gbc, IF, 2, false);
 			}
 		}
+		if (gbc->tima_reload == 0) {
+			gbcc_memory_copy(gbc, TMA, TIMA, false);
+		}
+	}
+	if (!gbc->apu.disabled) {
+		/* APU also updates based on falling edge of DIV timer bit */
+		if (gbc->double_speed) {
+			mask = bit16(13);
+		} else {
+			mask = bit16(12);
+		}
+		if (!(gbc->div_timer & mask) && gbc->apu.div_bit) {
+			gbcc_apu_sequencer_clock(gbc);
+		}
+		gbc->apu.div_bit = gbc->div_timer & mask;
 	}
 }
 
@@ -119,9 +172,14 @@ void check_interrupts(struct gbc *gbc)
 	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
 	if (interrupt) {
 		gbc->halt.set = false;
-		if (!gbc->ime) {
+		gbc->stop = false;
+		if (!gbc->ime || gbc->interrupt.addr) {
 			return;
 		}
+		/* 
+		 * Interrupt priority is in memory address order; lower
+		 * adresses have higher priority.
+		 */
 		if (check_bit(interrupt, 0)) {
 			gbc->interrupt.addr = INT_VBLANK;
 		} else if (check_bit(interrupt, 1)) {
@@ -132,9 +190,6 @@ void check_interrupts(struct gbc *gbc)
 			gbc->interrupt.addr = INT_SERIAL;
 		} else if (check_bit(interrupt, 4)) {
 			gbc->interrupt.addr = INT_JOYPAD;
-		} else {
-			gbcc_log_error("False interrupt\n");
-			gbc->interrupt.addr = 0;
 		}
 	}
 }
@@ -142,6 +197,7 @@ void check_interrupts(struct gbc *gbc)
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)
 {
 	if (gbc->halt.skip) {
+		/* HALT bug; CPU fails to increment pc */
 		gbc->halt.skip = false;
 		return gbcc_memory_read(gbc, gbc->reg.pc, false);
 	} 

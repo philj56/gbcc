@@ -286,7 +286,7 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 	uint8_t ret = gbc->memory.ioreg[addr - IOREG_START];
 
 	if (addr >= WAVE_START && addr < WAVE_END) {
-		printf("Reading wave from %04X\n", gbc->apu.wave.addr);
+		//printf("Reading wave from %04X\n", gbc->apu.wave.addr);
 		if (gbc->apu.ch3.enabled) {
 			return gbc->memory.ioreg[gbc->apu.wave.addr - IOREG_START];
 		}
@@ -308,6 +308,8 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.right << 0u);
 			}
 			break;
+		case DIV:
+			return high_byte(gbc->div_timer);
 		case NR52:
 			ret &= 0xF0u;
 			ret |= (uint8_t)(gbc->apu.ch1.enabled << 0u);
@@ -387,11 +389,10 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			}
 			break;
 		case DIV:
-			*dest = 0;
+			//printf("DIV reset from %04X\n", gbc->div_timer);
 			gbc->div_timer = 0;
 			break;
 		case LCDC:
-			/* TODO: handle properly */
 			if (check_bit(val, 7)) {
 				gbcc_enable_lcd(gbc);
 			} else {
@@ -401,6 +402,10 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			break;
 		case DMA:
 			gbc->dma.new_source = (uint16_t)val << 8u;
+			if (gbc->dma.new_source > WRAMX_END) {
+				/* Can't DMA from ECHO or IOREG areas */
+				gbc->dma.new_source -= 0x2000u;
+			}
 			gbc->dma.requested = true;
 			*dest = tmp | (uint8_t)(val & mask);
 			break;

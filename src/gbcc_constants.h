@@ -82,7 +82,6 @@
 #define TIMA 0xFF05u	/* Timer Counter (R/W) */
 #define TMA 0xFF06u	/* Timer Modulo (R/W) */
 #define TAC 0xFF07u	/* Timer Control (R/W) */
-#define DIV_INC_CLOCKS 0x100u
 
 /* LCD */
 #define LCDC 0xFF40u	/* LCD Control (R/W) */
@@ -169,7 +168,6 @@
 
 
 enum MBC { NONE, MBC1, MBC2, MBC3, MBC5, MMM01 };
-enum BANK_MODE { ROM, RAM };
 enum CART_MODE { GBC, DMG };
 
 #endif /* GBC_CONSTANTS_H */

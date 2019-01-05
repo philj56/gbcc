@@ -40,10 +40,8 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->cart.mbc.type = NONE;
 	gbc->cart.mbc.romx_bank = 0x01u;
 	gbc->cart.mbc.sram_bank = 0x00u;
-	gbc->cart.mbc.bank_mode = ROM;
 	gbc->ime = true;
-	gbc->clock = GBC_LCD_MODE_PERIOD;
-	gbc->ppu_clock = gbc->clock;
+	gbc->ppu_clock = GBC_LCD_MODE_PERIOD;
 	gbc->palette = gbcc_get_palette("default");
 	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
 	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
@@ -363,9 +361,10 @@ void init_ram(struct gbc *gbc)
 			exit(EXIT_FAILURE);
 	}
 
-	/*if (gbc->cart.mbc.type == NONE) {
-		gbc->cart.ram_size = 0x0200u;
-	}*/
+	/* Assume SRAM is connected when there's no MBC, as we can't detect it */
+	if (gbc->cart.mbc.type == NONE) {
+		gbc->cart.ram_size = 0x2000u;
+	}
 
 	if (gbc->cart.ram_size > 0) {
 		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;

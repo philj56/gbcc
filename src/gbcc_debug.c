@@ -298,7 +298,6 @@ void gbcc_print_state(struct gbc *gbc)
 	printf("DMA:\n");
 	printf("\tsource:%04X\n", gbc->dma.source);
 	printf("\tnew_source:%04X\n", gbc->dma.new_source);
-	printf("\ttimer:%d\n", gbc->dma.timer);
 	printf("\trequested:%d\n", gbc->dma.requested);
 	printf("HDMA:\n");
 	printf("\tsource:%04X\n", gbc->hdma.source);
@@ -311,8 +310,8 @@ void gbcc_print_state(struct gbc *gbc)
 	printf("\trequest:%d\n", gbc->rst.request);
 	printf("stop:%d\n", gbc->stop);
 	printf("div_timer:%d\n", gbc->div_timer);
-	printf("clock:%lu\n", gbc->clock);
-	printf("ppu_clock:%lu\n", gbc->ppu_clock);
+	printf("clock:%u\n", gbc->clock);
+	printf("ppu_clock:%u\n", gbc->ppu_clock);
 	printf("quit:%d\n", gbc->quit);
 	printf("pause:%d\n", gbc->pause);
 	printf("interlace:%d\n", gbc->interlace);

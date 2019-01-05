@@ -4,7 +4,7 @@
 #include "gbcc.h"
 #include <SDL2/SDL.h>
 
-#define GBCC_AUDIO_BUFSIZE (512*2) /* samples * channels */
+#define GBCC_AUDIO_BUFSIZE (2048*2) /* samples * channels */
 #define GBCC_AUDIO_FMT Uint16
 
 struct gbcc_audio {
@@ -13,6 +13,7 @@ struct gbcc_audio {
 	SDL_AudioSpec audiospec;
 	SDL_AudioDeviceID device;
 	uint64_t sample_clock;
+	uint64_t clock;
 	size_t index;
 	bool quit;
 	struct timespec cur_time;

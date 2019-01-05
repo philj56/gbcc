@@ -10,7 +10,6 @@
 #define SYNC_FREQ 48000
 #define CLOCKS_PER_SYNC (GBC_CLOCK_FREQ / SYNC_FREQ)
 #define SLEEP_TIME (SECOND / SYNC_FREQ)
-#define SEQUENCER_CLOCKS 8192
 #define SLEEP_DETECT (SECOND / 10)
 
 static const uint8_t duty_table[4] = {
@@ -26,7 +25,6 @@ static bool timer_clock(struct timer *timer);
 static void timer_reset(struct timer *timer);
 static bool duty_clock(struct duty *duty);
 static void envelope_clock(struct envelope *envelope);
-static void sequencer_clock(struct gbc *gbc);
 static void time_sync(struct gbc *gbc);
 static void ch1_trigger(struct gbc *gbc);
 static void ch2_trigger(struct gbc *gbc);
@@ -43,16 +41,15 @@ void gbcc_apu_init(struct gbc *gbc)
 
 void gbcc_apu_clock(struct gbc *gbc)
 {
-	gbc->apu.sync_clock.cur += 4;
-	if (gbc->apu.sync_clock.cur - gbc->apu.sync_clock.prev >= CLOCKS_PER_SYNC) {
-		time_sync(gbc);
-		gbc->apu.sync_clock.prev = gbc->apu.sync_clock.cur;
+	gbc->apu.sync_clock++;
+	if (gbc->apu.sync_clock == CLOCKS_PER_SYNC) {
+		gbc->apu.sync_clock = 0;
 		gbc->apu.sample++;
+		time_sync(gbc);
 	}
 	if (gbc->apu.disabled) {
 		return;
 	}
-	gbc->apu.clock += 4;
 	if (gbc->apu.start_time.tv_sec == 0) {
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 	}
@@ -68,18 +65,18 @@ void gbcc_apu_clock(struct gbc *gbc)
 		gbc->apu.noise.lfsr >>= 1u;
 		gbc->apu.noise.lfsr |= tmp * (1u << 14u);
 		if (gbc->apu.noise.width_mode) {
-			gbc->apu.noise.lfsr |= (uint8_t)(tmp * bit(6));
+			gbc->apu.noise.lfsr |= tmp * (1u << 6u);
 		}
-		gbc->apu.ch4.state = !(gbc->apu.noise.lfsr & bit(0));
+		gbc->apu.ch4.state = !check_bit(gbc->apu.noise.lfsr, 0);
 	}
 
-	printf("Wave timer: %d\n", gbc->apu.wave.timer.counter);
+	//printf("Wave timer: %d\n", gbc->apu.wave.timer.counter);
 	/* Wave */
 	if (timer_clock(&gbc->apu.wave.timer)) {
 		gbc->apu.wave.position++;
-		gbc->apu.wave.position %= 32;
+		gbc->apu.wave.position &= 31u;
 		gbc->apu.wave.addr = WAVE_START + (gbc->apu.wave.position / 2);
-		printf("Wave clocked to %04X\n", gbc->apu.wave.addr);
+		//printf("Wave clocked to %04X\n", gbc->apu.wave.addr);
 		gbc->apu.wave.buffer = gbcc_memory_read(gbc, gbc->apu.wave.addr, true);
 		/* Alternates betwee high & low nibble, high first */
 		if (gbc->apu.wave.position % 2) {
@@ -87,10 +84,6 @@ void gbcc_apu_clock(struct gbc *gbc)
 		} else {
 			gbc->apu.wave.buffer >>= 4u;
 		}
-	}
-
-	if (!(gbc->apu.clock % SEQUENCER_CLOCKS)) {
-		sequencer_clock(gbc);
 	}
 }
 
@@ -119,7 +112,7 @@ void timer_reset(struct timer *timer)
 
 bool duty_clock(struct duty *duty)
 {
-	duty->timer.period = 2048u - duty->freq;
+	duty->timer.period = (2048u - duty->freq) * 4;
 	if (timer_clock(&duty->timer)) {
 		duty->counter++;
 		duty->counter %= 8u;
@@ -152,9 +145,13 @@ uint16_t frequency_calc(struct sweep *sweep)
 	return sweep->freq + sweep->dir * (sweep->freq >> sweep->shift);
 }
 
-void sequencer_clock(struct gbc *gbc)
+void gbcc_apu_sequencer_clock(struct gbc *gbc)
 {
-
+	/*static struct timespec last = {0};
+	static struct timespec cur = {0};
+	clock_gettime(CLOCK_REALTIME, &cur);
+	printf("dt: %lf\n", 1e9/gbcc_time_diff(&cur, &last));
+	last = cur;*/
 	/* Length counters every other clock */
 	if (!(gbc->apu.sequencer_counter & 0x01u)) {
 		if (gbc->apu.ch1.length_enable) {
@@ -199,7 +196,7 @@ void sequencer_clock(struct gbc *gbc)
 	}
 
 	gbc->apu.sequencer_counter++;
-	gbc->apu.sequencer_counter %= 8u;
+	gbc->apu.sequencer_counter &= 0x7u;
 }
 
 void time_sync(struct gbc *gbc)
@@ -215,7 +212,10 @@ void time_sync(struct gbc *gbc)
 	if (gbc->keys.turbo) {
 		mult = gbc->turbo_speed;
 	}
-	while ((mult > 0) && (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult))) {
+	if (mult == 0) {
+		return;
+	}
+	while (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult)) {
 		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
 		nanosleep(&time, NULL);
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
@@ -329,7 +329,7 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		case NR33:
 			gbc->apu.wave.freq &= ~0x00FFu;
 			gbc->apu.wave.freq |= val;
-			gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
+			gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) * 2;
 			break;
 		case NR34:
 			tmp = gbc->apu.ch3.length_enable;
@@ -343,7 +343,7 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			}
 			gbc->apu.wave.freq &= ~0xFF00u;
 			gbc->apu.wave.freq |= (val & 0x07u) << 8u;
-			gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) / 2;
+			gbc->apu.wave.timer.period = (2048u - gbc->apu.wave.freq) * 2;
 			if (check_bit(val, 7)) {
 				ch3_trigger(gbc);
 			}
@@ -495,10 +495,10 @@ void ch3_trigger(struct gbc *gbc)
 	timer_reset(&gbc->apu.wave.timer);
 	gbc->apu.wave.addr = WAVE_START;
 	gbc->apu.wave.position = 0;
-	printf("WAVE TRIGGER\n");
+	/*printf("WAVE TRIGGER\n");
 	printf("freq = %d\n", gbc->apu.wave.freq);
 	printf("period = %d\n", gbc->apu.wave.timer.period);
-	if (!gbc->apu.ch3.dac) {
+	*/if (!gbc->apu.ch3.dac) {
 		gbc->apu.ch3.enabled = false;
 	}
 }

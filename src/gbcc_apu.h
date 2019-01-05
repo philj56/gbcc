@@ -66,16 +66,13 @@ struct channel {
 };
 
 struct apu {
-	uint64_t clock;
-	struct {
-		uint64_t prev;
-		uint64_t cur;
-	} sync_clock;
+	uint64_t sync_clock;
 	uint64_t sample;
 	size_t index;
 	uint8_t left_vol;
 	uint8_t right_vol;
 	bool disabled;
+	bool div_bit;
 	struct timespec cur_time;
 	struct timespec start_time;
 	struct channel ch1; 	/* Tone & Sweep */
@@ -90,6 +87,7 @@ struct apu {
 
 void gbcc_apu_init(struct gbc *gbc);
 void gbcc_apu_clock(struct gbc *gbc);
+void gbcc_apu_sequencer_clock(struct gbc *gbc);
 void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
 #endif /* GBCC_AUDIO_H */

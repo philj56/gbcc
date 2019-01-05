@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <time.h>
 
+static void update_mbc1_banks(struct gbc *gbc);
+
 uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
 {
 	if (addr < ROMX_START) {
@@ -23,10 +25,6 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
 
 void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	if (gbc->cart.ram_size == 0) {
-		gbcc_log_debug("Trying to write to SRAM when there isn't any!\n", addr);
-		return;
-	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		gbc->memory.sram[addr - SRAM_START] = val;
 	} else {
@@ -51,6 +49,7 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr)
 			return gbc->memory.sram[addr - SRAM_START];
 		}
 		gbcc_log_debug("SRAM not enabled!\n");
+		return 0xFFu;
 	}
 	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
 	return 0xFFu;
@@ -67,54 +66,65 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbcc_log_debug("SRAM not enabled!\n");
 		}
 	} else if (addr < 0x2000u) {
-		gbc->cart.mbc.sram_enable = ((val & 0x0Au) == 0x0Au);
+		gbc->cart.mbc.ramg = val;
 	} else if (addr < 0x4000u) {
-		gbc->cart.mbc.romx_bank &= ~0x1Fu;
-		gbc->cart.mbc.romx_bank |= val & 0x1Fu;
-		gbc->cart.mbc.romx_bank += !(val & 0x1Fu);
-		if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
-			gbcc_log_debug("Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
-			gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
-		}
-		gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
+		gbc->cart.mbc.romb0 = val;
 	} else if (addr < 0x6000u) {
-		if (gbc->cart.mbc.bank_mode == ROM) {
-			gbc->cart.mbc.romx_bank &= ~0x60u;
-			gbc->cart.mbc.romx_bank |= val & 0x60u;
-			if (gbc->cart.mbc.romx_bank > gbc->cart.rom_banks) {
-				gbcc_log_debug("Invalid rom bank %u.\n", gbc->cart.mbc.romx_bank);
-				gbc->cart.mbc.romx_bank &= (gbc->cart.rom_banks - 1);
-			}
-			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
-			if ((size_t)(gbc->memory.romx - gbc->memory.rom0) > gbc->cart.rom_size) {
-				gbc->cart.mbc.romx_bank &= ~0x60u;
-				gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
-			}
-		} else {
-			gbc->cart.mbc.sram_bank = val & 0x03u;
-			if (gbc->cart.mbc.sram_bank > gbc->cart.ram_banks) {
-				gbcc_log_debug("Invalid ram bank %u.\n", gbc->cart.mbc.sram_bank);
-				gbc->cart.mbc.sram_bank &= (gbc->cart.ram_banks - 1);
-			}
-			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
-		}
+		gbc->cart.mbc.romb1 = val;
 	} else if (addr < 0x8000u) {
-		if (val & 0x01u) {
-			gbc->cart.mbc.bank_mode = RAM;
-			gbc->cart.mbc.sram_bank = (gbc->cart.mbc.romx_bank & 0x60u) >> 4u; /* TODO: Are these upper 2 bits remembered? */
-			gbc->cart.mbc.romx_bank &= ~0x60u; /* TODO: Are these upper 2 bits remembered? */
-			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
-			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
-		} else {
-			gbc->cart.mbc.bank_mode = ROM;
-			gbc->cart.mbc.romx_bank = (uint8_t)(gbc->cart.mbc.sram_bank << 4u); /* TODO: Are these upper 2 bits remembered? */
-			gbc->cart.mbc.sram_bank = 0x00u; /* TODO: Are these upper 2 bits remembered? */
-			gbc->memory.romx = gbc->cart.rom + gbc->cart.mbc.romx_bank * ROMX_SIZE;
-			gbc->memory.sram = gbc->cart.ram + gbc->cart.mbc.sram_bank * SRAM_SIZE;
-		}
+		gbc->cart.mbc.ramb = val;
 	} else {
 		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
+		return;
 	}
+	update_mbc1_banks(gbc);
+}
+
+void update_mbc1_banks(struct gbc *gbc)
+{
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
+	
+	/* RAMG switches on SRAM when it has 0x0A in the lower bits. */
+	mbc->sram_enable = ((mbc->ramg & 0x0Au) == 0x0Au);
+
+	/* 
+	 * ROMB0 selects lower 5 bits of ROMX bank number.
+	 * 0 maps to 1, so banks 0x00, 0x20, 0x40 & 0x60 can
+	 * never be mapped to ROMX.
+	 */
+	mbc->romx_bank = mbc->romb0 & 0x1Fu;
+	mbc->romx_bank += !mbc->romx_bank;
+
+	/* 
+	 * ROMB1 selects either upper 2 bits of ROMX bank number
+	 * or RAM bank number, depending on bit 0 of RAMB.
+	 */
+	if (!check_bit(mbc->ramb, 0)) {
+		/* Mode 0 (ROM banking mode) */
+		/* TODO: 0x60 seems wrong */
+		mbc->romx_bank |= (mbc->romb1 & 0x60u);
+		mbc->sram_bank = 0;
+	} else {
+		/* Mode 1 (RAM banking mode) */
+		mbc->sram_bank = mbc->romb1 & 0x03u;
+	}
+
+	/* 
+	 * Perform some sanity checks on selected values,
+	 * discarding bits that don't make sense.
+	 */
+	if (mbc->romx_bank > gbc->cart.rom_banks) {
+		gbcc_log_debug("Invalid rom bank %u.\n", mbc->romx_bank);
+		mbc->romx_bank &= (gbc->cart.rom_banks - 1);
+	}
+	if (mbc->sram_bank > gbc->cart.ram_banks) {
+		gbcc_log_debug("Invalid ram bank %u.\n", mbc->sram_bank);
+		mbc->sram_bank &= (gbc->cart.ram_banks - 1);
+	}
+
+	/* And finally update the actual banks */
+	gbc->memory.romx = gbc->cart.rom + mbc->romx_bank * ROMX_SIZE;
+	gbc->memory.sram = gbc->cart.ram + mbc->sram_bank * SRAM_SIZE;
 }
 
 uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr)

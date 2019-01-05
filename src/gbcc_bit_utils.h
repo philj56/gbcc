@@ -14,5 +14,6 @@ uint8_t toggle_bit(uint8_t byte, uint8_t bit);
 uint8_t check_bit(uint8_t byte, uint8_t bit);
 
 uint8_t bit(uint8_t b);
+uint16_t bit16(uint8_t b);
 
 #endif /* GBCC_BIT_UTILS_H */

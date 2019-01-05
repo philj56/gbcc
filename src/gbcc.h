@@ -80,6 +80,10 @@ struct gbc {
 	uint8_t opcode;
 	bool ime;
 	struct {
+		uint8_t timer;
+		bool target_state;
+	} ime_timer;
+	struct {
 		bool set;
 		bool no_interrupt;
 		bool skip;
@@ -115,9 +119,13 @@ struct gbc {
 		bool prefix_cb;
 	} instruction;
 	bool stop;
-	uint8_t div_timer;
-	uint64_t clock;
-	uint64_t ppu_clock;
+	uint16_t div_timer;
+	bool tac_bit;
+	uint8_t tima_reload;
+	uint8_t clock;
+	uint64_t debug_clock;
+	uint16_t ppu_clock;
+	uint8_t cpu_clock;
 	bool lcd_disabled;
 	struct {
 		struct timespec current;
@@ -193,10 +201,13 @@ struct gbc {
 		bool rumble;
 		struct gbcc_mbc {
 			enum MBC type;
-			enum BANK_MODE bank_mode;
 			bool sram_enable;
 			uint16_t romx_bank;
 			uint8_t sram_bank;
+			uint8_t ramg;
+			uint8_t romb0;
+			uint8_t romb1;
+			uint8_t ramb;
 			struct gbcc_rtc {
 				uint8_t seconds;
 				uint8_t minutes;

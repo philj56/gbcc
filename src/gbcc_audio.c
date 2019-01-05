@@ -8,7 +8,7 @@
 #include <time.h>
 
 #define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F / 0x10u)
-#define SAMPLE_RATE 48000
+#define SAMPLE_RATE 44150
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
 
 static void ch1_update(struct gbcc_audio *audio);
@@ -19,8 +19,6 @@ static void ch4_update(struct gbcc_audio *audio);
 void gbcc_audio_initialise(struct gbcc_audio *audio, struct gbc *gbc)
 {
 	audio->gbc = gbc;
-	audio->index = 0;
-	audio->quit = false;
 
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
@@ -34,7 +32,6 @@ void gbcc_audio_initialise(struct gbcc_audio *audio, struct gbc *gbc)
 	want.callback = NULL;
 	want.userdata = NULL;
 
-	audio->sample_clock = 0;
 	audio->device = SDL_OpenAudioDevice(NULL, 0, &want, &audio->audiospec, 0);
 	if (audio->device == 0) {
 		gbcc_log_error("Failed to open audio: %s\n", SDL_GetError());
@@ -59,8 +56,9 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 			return;
 		}
 	}
-	if (audio->gbc->apu.clock - audio->sample_clock > CLOCKS_PER_SAMPLE * mult) {
-		audio->sample_clock = audio->gbc->apu.clock;
+	audio->clock++;
+	if (audio->clock - audio->sample_clock > CLOCKS_PER_SAMPLE * mult) {
+		audio->sample_clock = audio->clock;
 		audio->mix_buffer[audio->index] = 0;
 		audio->mix_buffer[audio->index + 1] = 0;
 		ch1_update(audio);

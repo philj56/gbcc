@@ -117,9 +117,25 @@ void (*const gbcc_ops[0x100])(struct gbc *gbc) = {
 void INTERRUPT(struct gbc *gbc)
 {
 	if (gbc->halt.no_interrupt) {
-		printf("NO INTERRUPT");
+		if (gbc->instruction.step < 20) {
+			YIELD;
+		}
 		gbc->halt.no_interrupt = false;
 		gbc->halt.set = false;
+		done(gbc);
+		return;
+	}
+	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
+	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
+	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
+	if (!interrupt && gbc->instruction.step < 4) {
+		/* 
+		 * Interrupt was cancelled by writing over a flag when pushing
+		 * the high byte of pc.
+		 */
+		gbc->reg.pc = 0x0000u;
+		gbc->ime = false;
+		gbc->interrupt.addr = 0;
 		done(gbc);
 		return;
 	}
@@ -129,10 +145,10 @@ void INTERRUPT(struct gbc *gbc)
 		case 1:
 			YIELD;
 		case 2:
-			gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), true);
+			gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), false);
 			YIELD;
 		case 3:
-			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), true);
+			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
 			YIELD;
 		case 4:
 			if (gbc->halt.set) {
@@ -158,8 +174,6 @@ void INTERRUPT(struct gbc *gbc)
 	}
 	gbc->reg.pc = gbc->interrupt.addr;
 	gbc->ime = false;
-	gbc->halt.set = false;
-	gbc->stop = false;
 	gbc->interrupt.addr = 0;
 	done(gbc);
 }
@@ -181,11 +195,11 @@ void NOP(struct gbc *gbc)
 
 void STOP(struct gbc *gbc)
 {
-	uint8_t key1 = gbcc_memory_read(gbc, KEY1, false);
+	uint8_t key1 = gbcc_memory_read(gbc, KEY1, true);
 	if (gbc->mode == GBC && check_bit(key1, 0)) {
 		key1 = clear_bit(key1, 0);
 		gbc->double_speed = !gbc->double_speed;
-		toggle_bit(key1, 7);
+		key1 = gbc->double_speed * bit(7);//toggle_bit(key1, 7);
 		gbcc_memory_write(gbc, KEY1, key1, true);
 	} else {
 		gbc->stop = true;
@@ -202,12 +216,17 @@ void HALT(struct gbc *gbc)
 	if (gbc->ime) {
 		/* HALT proceeds normally */
 		gbc->halt.set = true;
+		gbc->halt.no_interrupt = false;
+		gbc->halt.skip = false;
 	} else if (!interrupt) {
 		/* HALT proceeds, but on resumption the interrupt isn't executed */
-		gbc->halt.no_interrupt = true;
 		gbc->halt.set = true;
+		gbc->halt.no_interrupt = true;
+		gbc->halt.skip = false;
 	} else {
 		/* HALT bug; next instruction doesn't increase PC */
+		gbc->halt.set = false;
+		gbc->halt.no_interrupt = false;
 		gbc->halt.skip = true;
 	}
 	done(gbc);
@@ -261,15 +280,29 @@ void CCF(struct gbc *gbc)
 	done(gbc);
 }
 
+/* 
+ * EI and DI take 1 M-cycle to take effect, so we don't immediately set the
+ * IME here. However, EI immediately followed by DI will not result in an
+ * interrupt, so we need to know when executing DI if the last instruction was
+ * EI, hence setting the timer to 2, and making the IME change on step 1
+ * normally.
+ */
 void EI(struct gbc *gbc)
 {
-	gbc->ime = true;
+	gbc->ime_timer.target_state = true;
+	gbc->ime_timer.timer = 2;
 	done(gbc);
 }
 
 void DI(struct gbc *gbc)
 {
-	gbc->ime = false;
+	if (gbc->ime_timer.timer > 0 && gbc->ime_timer.target_state == true) {
+		gbc->ime = false;
+		done(gbc);
+		return;
+	}
+	gbc->ime_timer.target_state = false;
+	gbc->ime_timer.timer = 2;
 	done(gbc);
 }
 

@@ -43,3 +43,8 @@ uint8_t bit(uint8_t b)
 {
 	return (uint8_t)(1u << b);
 }
+
+uint16_t bit16(uint8_t b)
+{
+	return (uint16_t)(1u << b);
+}
