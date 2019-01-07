@@ -304,10 +304,6 @@ void gbcc_print_state(struct gbc *gbc)
 	printf("\tdest:%04X\n", gbc->hdma.dest);
 	printf("\tlength:%d\n", gbc->hdma.length);
 	printf("\thblank:%d\n", gbc->hdma.hblank);
-	printf("rst:\n");
-	printf("\taddr:%04X\n", gbc->rst.addr);
-	printf("\tdelay:%d\n", gbc->rst.delay);
-	printf("\trequest:%d\n", gbc->rst.request);
 	printf("stop:%d\n", gbc->stop);
 	printf("div_timer:%d\n", gbc->div_timer);
 	printf("clock:%u\n", gbc->clock);

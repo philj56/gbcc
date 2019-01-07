@@ -336,25 +336,13 @@ void init_ram(struct gbc *gbc)
 			}
 			break;
 		case 0x01u:
-			if (gbc->cart.mbc.type == MBC5) {
-				gbc->cart.ram_size = 0x2000u;
-			} else {
-				gbc->cart.ram_size = 0x0800u;
-			}
-			break;
 		case 0x02u:
-			if (gbc->cart.mbc.type == MBC5) {
-				gbc->cart.ram_size = 0x8000u;
-			} else {
-				gbc->cart.ram_size = 0x2000u;
-			}
-			break;
 		case 0x03u:
-			if (gbc->cart.mbc.type == MBC5) {
-				gbc->cart.ram_size = 0x20000u;
-			} else {
-				gbc->cart.ram_size = 0x8000u;
-			}
+		case 0x04u:
+			gbc->cart.ram_size = 0x200u << (2u * ram_size_flag);
+			break;
+		case 0x05u:
+			gbc->cart.ram_size = 0x2000u << 3u;
 			break;
 		default:
 			gbcc_log_error("Unknown ram size flag: %u\n", ram_size_flag);
@@ -362,9 +350,10 @@ void init_ram(struct gbc *gbc)
 	}
 
 	/* Assume SRAM is connected when there's no MBC, as we can't detect it */
-	if (gbc->cart.mbc.type == NONE) {
+	/* TODO: Not correct */
+	/*if (gbc->cart.mbc.type == NONE) {
 		gbc->cart.ram_size = 0x2000u;
-	}
+	}*/
 
 	if (gbc->cart.ram_size > 0) {
 		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;

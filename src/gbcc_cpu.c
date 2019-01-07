@@ -46,18 +46,20 @@ void gbcc_cpu_clock(struct gbc *gbc)
 			gbc->ime = gbc->ime_timer.target_state;
 		}
 	}
-	if (gbc->dma.timer > 0) {
-		gbc->dma.running = true;
-		gbc->memory.oam[low_byte(gbc->dma.source)] = gbcc_memory_read(gbc, gbc->dma.source, false);
-		gbc->dma.timer--;
-		gbc->dma.source++;
-	} else {
-		gbc->dma.running = false;
-	}
-	if (gbc->dma.requested) {
-		gbc->dma.requested = false;
-		gbc->dma.timer = DMA_TIMER;
-		gbc->dma.source = gbc->dma.new_source;
+	if (!gbc->halt.set && !gbc->stop) {
+		if (gbc->dma.timer > 0) {
+			gbc->dma.running = true;
+			gbc->memory.oam[low_byte(gbc->dma.source)] = gbcc_memory_read(gbc, gbc->dma.source, false);
+			gbc->dma.timer--;
+			gbc->dma.source++;
+		} else {
+			gbc->dma.running = false;
+		}
+		if (gbc->dma.requested) {
+			gbc->dma.requested = false;
+			gbc->dma.timer = DMA_TIMER;
+			gbc->dma.source = gbc->dma.new_source;
+		}
 	}
 	if (!gbc->instruction.running) {
 		if (gbc->interrupt.addr && gbc->ime) {
@@ -66,12 +68,6 @@ void gbcc_cpu_clock(struct gbc *gbc)
 		}
 		if (gbc->halt.set || gbc->stop) {
 			return;
-		}
-		if (gbc->rst.request) {
-			if (--gbc->rst.delay == 0) {
-				gbc->rst.request = 0;
-				gbc->reg.pc = gbc->rst.addr;
-			}
 		}
 		//printf("%04X\n", gbc->reg.pc);
 		gbc->opcode = gbcc_fetch_instruction(gbc);

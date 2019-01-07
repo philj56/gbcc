@@ -308,6 +308,12 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.right << 0u);
 			}
 			break;
+		case SB:
+			/* TODO: implement properly */
+			return 0xFFu;
+		case SC:
+			/* TODO: implement properly */
+			return 0x01u;
 		case DIV:
 			return high_byte(gbc->div_timer);
 		case NR52:

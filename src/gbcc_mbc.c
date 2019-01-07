@@ -25,7 +25,7 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
 
 void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	if (addr >= SRAM_START && addr < SRAM_END) {
+	if (addr >= SRAM_START && addr < SRAM_END && addr - SRAM_START < gbc->cart.ram_size) {
 		gbc->memory.sram[addr - SRAM_START] = val;
 	} else {
 		gbcc_log_error("Writing memory address 0x%04X out of bounds.\n", addr);
@@ -84,8 +84,8 @@ void update_mbc1_banks(struct gbc *gbc)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 	
-	/* RAMG switches on SRAM when it has 0x0A in the lower bits. */
-	mbc->sram_enable = ((mbc->ramg & 0x0Au) == 0x0Au);
+	/* RAMG switches on SRAM when it has 0x0A in the lower 4 bits. */
+	mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
 
 	/* 
 	 * ROMB0 selects lower 5 bits of ROMX bank number.
@@ -101,28 +101,36 @@ void update_mbc1_banks(struct gbc *gbc)
 	 */
 	if (!check_bit(mbc->ramb, 0)) {
 		/* Mode 0 (ROM banking mode) */
-		/* TODO: 0x60 seems wrong */
-		mbc->romx_bank |= (mbc->romb1 & 0x60u);
+		mbc->romx_bank |= (mbc->romb1 & 0x03u) << 5u;
 		mbc->sram_bank = 0;
+		mbc->rom0_bank = 0;
 	} else {
 		/* Mode 1 (RAM banking mode) */
 		mbc->sram_bank = mbc->romb1 & 0x03u;
+		/*
+		 * Some weirdness here; in RAM banking mode, as well as
+		 * controlling the RAM bank, ROMB1 moves ROM0 around!
+		 */
+		mbc->rom0_bank = (mbc->romb1 & 0x03u) << 5u;
+		mbc->romx_bank |= (mbc->romb1 & 0x03u) << 5u;
 	}
 
 	/* 
 	 * Perform some sanity checks on selected values,
 	 * discarding bits that don't make sense.
 	 */
-	if (mbc->romx_bank > gbc->cart.rom_banks) {
+	if (mbc->romx_bank > gbc->cart.rom_banks - 1) {
 		gbcc_log_debug("Invalid rom bank %u.\n", mbc->romx_bank);
+		mbc->rom0_bank &= (gbc->cart.rom_banks - 1);
 		mbc->romx_bank &= (gbc->cart.rom_banks - 1);
 	}
-	if (mbc->sram_bank > gbc->cart.ram_banks) {
+	if (mbc->sram_bank > gbc->cart.ram_banks - 1) {
 		gbcc_log_debug("Invalid ram bank %u.\n", mbc->sram_bank);
 		mbc->sram_bank &= (gbc->cart.ram_banks - 1);
 	}
 
 	/* And finally update the actual banks */
+	gbc->memory.rom0 = gbc->cart.rom + mbc->rom0_bank * ROM0_SIZE;
 	gbc->memory.romx = gbc->cart.rom + mbc->romx_bank * ROMX_SIZE;
 	gbc->memory.sram = gbc->cart.ram + mbc->sram_bank * SRAM_SIZE;
 }

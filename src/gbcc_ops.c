@@ -141,6 +141,7 @@ void INTERRUPT(struct gbc *gbc)
 	}
 	switch (gbc->instruction.step) {
 		case 0:
+			gbc->interrupt.cur_addr = gbc->interrupt.addr;
 			YIELD;
 		case 1:
 			YIELD;
@@ -1178,9 +1179,7 @@ void RST(struct gbc *gbc)
 		case 3:
 			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
 	}
-	gbc->rst.addr = gbc->opcode - 0xC7u;
-	gbc->rst.request = true;
-	gbc->rst.delay = 1;
+	gbc->reg.pc = gbc->opcode - 0xC7u;
 	done(gbc);
 }
 

@@ -103,11 +103,7 @@ struct gbc {
 	} hdma;
 	struct {
 		uint16_t addr;
-		uint8_t delay;
-		bool request;
-	} rst;
-	struct {
-		uint16_t addr;
+		uint16_t cur_addr;
 		uint8_t request;
 	} interrupt;
 	struct {
@@ -202,12 +198,14 @@ struct gbc {
 		struct gbcc_mbc {
 			enum MBC type;
 			bool sram_enable;
+			uint8_t rom0_bank;
 			uint16_t romx_bank;
 			uint8_t sram_bank;
 			uint8_t ramg;
 			uint8_t romb0;
 			uint8_t romb1;
 			uint8_t ramb;
+			bool mode;
 			struct gbcc_rtc {
 				uint8_t seconds;
 				uint8_t minutes;
