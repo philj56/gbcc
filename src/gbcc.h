@@ -103,8 +103,7 @@ struct gbc {
 	} hdma;
 	struct {
 		uint16_t addr;
-		uint16_t cur_addr;
-		uint8_t request;
+		bool request;
 	} interrupt;
 	struct {
 		uint16_t addr;

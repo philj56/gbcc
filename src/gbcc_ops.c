@@ -129,19 +129,23 @@ void INTERRUPT(struct gbc *gbc)
 	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
 	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
 	if (!interrupt && gbc->instruction.step < 4) {
+		if (gbc->instruction.step < 3) {
+			gbc->interrupt.request = false;
+			done(gbc);
+			return;
+		}
 		/* 
 		 * Interrupt was cancelled by writing over a flag when pushing
 		 * the high byte of pc.
 		 */
 		gbc->reg.pc = 0x0000u;
 		gbc->ime = false;
-		gbc->interrupt.addr = 0;
+		gbc->interrupt.request = false;
 		done(gbc);
 		return;
 	}
 	switch (gbc->instruction.step) {
 		case 0:
-			gbc->interrupt.cur_addr = gbc->interrupt.addr;
 			YIELD;
 		case 1:
 			YIELD;
@@ -150,6 +154,22 @@ void INTERRUPT(struct gbc *gbc)
 			YIELD;
 		case 3:
 			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
+			/* 
+			 * Interrupt address is calculated here according to
+			 * mooneye's tests. Interrupt priority is in memory
+			 * address order; lower adresses have higher priority.
+			 */
+			if (check_bit(interrupt, 0)) {
+				gbc->interrupt.addr = INT_VBLANK;
+			} else if (check_bit(interrupt, 1)) {
+				gbc->interrupt.addr = INT_LCDSTAT;
+			} else if (check_bit(interrupt, 2)) {
+				gbc->interrupt.addr = INT_TIMER;
+			} else if (check_bit(interrupt, 3)) {
+				gbc->interrupt.addr = INT_SERIAL;
+			} else if (check_bit(interrupt, 4)) {
+				gbc->interrupt.addr = INT_JOYPAD;
+			}
 			YIELD;
 		case 4:
 			if (gbc->halt.set) {
@@ -175,7 +195,6 @@ void INTERRUPT(struct gbc *gbc)
 	}
 	gbc->reg.pc = gbc->interrupt.addr;
 	gbc->ime = false;
-	gbc->interrupt.addr = 0;
 	done(gbc);
 }
 

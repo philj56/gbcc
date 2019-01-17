@@ -62,7 +62,7 @@ void gbcc_cpu_clock(struct gbc *gbc)
 		}
 	}
 	if (!gbc->instruction.running) {
-		if (gbc->interrupt.addr && gbc->ime) {
+		if (gbc->ime && gbc->interrupt.request) {
 			INTERRUPT(gbc);
 			return;
 		}
@@ -169,23 +169,8 @@ void check_interrupts(struct gbc *gbc)
 	if (interrupt) {
 		gbc->halt.set = false;
 		gbc->stop = false;
-		if (!gbc->ime || gbc->interrupt.addr) {
-			return;
-		}
-		/* 
-		 * Interrupt priority is in memory address order; lower
-		 * adresses have higher priority.
-		 */
-		if (check_bit(interrupt, 0)) {
-			gbc->interrupt.addr = INT_VBLANK;
-		} else if (check_bit(interrupt, 1)) {
-			gbc->interrupt.addr = INT_LCDSTAT;
-		} else if (check_bit(interrupt, 2)) {
-			gbc->interrupt.addr = INT_TIMER;
-		} else if (check_bit(interrupt, 3)) {
-			gbc->interrupt.addr = INT_SERIAL;
-		} else if (check_bit(interrupt, 4)) {
-			gbc->interrupt.addr = INT_JOYPAD;
+		if (gbc->ime) {
+			gbc->interrupt.request = true;
 		}
 	}
 }
