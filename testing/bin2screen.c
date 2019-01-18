@@ -6,17 +6,17 @@
 #define BUF_LEN 32
 #define VRAM_SIZE 0x2000u
 
-uint8_t bit(uint8_t b)
+static uint8_t bit(uint8_t b)
 {
 	return (uint8_t)(1u << b);
 }
 
-bool check_bit(uint8_t byte, uint8_t b)
+static bool check_bit(uint8_t byte, uint8_t b)
 {
 	return byte & bit(b);
 }
 
-void n2c(uint8_t n)
+static void n2c(uint8_t n)
 {
 	switch (n) {
 		case 0:
