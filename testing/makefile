@@ -1,6 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -pedantic -O2
 
+.PHNOY: all
 all: romgen bin2screen
 
 romgen: romgen.c
