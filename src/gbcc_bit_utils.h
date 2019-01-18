@@ -1,7 +1,6 @@
 #ifndef GBCC_BIT_UTILS_H
 #define GBCC_BIT_UTILS_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
 uint8_t high_byte(uint16_t x);

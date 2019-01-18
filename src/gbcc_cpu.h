@@ -2,6 +2,7 @@
 #define GBCC_CPU_H
 
 #include "gbcc.h"
+#include <stdint.h>
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc);
 void gbcc_emulate_cycle(struct gbc *gbc);

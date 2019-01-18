@@ -2,6 +2,7 @@
 #define GBCC_OPS_H
 
 #include "gbcc.h"
+#include <stdint.h>
 
 extern void (*const gbcc_ops[0x100])(struct gbc *gbc);
 extern const uint8_t gbcc_op_times[0x100];

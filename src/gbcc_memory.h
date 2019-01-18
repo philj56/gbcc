@@ -2,6 +2,8 @@
 #define GBCC_MEMORY_H
 
 #include "gbcc.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 void gbcc_memory_increment(struct gbc *gbc, uint16_t addr, bool override);
 void gbcc_memory_copy(struct gbc *gbc, uint16_t src, uint16_t dest, bool override);
