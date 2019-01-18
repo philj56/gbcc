@@ -40,6 +40,7 @@ void gbcc_screenshot(struct gbcc_window *win)
 			PNG_LIBPNG_VER_STRING,
 			NULL, NULL, NULL);
 	if (!png_ptr) {
+		fclose(fp);
 		gbcc_log_error("Couldn't create PNG write struct.\n");
 		return;
 	}
