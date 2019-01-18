@@ -9,3 +9,7 @@ romgen: romgen.c
 
 bin2screen: bin2screen.c
 	$(CC) -o $@ $< $(CFLAGS)
+
+.PHONY: clean
+clean:
+	rm -f romgen bin2screen
