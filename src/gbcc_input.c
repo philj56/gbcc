@@ -4,6 +4,7 @@
 #include "gbcc_memory.h"
 #include "gbcc_save.h"
 #include "gbcc_window.h"
+#include <SDL2/SDL.h>
 
 static const SDL_Scancode keymap[21] = {
 	SDL_SCANCODE_Z,		/* A */

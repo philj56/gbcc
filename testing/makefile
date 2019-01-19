@@ -1,6 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -pedantic -O2
 
+.PHNOY: all
 all: romgen bin2screen
 
 romgen: romgen.c
@@ -8,3 +9,7 @@ romgen: romgen.c
 
 bin2screen: bin2screen.c
 	$(CC) -o $@ $< $(CFLAGS)
+
+.PHONY: clean
+clean:
+	rm -f romgen bin2screen

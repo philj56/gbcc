@@ -1,22 +1,21 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #define BUF_LEN 32
 #define VRAM_SIZE 0x2000u
 
-uint8_t bit(uint8_t b)
+static uint8_t bit(uint8_t b)
 {
 	return (uint8_t)(1u << b);
 }
 
-bool check_bit(uint8_t byte, uint8_t b)
+static bool check_bit(uint8_t byte, uint8_t b)
 {
 	return byte & bit(b);
 }
 
-void n2c(uint8_t n)
+static void n2c(uint8_t n)
 {
 	switch (n) {
 		case 0:
@@ -36,14 +35,21 @@ void n2c(uint8_t n)
 
 int main(int argc, char **argv)
 {
+	uint8_t buf[BUF_LEN];
+	FILE *f;
+	unsigned int vram_pos = 0;
+
 	if (argc == 1) {
 		printf("Usage: %s bin_file\n", argv[0]);
-		exit(1);
+		return 1;
 	}
 
-	uint8_t buf[BUF_LEN];
-	FILE *f = fopen(argv[1], "rbe");
-	int vram_pos = 0;
+	f = fopen(argv[1], "rbe");
+	if (!f) {
+		printf("Failed to open bin_file %s\n", argv[1]);
+		return 1;
+	}
+
 	printf("VRAM Bank 0:\n");
 	while (fread(buf, BUF_LEN, 1, f)) {
 		for (uint8_t i = 0; i < BUF_LEN; i += 2) {

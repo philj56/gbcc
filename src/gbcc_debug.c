@@ -271,6 +271,10 @@ void gbcc_log_append_info(const char *const fmt, ...)
 void gbcc_vram_dump(struct gbc *gbc, const char *filename)
 {
 	FILE *fp = fopen(filename, "wbe");
+	if (!fp) {
+		return;
+	}
+
 	fwrite(gbc->memory.vram_bank[0], 1, VRAM_SIZE, fp);
 	if (gbc->mode == GBC) {
 		fwrite(gbc->memory.vram_bank[1], 1, VRAM_SIZE, fp);

@@ -452,16 +452,12 @@ void draw_sprite_line(struct gbc *gbc)
 void composite_line(struct gbc *gbc)
 {
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
-	uint8_t bg_attr;
-	uint8_t win_attr;
-	uint8_t ob_attr;
-	uint16_t pixel;
 	for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-		pixel = ly * GBC_SCREEN_WIDTH + x;
+		uint16_t pixel = ly * GBC_SCREEN_WIDTH + x;
 
-		bg_attr = gbc->memory.background_buffer.attr[x];
-		win_attr = gbc->memory.window_buffer.attr[x];
-		ob_attr = gbc->memory.sprite_buffer.attr[x];
+		uint8_t bg_attr = gbc->memory.background_buffer.attr[x];
+		uint8_t win_attr = gbc->memory.window_buffer.attr[x];
+		uint8_t ob_attr = gbc->memory.sprite_buffer.attr[x];
 		if (bg_attr & ATTR_DRAWN) {
 			gbc->memory.gbc_screen[pixel] = gbc->memory.background_buffer.colour[x];
 		}
