@@ -1,6 +1,7 @@
 #ifndef GBCC_BIT_UTILS_H
 #define GBCC_BIT_UTILS_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 uint8_t high_byte(uint16_t x);
@@ -11,6 +12,8 @@ uint8_t set_bit(uint8_t byte, uint8_t bit);
 uint8_t clear_bit(uint8_t byte, uint8_t bit);
 uint8_t toggle_bit(uint8_t byte, uint8_t bit);
 uint8_t check_bit(uint8_t byte, uint8_t bit);
+uint8_t cond_bit(uint8_t byte, uint8_t b, bool cond);
+
 
 uint8_t bit(uint8_t b);
 uint16_t bit16(uint8_t b);

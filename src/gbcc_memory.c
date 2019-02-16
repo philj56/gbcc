@@ -324,10 +324,10 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 			ret |= (uint8_t)(gbc->apu.ch4.enabled << 3u);
 			break;
 		case BGPD:
-			ret = gbc->memory.bgp[gbc->memory.ioreg[BGPI - IOREG_START] & 0x3Fu];
+			ret = gbc->ppu.bgp[gbc->memory.ioreg[BGPI - IOREG_START] & 0x3Fu];
 			break;
 		case OBPD:
-			ret = gbc->memory.obp[gbc->memory.ioreg[OBPI - IOREG_START] & 0x3Fu];
+			ret = gbc->ppu.obp[gbc->memory.ioreg[OBPI - IOREG_START] & 0x3Fu];
 			break;
 		default:
 			ret = gbc->memory.ioreg[addr - IOREG_START];
@@ -453,7 +453,7 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		case BGPD:
 			{
 				uint8_t index = gbc->memory.ioreg[BGPI - IOREG_START];
-				gbc->memory.bgp[index & 0x3Fu] = val;
+				gbc->ppu.bgp[index & 0x3Fu] = val;
 				if (check_bit(index, 7)) {
 					index++;
 					if ((index & 0x7Fu) == 0x40u) {
@@ -466,7 +466,7 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 		case OBPD:
 			{
 				uint8_t index = gbc->memory.ioreg[OBPI - IOREG_START];
-				gbc->memory.obp[index & 0x3Fu] = val;
+				gbc->ppu.obp[index & 0x3Fu] = val;
 				if (check_bit(index, 7)) {
 					index++;
 					if ((index & 0x7Fu) == 0x40u) {

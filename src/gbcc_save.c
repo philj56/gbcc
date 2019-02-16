@@ -112,8 +112,8 @@ void gbcc_load_state(struct gbc *gbc)
 	fread(gbc, sizeof(struct gbc), 1, sav);
 	/* FIXME: Thread-unsafe, screen could try to read from here while the
 	 * pointer is still invalid */
-	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
-	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
+	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
+	gbc->ppu.screen.sdl = gbc->ppu.screen.buffer_1;
 
 	gbc->cart.rom = rom;
 	gbc->cart.ram = ram;

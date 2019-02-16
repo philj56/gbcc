@@ -3,7 +3,7 @@
 
 #include "gbcc_apu.h"
 #include "gbcc_constants.h"
-#include "gbcc_palettes.h"
+#include "gbcc_ppu.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -13,11 +13,6 @@
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN
 #endif
-
-struct line_buffer {
-	uint32_t colour[GBC_SCREEN_WIDTH];
-	uint8_t attr[GBC_SCREEN_WIDTH];
-};
 
 struct gbc {
 	/* Registers */
@@ -76,7 +71,6 @@ struct gbc {
 
 	/* Non-Register state data */
 	enum CART_MODE mode;
-	struct palette palette;
 	uint8_t opcode;
 	bool ime;
 	struct {
@@ -119,9 +113,7 @@ struct gbc {
 	uint8_t tima_reload;
 	uint8_t clock;
 	uint64_t debug_clock;
-	uint16_t ppu_clock;
 	uint8_t cpu_clock;
-	bool lcd_disabled;
 	struct {
 		struct timespec current;
 		struct timespec old;
@@ -132,7 +124,6 @@ struct gbc {
 	int8_t save_state;
 	int8_t load_state;
 	bool double_speed;
-	uint64_t frame;
 	float turbo_speed;
 
 	/* Memory map */
@@ -150,18 +141,9 @@ struct gbc {
 		uint8_t ioreg[IOREG_SIZE];	/* I/O Registers */
 		uint8_t hram[HRAM_SIZE];	/* Internal CPU RAM */
 		uint8_t iereg;	/* Interrupt enable flags */
-		uint8_t bgp[64]; 	/* 8 x 8-byte sprites */
-		uint8_t obp[64]; 	/* 8 x 8-byte sprites */
 		/* Emulator areas */
 		uint8_t wram_bank[8][WRAM0_SIZE];	/* Actual location of WRAM */
 		uint8_t vram_bank[2][VRAM_SIZE]; 	/* Actual location of VRAM */
-		uint32_t screen_buffer_0[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
-		uint32_t screen_buffer_1[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
-		struct line_buffer background_buffer;
-		struct line_buffer window_buffer;
-		struct line_buffer sprite_buffer;
-		uint32_t *gbc_screen;
-		uint32_t *sdl_screen;
 	} memory;
 
 	/* Current key states */
@@ -181,6 +163,9 @@ struct gbc {
 	
 	/* APU */
 	struct apu apu;
+
+	/* PPU */
+	struct ppu ppu;
 
 	/* Cartridge data & flags */
 	struct {

@@ -39,6 +39,14 @@ uint8_t check_bit(uint8_t byte, uint8_t b)
 	return (uint8_t)(byte & bit(b)) >> b;
 }
 
+uint8_t cond_bit(uint8_t byte, uint8_t b, bool cond)
+{
+	if (cond) {
+		return set_bit(byte, b);
+	}
+	return clear_bit(byte, b);
+}
+
 uint8_t bit(uint8_t b)
 {
 	return (uint8_t)(1u << b);

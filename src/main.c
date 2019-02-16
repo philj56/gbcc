@@ -117,8 +117,8 @@ int main(int argc, char **argv)
 				gbc.interlace = true;
 				break;
 			case 'p':
-				gbc.palette = gbcc_get_palette(optarg);
-				gbcc_log_debug("%s palette selected\n", gbc.palette.name);
+				gbc.ppu.palette = gbcc_get_palette(optarg);
+				gbcc_log_debug("%s palette selected\n", gbc.ppu.palette.name);
 				break;
 			case 's':
 				scaling = SCALING_SUBPIXEL;

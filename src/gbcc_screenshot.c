@@ -73,7 +73,7 @@ void gbcc_screenshot(struct gbcc_window *win)
 			int idx = y * size_mult * GBC_SCREEN_WIDTH + x;
 			uint32_t pixel;
 			if (win->raw_screenshot) {
-				pixel = win->gbc->memory.sdl_screen[idx];
+				pixel = win->gbc->ppu.screen.sdl[idx];
 			} else {
 				pixel = win->buffer[idx];
 			}

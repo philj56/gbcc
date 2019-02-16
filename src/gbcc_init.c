@@ -41,10 +41,10 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->cart.mbc.romx_bank = 0x01u;
 	gbc->cart.mbc.sram_bank = 0x00u;
 	gbc->ime = true;
-	gbc->ppu_clock = GBC_LCD_MODE_PERIOD;
-	gbc->palette = gbcc_get_palette("default");
-	gbc->memory.gbc_screen = gbc->memory.screen_buffer_0;
-	gbc->memory.sdl_screen = gbc->memory.screen_buffer_1;
+	gbc->ppu.clock = GBC_LCD_MODE_PERIOD;
+	gbc->ppu.palette = gbcc_get_palette("default");
+	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
+	gbc->ppu.screen.sdl = gbc->ppu.screen.buffer_1;
 	timespec_get(&gbc->real_time.current, TIME_UTC);
 	load_rom(gbc, filename);
 	parse_header(gbc);
@@ -454,7 +454,5 @@ void init_ioreg(struct gbc *gbc)
 	gbc->memory.ioreg[HDMA5 - IOREG_START] = 0x80u;
 	gbc->memory.ioreg[SVBK - IOREG_START] = 0x01u;
 	gbc->memory.iereg = 0x00u;
-	for (size_t i = 0; i < sizeof(gbc->memory.bgp)/sizeof(gbc->memory.bgp[0]); i++) {
-		gbc->memory.bgp[i] = 0xFFu;
-	}
+	memset(gbc->ppu.bgp, 0xFFu, sizeof(gbc->ppu.bgp));
 }

@@ -289,7 +289,7 @@ void gbcc_sram_dump(struct gbc *gbc, const char* filename)
 	fclose(fp);
 }
 
-void gbcc_print_state(struct gbc *gbc)
+/*void gbcc_print_state(struct gbc *gbc)
 {
 	gbcc_print_registers(gbc);
 	printf("mode: %d\n", gbc->mode);
@@ -319,8 +319,8 @@ void gbcc_print_state(struct gbc *gbc)
 	printf("load_state:%d\n", gbc->load_state);
 	printf("double_speed:%d\n", gbc->double_speed);
 	printf("div_timer:%d\n", gbc->div_timer);
-	/* TODO: Finish */
-}
+	// TODO: Finish
+//}*/
 /*
 {
 	

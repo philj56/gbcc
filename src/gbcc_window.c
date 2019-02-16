@@ -153,11 +153,11 @@ void gbcc_window_destroy(struct gbcc_window *win)
 void gbcc_window_update(struct gbcc_window *win)
 {
 	int err;
-	uint32_t *screen = win->gbc->memory.sdl_screen;
+	uint32_t *screen = win->gbc->ppu.screen.sdl;
 
 	switch (win->scaling.type) {
 		case SCALING_NONE:
-			if (win->gbc->mode == GBC || !win->gbc->palette.precorrected) {
+			if (win->gbc->mode == GBC || !win->gbc->ppu.palette.precorrected) {
 				for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
 					uint8_t r = (uint8_t)(screen[i] >> 19u) & 0x1Fu;
 					uint8_t g = (uint8_t)(screen[i] >> 11u) & 0x1Fu;
@@ -321,7 +321,7 @@ void update_text(struct gbcc_window *win)
 
 	/* Update FPS counter */
 	win->fps_counter.last_time = cur_time;
-	float df = win->gbc->frame - win->fps_counter.last_frame;
+	float df = win->gbc->ppu.frame - win->fps_counter.last_frame;
 	uint8_t ly = gbcc_memory_read(win->gbc, LY, false);
 	if (ly < win->fps_counter.last_ly) {
 		df -= 1;
@@ -330,7 +330,7 @@ void update_text(struct gbcc_window *win)
 		ly -= win->fps_counter.last_ly;
 	}
 	df += ly / 154.0;
-	win->fps_counter.last_frame = win->gbc->frame;
+	win->fps_counter.last_frame = win->gbc->ppu.frame;
 	win->fps_counter.last_ly = gbcc_memory_read(win->gbc, LY, false);
 	win->fps_counter.fps = df / (dt / 1e9);
 
