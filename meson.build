@@ -11,7 +11,7 @@ add_project_arguments(
   [
     '-D_POSIX_C_SOURCE=200809L',
     '-O2',
-    '-flto=full',
+    '-flto',
     '-march=native',
     '-Wall',
     '-Wextra',
@@ -52,7 +52,7 @@ executable(
   'gbcc',
   sources,
   dependencies: [sdl, png],
-  link_args: ['-flto=full', '-lm'],
+  link_args: ['-flto', '-lm'],
   install: true,
 )
 
