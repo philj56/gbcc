@@ -157,8 +157,8 @@ void draw_background_line(struct gbc *gbc)
 	uint8_t palette = gbcc_memory_read(gbc, BGP, true);
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 
-	uint8_t ty = ((scy + ly) / 8u) % 32;
-	uint8_t line_offset = 2 * ((scy + ly) % 8); /* 2 bytes per line */
+	uint8_t ty = ((scy + ly) / 8u) % 32u;
+	uint16_t line_offset = 2 * ((scy + ly) % 8u); /* 2 bytes per line */
 	uint16_t map;
 	if (check_bit(lcdc, 3)) {
 		map = BACKGROUND_MAP_BANK_2;
@@ -171,7 +171,7 @@ void draw_background_line(struct gbc *gbc)
 		if (gbc->mode == DMG) {
 			colour = get_palette_colour(gbc, 0, 0, BACKGROUND);
 		} else {
-			colour = 0xFFu;
+			colour = 0xFF;
 		}
 		memset(ppu->bg_line.colour, colour, sizeof(ppu->bg_line.colour));
 		/*for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
@@ -181,12 +181,10 @@ void draw_background_line(struct gbc *gbc)
 	}
 
 	if (gbc->mode == DMG) {
-		uint8_t tx = scx / 8u;
-		int x = -(scx % 8);
-		while (x < GBC_SCREEN_WIDTH) {
+		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
 			uint8_t tx = ((scx + x) / 8u) % 32u;
 			uint8_t xoff = (scx + x) % 8u;
-			uint8_t tile = gbc->memory.vram_bank[0][map + 32 * ty + tx - VRAM_START];
+			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 			uint16_t tile_addr;
 			/* TODO: Put this somewhere better */
 			if (check_bit(lcdc, 4)) {
@@ -202,8 +200,6 @@ void draw_background_line(struct gbc *gbc)
 			if (colour == 0) {
 				ppu->bg_line.attr[x] |= ATTR_COLOUR0;
 			}
-			tx++;
-			tx %= 32;
 		}
 	} else {
 		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
