@@ -56,10 +56,10 @@ dkms.conf
 *.taghl
 tags
 
-#Mac OS files
+# Mac OS files
 .DS_Store
 
-#Project specific files
+# Project specific files
 gbcc
 roms/
 build/
