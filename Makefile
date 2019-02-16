@@ -1,6 +1,6 @@
 ODIR=obj
 SRCDIR=src
-CC=clang
+CC?=gcc
 CFLAGS=-std=c11 -D_POSIX_C_SOURCE=200809L -O2 -flto=full -march=native \
        -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers \
        $(shell pkg-config --cflags sdl2)
