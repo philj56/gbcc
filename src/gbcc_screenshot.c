@@ -15,21 +15,21 @@
 
 void gbcc_screenshot(struct gbcc_window *win)
 {
-	char dir[] = "screenshots";
+	char *dir;
 	char fname[MAX_NAME_LEN];
+
+	dir = getenv("HOME");
+	if (!dir) {
+		dir = ".";
+	}
+
+	strncpy(fname, dir, MAX_NAME_LEN);
 
 	time_t raw_time;
 	struct tm *time_info;
 	time(&raw_time);
 	time_info = gmtime(&raw_time);
-	strftime(fname, MAX_NAME_LEN, "screenshots/%G-%m-%dT%H:%M:%SZ.png", time_info);
-
-	if (mkdir(dir, 0755) != 0) {
-		if (errno != EEXIST) {
-			gbcc_log_error("Couldn't create screenshots folder: %s\n", strerror(errno));
-			return;
-		}
-	}
+	strftime(fname + strlen(dir), MAX_NAME_LEN - strlen(dir), "/%G-%m-%dT%H-%M-%SZ-gbcc.png", time_info);
 
 	FILE *fp = fopen(fname, "wbe");
 	if (!fp) {

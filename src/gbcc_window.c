@@ -13,6 +13,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef TILESET_PATH
+#define TILESET_PATH "/usr/share/gbcc/tileset.png"
+#endif
+
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
 static void update_text(struct gbcc_window *win);
@@ -62,7 +66,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 	win->buffer = calloc((win->scaling.factor * win->scaling.factor) * GBC_SCREEN_SIZE, sizeof(*win->buffer));
 	win->gbc = gbc;
 	clock_gettime(CLOCK_REALTIME, &win->fps_counter.last_time);
-	gbcc_fontmap_load(&win->font, "/usr/share/gbcc/tileset.png");
+	gbcc_fontmap_load(&win->font, TILESET_PATH);
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());

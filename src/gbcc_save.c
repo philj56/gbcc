@@ -29,7 +29,7 @@ void gbcc_save(struct gbc *gbc)
 	sav = fopen(fname, "wbe");
 	if (sav == NULL) {
 		gbcc_log_error("Can't open save file %s\n", fname);
-		exit(EXIT_FAILURE);
+		return;
 	}
 	fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, sav);
 	fclose(sav);

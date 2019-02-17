@@ -7,6 +7,13 @@ project(
   ],
 )
 
+tileset_location = join_paths(
+  get_option('prefix'),
+  get_option('datadir'),
+  'gbcc',
+  'tileset.png'
+)
+
 add_project_arguments(
   [
     '-D_POSIX_C_SOURCE=200809L',
@@ -17,6 +24,7 @@ add_project_arguments(
     '-Wextra',
     '-Wno-unused-parameter',
     '-Wno-missing-field-initializers',
+    '-DTILESET_PATH="@0@"'.format(tileset_location),
   ],
   language: 'c'
 )
