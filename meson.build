@@ -68,6 +68,16 @@ install_data(
   'tileset.png'
 )
 
+license_dir = join_paths(
+  get_option('datadir'),
+  'gbcc'
+)
+
+install_data(
+  'LICENSE',
+  install_dir: license_dir
+)
+
 scdoc = find_program('scdoc', required: get_option('man-pages'))
 if scdoc.found()
   sh = find_program('sh')
