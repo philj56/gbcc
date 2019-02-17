@@ -29,7 +29,7 @@ void gbcc_screenshot(struct gbcc_window *win)
 	struct tm *time_info;
 	time(&raw_time);
 	time_info = gmtime(&raw_time);
-	strftime(fname + strlen(dir), MAX_NAME_LEN - strlen(dir), "/%G-%m-%dT%H-%M-%SZ-gbcc.png", time_info);
+	strftime(fname + strlen(dir), MAX_NAME_LEN - strlen(dir), "/%G-%m-%dT%H%M%SZ-gbcc.png", time_info);
 
 	FILE *fp = fopen(fname, "wbe");
 	if (!fp) {
