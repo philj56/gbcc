@@ -70,6 +70,7 @@ install_data(
 
 license_dir = join_paths(
   get_option('datadir'),
+  'licenses',
   'gbcc'
 )
 
