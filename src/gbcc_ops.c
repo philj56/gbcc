@@ -217,7 +217,6 @@ void STOP(struct gbc *gbc)
 {
 	uint8_t key1 = gbcc_memory_read(gbc, KEY1, true);
 	if (gbc->mode == GBC && check_bit(key1, 0)) {
-		key1 = clear_bit(key1, 0);
 		gbc->double_speed = !gbc->double_speed;
 		key1 = gbc->double_speed * bit(7);//toggle_bit(key1, 7);
 		gbcc_memory_write(gbc, KEY1, key1, true);
@@ -869,7 +868,7 @@ void ADD_HL(struct gbc *gbc)
 			gbcc_log_error("Impossible case in ADD_HL\n");
 			return;
 	}
-	cond_flag(gbc, HF, ((gbc->reg.hl & 0x0FFFu) + (op & 0x0FFFu) & 0x1000u) == 0x1000u);
+	cond_flag(gbc, HF, (((gbc->reg.hl & 0x0FFFu) + (op & 0x0FFFu)) & 0x1000u) == 0x1000u);
 	tmp = gbc->reg.hl;
 	gbc->reg.hl += op;
 	cond_flag(gbc, CF, (tmp > gbc->reg.hl));

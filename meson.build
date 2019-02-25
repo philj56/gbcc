@@ -4,6 +4,12 @@ project(
   license: 'MIT',
   default_options: [
     'c_std=c11',
+    'optimization=3',
+    'buildtype=release',
+    'warning_level=3',
+    'b_lto=true',
+    'b_pie=true',
+    'prefix=/usr'
   ],
 )
 
@@ -16,12 +22,8 @@ tileset_location = join_paths(
 
 add_project_arguments(
   [
-    '-D_POSIX_C_SOURCE=200809L',
-    '-O2',
-    '-flto',
     '-march=native',
-    '-Wall',
-    '-Wextra',
+    '-mtune=native',
     '-Wno-unused-parameter',
     '-Wno-missing-field-initializers',
     '-DTILESET_PATH="@0@"'.format(tileset_location),
@@ -53,14 +55,16 @@ sources = files(
   'src/gbcc_screenshot.c',
 )
 
+cc = meson.get_compiler('c')
+m = cc.find_library('m', required: false)
 sdl = dependency('sdl2')
 png = dependency('libpng')
+
 
 executable(
   'gbcc',
   sources,
-  dependencies: [sdl, png],
-  link_args: ['-flto', '-lm'],
+  dependencies: [m, sdl, png],
   install: true,
 )
 

@@ -166,9 +166,9 @@ void verify_cartridge(struct gbc *gbc)
 
 void load_title(struct gbc *gbc)
 {
-	for (size_t i = CART_TITLE_START; i < CART_TITLE_END; i++) {
-		gbc->cart.title[i - CART_TITLE_START] = (char)gbc->cart.rom[i];
-	}
+	uint8_t *title = gbc->cart.rom + CART_TITLE_START;
+	memcpy(gbc->cart.title, title, CART_TITLE_SIZE);
+	gbc->cart.title[CART_TITLE_SIZE] = '\0';
 	gbcc_log_info("\tTitle: %s\n", gbc->cart.title);
 }
 

@@ -194,14 +194,19 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			switch (rtc->cur_reg) {
 				case 0:
 					rtc->seconds = val;
+					break;
 				case 1:
 					rtc->minutes = val;
+					break;
 				case 2:
 					rtc->hours = val;
+					break;
 				case 3:
 					rtc->day_low = val;
+					break;
 				case 4:
 					rtc->day_high = val;
+					break;
 				default:
 					gbcc_log_error("Invalid rtc reg %u\n", rtc->cur_reg);
 			}

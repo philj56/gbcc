@@ -202,7 +202,7 @@ struct gbc {
 				bool mapped;
 			} rtc;
 		} mbc;
-		char title[CART_TITLE_SIZE];
+		char title[CART_TITLE_SIZE + 1];
 	} cart;
 };
 
