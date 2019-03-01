@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 #ifndef TILESET_PATH
 #define TILESET_PATH "/usr/share/gbcc/tileset.png"
 #endif
@@ -32,7 +34,7 @@ static void load_shader(GLuint shader, const char *filename)
 	rewind(fp);
 	fread(source, 1, size, fp);
 	fclose(fp);
-	glShaderSource(shader, 1, &source, NULL);
+	glShaderSource(shader, 1, &source, &size);
 	free(source);
 }
 
@@ -77,7 +79,6 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 			gbcc_log_error("Invalid scaling type\n");
 			exit(EXIT_FAILURE);
 	}
-	win->buffer = calloc((win->scaling.factor * win->scaling.factor) * GBC_SCREEN_SIZE, sizeof(*win->buffer));
 	win->gbc = gbc;
 	clock_gettime(CLOCK_REALTIME, &win->fps_counter.last_time);
 	gbcc_fontmap_load(&win->font, TILESET_PATH);
@@ -104,8 +105,8 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
-			6 * GBC_SCREEN_WIDTH,      // width, in pixels
-			6 * GBC_SCREEN_HEIGHT,     // height, in pixels
+			GBC_SCREEN_WIDTH,      // width, in pixels
+			GBC_SCREEN_HEIGHT,     // height, in pixels
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
 			);
 
@@ -134,32 +135,34 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	load_shader(vertexShader, "vert.gl");
+	load_shader(vertexShader, "vert.vert");
 	glCompileShader(vertexShader);
 
 	GLint status;
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
 
 	if (status != GL_TRUE) {
+		gbcc_log_error("Could not compile vertex shader!\n");
 		exit(EXIT_FAILURE);
 	}
 
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	load_shader(fragmentShader, "frag.gl");
+	load_shader(fragmentShader, "default.frag");
 	glCompileShader(fragmentShader);
 
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
 
 	if (status != GL_TRUE) {
+		gbcc_log_error("Could not compile fragment shader!\n");
 		exit(EXIT_FAILURE);
 	}
 
-	GLuint shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glBindFragDataLocation(shaderProgram, 0, "outColor");
-	glLinkProgram(shaderProgram);
-	glUseProgram(shaderProgram);
+	win->gl.shader_program = glCreateProgram();
+	glAttachShader(win->gl.shader_program, vertexShader);
+	glAttachShader(win->gl.shader_program, fragmentShader);
+	glBindFragDataLocation(win->gl.shader_program, 0, "outColor");
+	glLinkProgram(win->gl.shader_program);
+	glUseProgram(win->gl.shader_program);
 
 	GLuint vao;
 	glGenVertexArrays(1, &vao);
@@ -176,11 +179,11 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
 
-	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+	GLint posAttrib = glGetAttribLocation(win->gl.shader_program, "position");
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), 0);
 	glEnableVertexAttribArray(posAttrib);
 
-	GLint texAttrib = glGetAttribLocation(shaderProgram, "texcoord");
+	GLint texAttrib = glGetAttribLocation(win->gl.shader_program, "texcoord");
 	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)(2*sizeof(float)));
 	glEnableVertexAttribArray(texAttrib);
 
@@ -191,7 +194,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	fill_lookup();
@@ -202,15 +205,20 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 
 void gbcc_window_destroy(struct gbcc_window *win)
 {
-	free(win->buffer);
 	gbcc_fontmap_destroy(&win->font);
-	SDL_DestroyTexture(win->texture);
-	SDL_DestroyRenderer(win->renderer);
 	SDL_DestroyWindow(win->window);
 }
 
 void gbcc_window_update(struct gbcc_window *win)
 {
+	/* TODO: This resize logic should only be done on window resize */
+	int width;
+	int height;
+	SDL_GL_GetDrawableSize(win->window, &width, &height);
+	int scale = min(width / GBC_SCREEN_WIDTH, height / GBC_SCREEN_HEIGHT);
+	int scaled_width = scale * GBC_SCREEN_WIDTH;
+	int scaled_height = scale * GBC_SCREEN_HEIGHT;
+	glViewport((width - scaled_width) / 2, (height - scaled_height) / 2, scaled_width, scaled_height);
 	uint32_t *screen = win->gbc->ppu.screen.sdl;
 	update_text(win);
 	if (win->fps_counter.show) {
