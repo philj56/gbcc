@@ -4,6 +4,7 @@
 #include "gbcc.h"
 #include "gbcc_constants.h"
 #include "gbcc_fontmap.h"
+#include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <stdint.h>
 
@@ -16,7 +17,7 @@ struct gbcc_window {
 	struct gbcc_fontmap font;
 	SDL_Window *window;
 	SDL_Renderer *renderer;
-	SDL_Texture *texture;
+	GLuint texture;
 	uint32_t *buffer;
 	struct {
 		enum scaling_type type;

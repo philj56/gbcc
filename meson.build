@@ -59,13 +59,16 @@ cc = meson.get_compiler('c')
 m = cc.find_library('m', required: false)
 sdl = dependency('sdl2')
 png = dependency('libpng')
+gl = dependency('gl')
+glew = dependency('glew')
 
 
 executable(
   'gbcc',
   sources,
-  dependencies: [m, sdl, png],
+  dependencies: [m, sdl, png, gl, glew],
   install: true,
+  link_args: []
 )
 
 install_data(
