@@ -2,11 +2,56 @@
 
 in vec2 Texcoord;
 
-out vec4 outColor;
+out vec4 out_colour;
 
 uniform sampler2D tex;
+uniform float frame;
+        
+const vec3 r = vec3(
+        255.0 / 255.0,
+        113.0 / 255.0,
+        69.0 / 255.0
+);
+        
+const vec3 g = vec3(
+        193.0 / 255.0,
+        214.0 / 255.0,
+        80.0 / 255.0
+);
+        
+const vec3 b = vec3(
+        59.0 / 255.0,
+        206.0 / 255.0,
+        255.0 / 255.0
+);
+        
+const float radius = 2.0;
+const float radius2 = radius * radius;
+
+vec3 circ(vec3 x)
+{
+        return sqrt(max(radius2 - x * x, 0)) / radius;
+}
+
+vec3 square(vec3 x)
+{
+        return ceil(circ(x));
+}
 
 void main()
 {
-    outColor = texture(tex, Texcoord) * vec4(1.0, 1.0, 1.0, 1.0);
+        vec3 src;
+        vec2 pos = vec2(Texcoord.x, 1.0 - Texcoord.y);
+        src.r = texture(tex, pos + vec2(1.0 / 320.0, 0)).r;
+        src.g = texture(tex, pos).g;
+        src.b = texture(tex, pos - vec2(1.0 / 320.0, 0)).b;
+        vec3 x = mod(pos.x * 160 * 7 - vec3(0, 2, 4), 7);
+        vec3 weight = circ(x);
+        float y = mod(pos.y * 144 * 7, 7);
+        vec3 dst = vec3(0);
+        dst += src.r * r * weight.r;
+        dst += src.g * g * weight.g;
+        dst += src.b * b * weight.b;
+        float gridline = ceil((y - 1) / 6);
+        out_colour = vec4(gridline * dst, 1.0);
 }

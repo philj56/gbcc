@@ -17,8 +17,16 @@ struct gbcc_window {
 	struct gbcc_fontmap font;
 	SDL_Window *window;
 	struct {
+		GLuint vbo;
+		GLuint vao;
+		GLuint ebo;
+		GLuint fbo;
+		GLuint fbo_texture;
+		GLuint rbo;
 		GLuint texture;
-		GLuint shader_program;
+		GLuint default_shader;
+		GLuint postprocessing_shader;
+		GLint frame_uniform;
 	} gl;
 	struct {
 		enum scaling_type type;
