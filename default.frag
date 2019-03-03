@@ -25,7 +25,7 @@ const vec3 b = vec3(
         255.0 / 255.0
 );
         
-const float radius = 2.0;
+const float radius = 3.0;
 const float radius2 = radius * radius;
 
 vec3 circ(vec3 x)
@@ -51,6 +51,6 @@ void main()
         dst += src.r * r * weight.r;
         dst += src.g * g * weight.g;
         dst += src.b * b * weight.b;
-        float gridline = ceil((y - 1) / 6);
+        float gridline = max(ceil((y - 1) / 6), 0.7);
         out_colour = vec4(gridline * dst, 1.0);
 }

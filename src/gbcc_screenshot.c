@@ -61,13 +61,13 @@ void gbcc_screenshot(struct gbcc_window *win)
 	}
 
 	int size_mult;
-	uint32_t *buffer;
+	uint8_t *buffer;
 	if (win->raw_screenshot) {
 		size_mult = 1;
 	} else {
 		size_mult = FBO_WIDTH / GBC_SCREEN_WIDTH;
-		buffer = malloc(FBO_SIZE * sizeof(*buffer));
-		glReadPixels(0, 0, FBO_WIDTH, FBO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		buffer = malloc(FBO_SIZE * 3 * sizeof(*buffer));
+		glReadPixels(0, 0, FBO_WIDTH, FBO_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
 	}
 	/* Initialize rows of PNG. */
 	png_bytepp row_pointers = png_malloc(png_ptr, size_mult * GBC_SCREEN_HEIGHT * sizeof(png_bytep));
@@ -75,16 +75,18 @@ void gbcc_screenshot(struct gbcc_window *win)
 		png_bytep row = png_malloc(png_ptr, size_mult * GBC_SCREEN_WIDTH * 3);
 		row_pointers[y] = row;
 		for (int x = 0; x < size_mult * GBC_SCREEN_WIDTH; x++) {
-			int idx = y * size_mult * GBC_SCREEN_WIDTH + x;
-			uint32_t pixel;
 			if (win->raw_screenshot) {
-				pixel = win->buffer[idx];
+				int idx = y * size_mult * GBC_SCREEN_WIDTH + x;
+				uint32_t pixel = win->buffer[idx];
+				*row++ = (pixel & 0xFF000000u) >> 24u;
+				*row++ = (pixel & 0x00FF0000u) >> 16u;
+				*row++ = (pixel & 0x0000FF00u) >> 8u;
 			} else {
-				pixel = buffer[idx];
+				int idx = 3 * ((size_mult * GBC_SCREEN_HEIGHT - y) * size_mult * GBC_SCREEN_WIDTH + x);
+				*row++ = buffer[idx++];
+				*row++ = buffer[idx++];
+				*row++ = buffer[idx++];
 			}
-			*row++ = (pixel & 0xFF000000u) >> 24u;
-			*row++ = (pixel & 0x00FF0000u) >> 16u;
-			*row++ = (pixel & 0x0000FF00u) >> 8u;
 		}
 	}
 

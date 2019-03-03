@@ -155,8 +155,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	/* Create a vertex array and enable vertex attributes for the shaders.
-	 * All shader programs use the same vertex shader, so we only need to
-	 * do this once. */
+	 * TODO: why do we only need to do this once? */
 	glGenVertexArrays(1, &win->gl.vao);
 	glBindVertexArray(win->gl.vao);
 
@@ -236,7 +235,6 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	/* Bind the actual bits we'll be using to render */
 	glBindVertexArray(win->gl.vao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
-	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 }
 
 void gbcc_window_destroy(struct gbcc_window *win)
@@ -279,6 +277,10 @@ void gbcc_window_update(struct gbcc_window *win)
 	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+	if (win->screenshot || win->raw_screenshot) {
+		gbcc_screenshot(win);
+	}
+
 	/* Second pass - render the framebuffer to the screen */
 	/* TODO: This resize logic should only be done on window resize */
 	int width;
@@ -294,10 +296,6 @@ void gbcc_window_update(struct gbcc_window *win)
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glUseProgram(win->gl.base_shader);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-	if (win->screenshot || win->raw_screenshot) {
-		gbcc_screenshot(win);
-	}
 	SDL_GL_SwapWindow(win->window);
 }
 
