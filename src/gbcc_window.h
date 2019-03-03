@@ -35,7 +35,6 @@ struct gbcc_window {
 		GLuint base_shader;
 		int cur_shader;
 		struct shader shaders[2];
-		GLint frame_uniform;
 	} gl;
 	struct {
 		uint32_t factor;

@@ -82,7 +82,7 @@ void gbcc_screenshot(struct gbcc_window *win)
 				*row++ = (pixel & 0x00FF0000u) >> 16u;
 				*row++ = (pixel & 0x0000FF00u) >> 8u;
 			} else {
-				int idx = 3 * ((size_mult * GBC_SCREEN_HEIGHT - y) * size_mult * GBC_SCREEN_WIDTH + x);
+				int idx = 3 * ((size_mult * GBC_SCREEN_HEIGHT - y - 1) * size_mult * GBC_SCREEN_WIDTH + x);
 				*row++ = buffer[idx++];
 				*row++ = buffer[idx++];
 				*row++ = buffer[idx++];
@@ -112,7 +112,6 @@ void gbcc_screenshot(struct gbcc_window *win)
 
 	gbcc_log_info("Saved screenshot %s\n", fname);
 	char message[MAX_NAME_LEN];
-	snprintf(message, MAX_NAME_LEN, "Saved screenshot: %s ", fname);
 	gbcc_window_show_message(win, message, 2);
 	win->screenshot = false;
 	win->raw_screenshot = false;

@@ -17,85 +17,18 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
 #ifndef TILESET_PATH
-#define TILESET_PATH "/usr/share/gbcc/tileset.png"
+#define TILESET_PATH "tileset.png"
+#endif
+
+#ifndef SHADER_PATH
+#define SHADER_PATH "shaders/"
 #endif
 
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
 static void update_text(struct gbcc_window *win);
-static uint32_t subpixel_lut[32][32][32][6];
-
-static void load_shader(GLuint shader, const char *filename)
-{
-	FILE *fp = fopen(filename, "rbe");
-	fseek(fp, 0, SEEK_END);
-	int size = ftell(fp);
-	GLchar *source = malloc(size);
-	rewind(fp);
-	fread(source, 1, size, fp);
-	fclose(fp);
-	glShaderSource(shader, 1, (const GLchar *const *)&source, &size);
-	free(source);
-}
-
-static void fill_lookup()
-{
-	const uint32_t red = 0xFF7145;
-	const uint32_t green = 0xC1D650;
-	const uint32_t blue = 0x3BCEFF;
-	static bool done = false;
-	if (done) {
-		return;
-	}
-	for (uint32_t r = 0; r < 32; r++) {
-		for (uint32_t g = 0; g < 32; g++) {
-			for (uint32_t b = 0; b < 32; b++) {
-				uint32_t r2 = gbcc_add_colours(0, red, r / 32.0);
-				uint32_t g2 = gbcc_add_colours(0, green, g / 32.0);
-				uint32_t b2 = gbcc_add_colours(0, blue, b / 32.0);
-				subpixel_lut[r][g][b][0] = gbcc_add_colours(r2, 0, 0.7);
-				subpixel_lut[r][g][b][1] = gbcc_add_colours(r2, g2, 0.7);
-				subpixel_lut[r][g][b][2] = gbcc_add_colours(g2, r2, 0.7);
-				subpixel_lut[r][g][b][3] = gbcc_add_colours(g2, b2, 0.7);
-				subpixel_lut[r][g][b][4] = gbcc_add_colours(b2, g2, 0.7);
-				subpixel_lut[r][g][b][5] = gbcc_add_colours(b2, 0, 0.7);
-			}
-		}
-	}
-	done = true;
-}
-
-static GLuint create_shader_program(const char *vert, const char *frag)
-{
-	GLint status;
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	load_shader(vertexShader, vert);
-	glCompileShader(vertexShader);
-
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-	if (status != GL_TRUE) {
-		gbcc_log_error("Could not compile vertex shader!\n");
-		exit(EXIT_FAILURE);
-	}
-
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	load_shader(fragmentShader, frag);
-	glCompileShader(fragmentShader);
-
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
-	if (status != GL_TRUE) {
-		gbcc_log_error("Could not compile fragment shader!\n");
-		exit(EXIT_FAILURE);
-	}
-
-	GLuint shader = glCreateProgram();
-	glAttachShader(shader, vertexShader);
-	glAttachShader(shader, fragmentShader);
-	glBindFragDataLocation(shader, 0, "out_colour");
-	glLinkProgram(shader);
-	glUseProgram(shader);
-	return shader;
-}
+static void load_shader(GLuint shader, const char *filename);
+static GLuint create_shader_program(const char *vert, const char *frag);
 
 void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 {
@@ -113,7 +46,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-	
+
 	win->window = SDL_CreateWindow(
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
@@ -131,15 +64,25 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 
 	SDL_GL_CreateContext(win->window);
 
-	//glewExperimental = GL_TRUE;
 	glewInit();
 
 	/* Compile and link the shader programs */
-	win->gl.base_shader = create_shader_program("flipped.vert", "basic.frag");
+	win->gl.base_shader = create_shader_program(
+			SHADER_PATH "flipped.vert",
+			SHADER_PATH "nothing.frag"
+			);
+
 	win->gl.shaders[0].name = " Nothing ";
-	win->gl.shaders[0].program = create_shader_program("vert.vert", "basic.frag");
+	win->gl.shaders[0].program = create_shader_program(
+			SHADER_PATH "vert.vert",
+			SHADER_PATH "nothing.frag"
+			);
+
 	win->gl.shaders[1].name = " Subpixel ";
-	win->gl.shaders[1].program = create_shader_program("vert.vert", "default.frag");
+	win->gl.shaders[1].program = create_shader_program(
+			SHADER_PATH "vert.vert",
+			SHADER_PATH "subpixel.frag"
+			);
 
 	/* Create a vertex buffer for a quad filling the screen */
 	float vertices[] = {
@@ -181,7 +124,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
+
 	/* Framebuffer for post-processing */
 	glGenFramebuffers(1, &win->gl.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
@@ -203,7 +146,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	 * renderbuffer */
 	glGenRenderbuffers(1, &win->gl.rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, win->gl.rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 6*GBC_SCREEN_WIDTH, 6*GBC_SCREEN_HEIGHT);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, FBO_WIDTH, FBO_HEIGHT);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, win->gl.rbo);
@@ -219,7 +162,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	glGenTextures(1, &win->gl.texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
-			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->gbc->ppu.screen.sdl);
+			GL_UNSIGNED_INT_8_8_8_8, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -227,10 +170,6 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
-
-	fill_lookup();
-
-	win->gl.frame_uniform = glGetUniformLocation(win->gl.shaders[0].program, "frame");
 
 	/* Bind the actual bits we'll be using to render */
 	glBindVertexArray(win->gl.vao);
@@ -247,25 +186,30 @@ void gbcc_window_destroy(struct gbcc_window *win)
 	glDeleteTextures(1, &win->gl.fbo_texture);
 	glDeleteRenderbuffers(1, &win->gl.rbo);
 	glDeleteTextures(1, &win->gl.texture);
-	glDeleteProgram(win->gl.shaders[0].program);
+	for (size_t i = 0; i < sizeof(win->gl.shaders) / sizeof(*win->gl.shaders); i++) {
+		glDeleteProgram(win->gl.shaders[i].program);
+	}
+	glDeleteProgram(win->gl.base_shader);
 	SDL_DestroyWindow(win->window);
 }
 
 void gbcc_window_update(struct gbcc_window *win)
 {
 	uint32_t *screen = win->gbc->ppu.screen.sdl;
+	bool screenshot = win->screenshot || win->raw_screenshot;
+
 	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
+
 	update_text(win);
 	if (win->fps_counter.show) {
 		char fps_text[16];
 		snprintf(fps_text, 16, " FPS: %.0f ", win->fps_counter.fps);
 		render_text(win, fps_text, 0, 0);
 	}
-	if (win->msg.time_left > 0) {
+	if (win->msg.time_left > 0 && !screenshot) {
 		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
 	}
-	
-	//glUniform1f(win->gl.frame_uniform, win->gbc->ppu.frame % 2);
+
 	/* First pass - render the gbc screen to the framebuffer */
 	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
 	glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
@@ -277,12 +221,11 @@ void gbcc_window_update(struct gbcc_window *win)
 	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-	if (win->screenshot || win->raw_screenshot) {
+	if (screenshot) {
 		gbcc_screenshot(win);
 	}
 
 	/* Second pass - render the framebuffer to the screen */
-	/* TODO: This resize logic should only be done on window resize */
 	int width;
 	int height;
 	SDL_GL_GetDrawableSize(win->window, &width, &height);
@@ -297,6 +240,58 @@ void gbcc_window_update(struct gbcc_window *win)
 	glUseProgram(win->gl.base_shader);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	SDL_GL_SwapWindow(win->window);
+}
+
+void load_shader(GLuint shader, const char *filename)
+{
+	FILE *fp = fopen(filename, "rbe");
+	if (!fp) {
+		gbcc_log_error("Failed to load shader %s.\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	fseek(fp, 0, SEEK_END);
+	int size = ftell(fp);
+	GLchar *source = malloc(size);
+	rewind(fp);
+	fread(source, 1, size, fp);
+	fclose(fp);
+	glShaderSource(shader, 1, (const GLchar *const *)&source, &size);
+	free(source);
+
+	glCompileShader(shader);
+
+	GLint status;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE) {
+		gbcc_log_error("Failed to compile shader %s!\n", filename);
+
+		GLint info_length = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_length);
+		if (info_length > 1) {
+			char *log = malloc(info_length * sizeof(*log));
+			glGetShaderInfoLog(shader, info_length, NULL, log);
+			gbcc_log_append_error("%s\n", log);
+			free(log);
+		}
+		exit(EXIT_FAILURE);
+	}
+}
+
+GLuint create_shader_program(const char *vert, const char *frag)
+{
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	load_shader(vertexShader, vert);
+
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	load_shader(fragmentShader, frag);
+
+	GLuint shader = glCreateProgram();
+	glAttachShader(shader, vertexShader);
+	glAttachShader(shader, fragmentShader);
+	glBindFragDataLocation(shader, 0, "out_colour");
+	glLinkProgram(shader);
+	glUseProgram(shader);
+	return shader;
 }
 
 void gbcc_window_show_message(struct gbcc_window *win, const char *msg, int seconds)
@@ -333,20 +328,20 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 			uint32_t dst_px = (j + y) * GBC_SCREEN_WIDTH + (i + x);
 			if (win->font.bitmap[src_px] > 0) {
 				win->buffer[dst_px] = 0xFFFFFF00u;
-			} else {
-				uint8_t r = (win->buffer[dst_px] >> 24u) & 0xFFu;
-				uint8_t g = (win->buffer[dst_px] >> 16u) & 0xFFu;
-				uint8_t b = (win->buffer[dst_px] >> 8u) & 0xFFu;
-				uint32_t res = 0;
-				r = (uint8_t)round(r / 4.0);
-				g = (uint8_t)round(g / 4.0);
-				b = (uint8_t)round(b / 4.0);
-				res |= (uint32_t)(r << 24u);
-				res |= (uint32_t)(g << 16u);
-				res |= (uint32_t)(b << 8u);
-				res |= 0xFFu;
-				win->buffer[dst_px] = res;
+				continue;
 			}
+			uint8_t r = (win->buffer[dst_px] >> 24u) & 0xFFu;
+			uint8_t g = (win->buffer[dst_px] >> 16u) & 0xFFu;
+			uint8_t b = (win->buffer[dst_px] >> 8u) & 0xFFu;
+			uint32_t res = 0;
+			r = (uint8_t)round(r / 4.0);
+			g = (uint8_t)round(g / 4.0);
+			b = (uint8_t)round(b / 4.0);
+			res |= (uint32_t)(r << 24u);
+			res |= (uint32_t)(g << 16u);
+			res |= (uint32_t)(b << 8u);
+			res |= 0xFFu;
+			win->buffer[dst_px] = res;
 		}
 	}
 }

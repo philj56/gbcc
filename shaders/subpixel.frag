@@ -5,7 +5,6 @@ in vec2 Texcoord;
 out vec4 out_colour;
 
 uniform sampler2D tex;
-uniform float frame;
         
 const vec3 r = vec3(
         255.0 / 255.0,

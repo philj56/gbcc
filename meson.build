@@ -13,7 +13,13 @@ project(
   ],
 )
 
-tileset_location = join_paths(
+data_location = join_paths(
+  get_option('prefix'),
+  get_option('datadir'),
+  'gbcc'
+)
+
+shader_location = join_paths(
   get_option('prefix'),
   get_option('datadir'),
   'gbcc',
@@ -26,7 +32,8 @@ add_project_arguments(
     '-mtune=native',
     '-Wno-unused-parameter',
     '-Wno-missing-field-initializers',
-    '-DTILESET_PATH="@0@"'.format(tileset_location),
+    '-DTILESET_PATH="@0@"'.format(join_paths(data_location, 'tileset.png')),
+    '-DSHADER_PATH="@0@"'.format(join_paths(data_location, 'shaders', '')),
   ],
   language: 'c'
 )
@@ -73,6 +80,11 @@ executable(
 
 install_data(
   'tileset.png'
+)
+
+install_subdir(
+  'shaders',
+  install_dir: data_location
 )
 
 license_dir = join_paths(
