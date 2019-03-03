@@ -6,7 +6,7 @@
 #include "gbcc_window.h"
 #include <SDL2/SDL.h>
 
-static const SDL_Scancode keymap[21] = {
+static const SDL_Scancode keymap[22] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -19,6 +19,7 @@ static const SDL_Scancode keymap[21] = {
 	SDL_SCANCODE_S, 	/* Screenshot */
 	SDL_SCANCODE_P, 	/* Pause */
 	SDL_SCANCODE_F, 	/* FPS Counter */
+	SDL_SCANCODE_V, 	/* Switch shader */
 	SDL_SCANCODE_F1,	/* State n */
 	SDL_SCANCODE_F2,
 	SDL_SCANCODE_F3,
@@ -101,6 +102,10 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				win->fps_counter.show ^= val;
 				break;
 			case 12:
+				win->gl.cur_shader += val;
+				win->gl.cur_shader %= sizeof(win->gl.shaders) / sizeof(win->gl.shaders[0]);
+				gbcc_window_show_message(win, win->gl.shaders[win->gl.cur_shader].name, 1);
+				break;
 			case 13:
 			case 14:
 			case 15:
@@ -109,6 +114,7 @@ void gbcc_input_process_all(struct gbcc_window *win)
 			case 18:
 			case 19:
 			case 20:
+			case 21:
 				if (!val) {
 					break;
 				}

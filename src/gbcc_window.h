@@ -10,12 +10,20 @@
 
 #define MSG_BUF_SIZE 128
 
-enum scaling_type { SCALING_NONE, SCALING_SUBPIXEL };
+#define FBO_WIDTH (7 * GBC_SCREEN_WIDTH)
+#define FBO_HEIGHT (7 * GBC_SCREEN_HEIGHT)
+#define FBO_SIZE (FBO_WIDTH * FBO_HEIGHT)
+
+struct shader {
+	char *name;
+	GLuint program;
+};
 
 struct gbcc_window {
 	struct gbc *gbc;
 	struct gbcc_fontmap font;
 	SDL_Window *window;
+	uint32_t buffer[GBC_SCREEN_SIZE];
 	struct {
 		GLuint vbo;
 		GLuint vao;
@@ -24,12 +32,12 @@ struct gbcc_window {
 		GLuint fbo_texture;
 		GLuint rbo;
 		GLuint texture;
-		GLuint default_shader;
-		GLuint postprocessing_shader;
+		GLuint base_shader;
+		int cur_shader;
+		struct shader shaders[2];
 		GLint frame_uniform;
 	} gl;
 	struct {
-		enum scaling_type type;
 		uint32_t factor;
 	} scaling;
 	struct {
@@ -48,7 +56,7 @@ struct gbcc_window {
 	bool raw_screenshot;
 };
 
-void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scaling_type scaling);
+void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc);
 void gbcc_window_destroy(struct gbcc_window *win);
 void gbcc_window_update(struct gbcc_window *win);
 void gbcc_window_show_message(struct gbcc_window *win, const char *msg, int seconds);

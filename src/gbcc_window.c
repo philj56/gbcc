@@ -20,9 +20,6 @@
 #define TILESET_PATH "/usr/share/gbcc/tileset.png"
 #endif
 
-#define FBO_WIDTH (7 * GBC_SCREEN_WIDTH)
-#define FBO_HEIGHT (7 * GBC_SCREEN_HEIGHT)
-
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
 static void update_text(struct gbcc_window *win);
@@ -100,34 +97,14 @@ static GLuint create_shader_program(const char *vert, const char *frag)
 	return shader;
 }
 
-void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scaling_type scaling)
+void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 {
-	win->scaling.type = scaling;
-	switch (scaling) {
-		case SCALING_NONE:
-			win->scaling.factor = 1;
-			break;
-		case SCALING_SUBPIXEL:
-			win->scaling.factor = 7;
-			break;
-		default:
-			gbcc_log_error("Invalid scaling type\n");
-			exit(EXIT_FAILURE);
-	}
 	win->gbc = gbc;
 	clock_gettime(CLOCK_REALTIME, &win->fps_counter.last_time);
 	gbcc_fontmap_load(&win->font, TILESET_PATH);
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
-	}
-	if (scaling == SCALING_SUBPIXEL){
-		SDL_DisplayMode dm;
-		SDL_GetDesktopDisplayMode(0, &dm);
-		if (dm.w < 3 * GBC_SCREEN_WIDTH || dm.h < 3 * GBC_SCREEN_HEIGHT) {
-			gbcc_log_warning("Minimum recommended screen size for subpixel scaling is %dx%d\n",
-					3 * GBC_SCREEN_WIDTH, 3 * GBC_SCREEN_HEIGHT);
-		}
 	}
 
 	/* Main OpenGL settings */
@@ -141,8 +118,8 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
-			win->scaling.factor * GBC_SCREEN_WIDTH,      // width, in pixels
-			win->scaling.factor * GBC_SCREEN_HEIGHT,     // height, in pixels
+			GBC_SCREEN_WIDTH,      // width, in pixels
+			GBC_SCREEN_HEIGHT,     // height, in pixels
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
 			);
 
@@ -158,8 +135,11 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 	glewInit();
 
 	/* Compile and link the shader programs */
-	win->gl.default_shader = create_shader_program("vert.vert", "basic.frag");
-	win->gl.postprocessing_shader = create_shader_program("vert.vert", "default.frag");
+	win->gl.base_shader = create_shader_program("flipped.vert", "basic.frag");
+	win->gl.shaders[0].name = " Nothing ";
+	win->gl.shaders[0].program = create_shader_program("vert.vert", "basic.frag");
+	win->gl.shaders[1].name = " Subpixel ";
+	win->gl.shaders[1].program = create_shader_program("vert.vert", "default.frag");
 
 	/* Create a vertex buffer for a quad filling the screen */
 	float vertices[] = {
@@ -174,15 +154,17 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 	glBindBuffer(GL_ARRAY_BUFFER, win->gl.vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	/* Create a vertex array and enable vertex attributes for the shader */
+	/* Create a vertex array and enable vertex attributes for the shaders.
+	 * All shader programs use the same vertex shader, so we only need to
+	 * do this once. */
 	glGenVertexArrays(1, &win->gl.vao);
 	glBindVertexArray(win->gl.vao);
 
-	GLint posAttrib = glGetAttribLocation(win->gl.default_shader, "position");
+	GLint posAttrib = glGetAttribLocation(win->gl.shaders[0].program, "position");
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), 0);
 	glEnableVertexAttribArray(posAttrib);
 
-	GLint texAttrib = glGetAttribLocation(win->gl.default_shader, "texcoord");
+	GLint texAttrib = glGetAttribLocation(win->gl.shaders[0].program, "texcoord");
 	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)(2*sizeof(float)));
 	glEnableVertexAttribArray(texAttrib);
 
@@ -249,7 +231,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 
 	fill_lookup();
 
-	win->gl.frame_uniform = glGetUniformLocation(win->gl.default_shader, "frame");
+	win->gl.frame_uniform = glGetUniformLocation(win->gl.shaders[0].program, "frame");
 
 	/* Bind the actual bits we'll be using to render */
 	glBindVertexArray(win->gl.vao);
@@ -267,13 +249,14 @@ void gbcc_window_destroy(struct gbcc_window *win)
 	glDeleteTextures(1, &win->gl.fbo_texture);
 	glDeleteRenderbuffers(1, &win->gl.rbo);
 	glDeleteTextures(1, &win->gl.texture);
-	glDeleteProgram(win->gl.default_shader);
+	glDeleteProgram(win->gl.shaders[0].program);
 	SDL_DestroyWindow(win->window);
 }
 
 void gbcc_window_update(struct gbcc_window *win)
 {
 	uint32_t *screen = win->gbc->ppu.screen.sdl;
+	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
 	update_text(win);
 	if (win->fps_counter.show) {
 		char fps_text[16];
@@ -292,8 +275,8 @@ void gbcc_window_update(struct gbcc_window *win)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
-			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)screen);
-	glUseProgram(win->gl.postprocessing_shader);
+			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->buffer);
+	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	/* Second pass - render the framebuffer to the screen */
@@ -309,9 +292,12 @@ void gbcc_window_update(struct gbcc_window *win)
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
-	glUseProgram(win->gl.default_shader);
+	glUseProgram(win->gl.base_shader);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+	if (win->screenshot || win->raw_screenshot) {
+		gbcc_screenshot(win);
+	}
 	SDL_GL_SwapWindow(win->window);
 }
 
@@ -346,25 +332,22 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 	for (uint32_t j = 0; j < th; j++) {
 		for (uint32_t i = 0; i < tw; i++) {
 			uint32_t src_px = char_y + j * (16 * tw) + char_x + i;
-			for (uint32_t n = 0; n < win->scaling.factor; n++) {
-				for (uint32_t m = 0; m < win->scaling.factor; m++) {
-					uint32_t dst_px = (n + (j + y) * win->scaling.factor) * win->scaling.factor * GBC_SCREEN_WIDTH + m + (i + x) * win->scaling.factor;
-					if (win->font.bitmap[src_px] > 0) {
-						win->gbc->ppu.screen.sdl[dst_px] = 0xFFFFFF00u;
-					} else {
-						uint8_t r = (win->gbc->ppu.screen.sdl[dst_px] >> 24u) & 0xFFu;
-						uint8_t g = (win->gbc->ppu.screen.sdl[dst_px] >> 16u) & 0xFFu;
-						uint8_t b = (win->gbc->ppu.screen.sdl[dst_px] >> 8u) & 0xFFu;
-						uint32_t res = 0;
-						r = (uint8_t)round(r / 4.0);
-						g = (uint8_t)round(g / 4.0);
-						b = (uint8_t)round(b / 4.0);
-						res |= (uint32_t)(r << 24u);
-						res |= (uint32_t)(g << 16u);
-						res |= (uint32_t)(b << 8u);
-						win->gbc->ppu.screen.sdl[dst_px] = res;
-					}
-				}
+			uint32_t dst_px = (j + y) * GBC_SCREEN_WIDTH + (i + x);
+			if (win->font.bitmap[src_px] > 0) {
+				win->buffer[dst_px] = 0xFFFFFF00u;
+			} else {
+				uint8_t r = (win->buffer[dst_px] >> 24u) & 0xFFu;
+				uint8_t g = (win->buffer[dst_px] >> 16u) & 0xFFu;
+				uint8_t b = (win->buffer[dst_px] >> 8u) & 0xFFu;
+				uint32_t res = 0;
+				r = (uint8_t)round(r / 4.0);
+				g = (uint8_t)round(g / 4.0);
+				b = (uint8_t)round(b / 4.0);
+				res |= (uint32_t)(r << 24u);
+				res |= (uint32_t)(g << 16u);
+				res |= (uint32_t)(b << 8u);
+				res |= 0xFFu;
+				win->buffer[dst_px] = res;
 			}
 		}
 	}

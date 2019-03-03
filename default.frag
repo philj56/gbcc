@@ -41,13 +41,12 @@ vec3 square(vec3 x)
 void main()
 {
         vec3 src;
-        vec2 pos = vec2(Texcoord.x, 1.0 - Texcoord.y);
-        src.r = texture(tex, pos + vec2(1.0 / 320.0, 0)).r;
-        src.g = texture(tex, pos).g;
-        src.b = texture(tex, pos - vec2(1.0 / 320.0, 0)).b;
-        vec3 x = mod(pos.x * 160 * 7 - vec3(0, 2, 4), 7);
+        src.r = texture(tex, Texcoord + vec2(1.0 / 320.0, 0)).r;
+        src.g = texture(tex, Texcoord).g;
+        src.b = texture(tex, Texcoord - vec2(1.0 / 320.0, 0)).b;
+        vec3 x = mod(Texcoord.x * 160 * 7 - vec3(0, 2, 4), 7);
         vec3 weight = circ(x);
-        float y = mod(pos.y * 144 * 7, 7);
+        float y = mod(Texcoord.y * 144 * 7, 7);
         vec3 dst = vec3(0);
         dst += src.r * r * weight.r;
         dst += src.g * g * weight.g;
