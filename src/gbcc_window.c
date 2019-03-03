@@ -8,62 +8,30 @@
 #include "gbcc_screenshot.h"
 #include "gbcc_time.h"
 #include "gbcc_window.h"
+#include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 #ifndef TILESET_PATH
-#define TILESET_PATH "/usr/share/gbcc/tileset.png"
+#define TILESET_PATH "tileset.png"
+#endif
+
+#ifndef SHADER_PATH
+#define SHADER_PATH "shaders/"
 #endif
 
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
 static void update_text(struct gbcc_window *win);
-static uint32_t subpixel_lut[32][32][32][6];
+static void load_shader(GLuint shader, const char *filename);
+static GLuint create_shader_program(const char *vert, const char *frag);
 
-static void fill_lookup()
+void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 {
-	const uint32_t red = 0xFF7145;
-	const uint32_t green = 0xC1D650;
-	const uint32_t blue = 0x3BCEFF;
-	static bool done = false;
-	if (done) {
-		return;
-	}
-	for (uint32_t r = 0; r < 32; r++) {
-		for (uint32_t g = 0; g < 32; g++) {
-			for (uint32_t b = 0; b < 32; b++) {
-				uint32_t r2 = gbcc_add_colours(0, red, r / 32.0);
-				uint32_t g2 = gbcc_add_colours(0, green, g / 32.0);
-				uint32_t b2 = gbcc_add_colours(0, blue, b / 32.0);
-				subpixel_lut[r][g][b][0] = gbcc_add_colours(r2, 0, 0.7);
-				subpixel_lut[r][g][b][1] = gbcc_add_colours(r2, g2, 0.7);
-				subpixel_lut[r][g][b][2] = gbcc_add_colours(g2, r2, 0.7);
-				subpixel_lut[r][g][b][3] = gbcc_add_colours(g2, b2, 0.7);
-				subpixel_lut[r][g][b][4] = gbcc_add_colours(b2, g2, 0.7);
-				subpixel_lut[r][g][b][5] = gbcc_add_colours(b2, 0, 0.7);
-			}
-		}
-	}
-	done = true;
-}
-
-void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scaling_type scaling)
-{
-	win->scaling.type = scaling;
-	switch (scaling) {
-		case SCALING_NONE:
-			win->scaling.factor = 1;
-			break;
-		case SCALING_SUBPIXEL:
-			win->scaling.factor = 7;
-			break;
-		default:
-			gbcc_log_error("Invalid scaling type\n");
-			exit(EXIT_FAILURE);
-	}
-	win->buffer = calloc((win->scaling.factor * win->scaling.factor) * GBC_SCREEN_SIZE, sizeof(*win->buffer));
 	win->gbc = gbc;
 	clock_gettime(CLOCK_REALTIME, &win->fps_counter.last_time);
 	gbcc_fontmap_load(&win->font, TILESET_PATH);
@@ -71,21 +39,20 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
 	}
-	if (scaling == SCALING_SUBPIXEL){
-		SDL_DisplayMode dm;
-		SDL_GetDesktopDisplayMode(0, &dm);
-		if (dm.w < 3 * GBC_SCREEN_WIDTH || dm.h < 3 * GBC_SCREEN_HEIGHT) {
-			gbcc_log_warning("Minimum recommended screen size for subpixel scaling is %dx%d\n",
-					3 * GBC_SCREEN_WIDTH, 3 * GBC_SCREEN_HEIGHT);
-		}
-	}
-	
+
+	/* Main OpenGL settings */
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
+
 	win->window = SDL_CreateWindow(
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
-			win->scaling.factor * GBC_SCREEN_WIDTH,      // width, in pixels
-			win->scaling.factor * GBC_SCREEN_HEIGHT,     // height, in pixels
+			GBC_SCREEN_WIDTH,      // width, in pixels
+			GBC_SCREEN_HEIGHT,     // height, in pixels
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
 			);
 
@@ -95,171 +62,236 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc, enum scali
 		exit(EXIT_FAILURE);
 	}
 
-	switch (scaling) {
-		case SCALING_NONE:
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
-			break;
-		case SCALING_SUBPIXEL:
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
-			break;
-	}
-	win->renderer = SDL_CreateRenderer(
-			win->window,
-			-1,
-			SDL_RENDERER_ACCELERATED
+	SDL_GL_CreateContext(win->window);
+
+	glewInit();
+
+	/* Compile and link the shader programs */
+	win->gl.base_shader = create_shader_program(
+			SHADER_PATH "flipped.vert",
+			SHADER_PATH "nothing.frag"
 			);
 
-	if (win->renderer == NULL) {
-		gbcc_log_error("Could not create renderer: %s\n", SDL_GetError());
-		SDL_DestroyWindow(win->window);
-		SDL_Quit();
+	win->gl.shaders[0].name = " Nothing ";
+	win->gl.shaders[0].program = create_shader_program(
+			SHADER_PATH "vert.vert",
+			SHADER_PATH "nothing.frag"
+			);
+
+	win->gl.shaders[1].name = " Subpixel ";
+	win->gl.shaders[1].program = create_shader_program(
+			SHADER_PATH "vert.vert",
+			SHADER_PATH "subpixel.frag"
+			);
+
+	/* Create a vertex buffer for a quad filling the screen */
+	float vertices[] = {
+		//  Position      Texcoords
+		-1.0f,  1.0f, 0.0f, 0.0f, // Top-left
+		1.0f,  1.0f,  1.0f, 0.0f, // Top-right
+		1.0f, -1.0f,  1.0f, 1.0f, // Bottom-right
+		-1.0f, -1.0f, 0.0f, 1.0f  // Bottom-left
+	};
+
+	glGenBuffers(1, &win->gl.vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, win->gl.vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	/* Create a vertex array and enable vertex attributes for the shaders.
+	 * TODO: why do we only need to do this once? */
+	glGenVertexArrays(1, &win->gl.vao);
+	glBindVertexArray(win->gl.vao);
+
+	GLint posAttrib = glGetAttribLocation(win->gl.shaders[0].program, "position");
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), 0);
+	glEnableVertexAttribArray(posAttrib);
+
+	GLint texAttrib = glGetAttribLocation(win->gl.shaders[0].program, "texcoord");
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)(2*sizeof(float)));
+	glEnableVertexAttribArray(texAttrib);
+
+	glBindVertexArray(0);
+
+	/* Create the element buffer object that will actually be drawn via
+	 * glDrawElements(). */
+	GLuint elements[] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	glGenBuffers(1, &win->gl.ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	/* Framebuffer for post-processing */
+	glGenFramebuffers(1, &win->gl.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+
+	glGenTextures(1, &win->gl.fbo_texture);
+	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, FBO_WIDTH, FBO_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, win->gl.fbo_texture, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	/* We don't care about the depth and stencil, so just use a
+	 * renderbuffer */
+	glGenRenderbuffers(1, &win->gl.rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, win->gl.rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, FBO_WIDTH, FBO_HEIGHT);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, win->gl.rbo);
+
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		gbcc_log_error("Framebuffer is not complete!\n");
 		exit(EXIT_FAILURE);
 	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	win->texture = SDL_CreateTexture(
-			win->renderer,
-			SDL_PIXELFORMAT_RGB888,
-			SDL_TEXTUREACCESS_STATIC,
-			win->scaling.factor * GBC_SCREEN_WIDTH,
-			win->scaling.factor * GBC_SCREEN_HEIGHT
-			);
+	/* This is the texture we're going to render the raw screen output to
+	 * before post-processing */
+	glGenTextures(1, &win->gl.texture);
+	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
+			GL_UNSIGNED_INT_8_8_8_8, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
-	if (win->texture == NULL) {
-		gbcc_log_error("Could not create texture: %s\n", SDL_GetError());
-		SDL_DestroyRenderer(win->renderer);
-		SDL_DestroyWindow(win->window);
-		SDL_Quit();
-		exit(EXIT_FAILURE);
-	}
-
-	SDL_RenderSetLogicalSize(
-			win->renderer,
-			GBC_SCREEN_WIDTH,
-			GBC_SCREEN_HEIGHT
-			);
-	SDL_RenderSetIntegerScale(win->renderer, true);
-
-	for (size_t i = 0; i < win->scaling.factor * win->scaling.factor * GBC_SCREEN_SIZE; i++) {
-		win->buffer[i] = 0;
-	}
-	fill_lookup();
+	/* Bind the actual bits we'll be using to render */
+	glBindVertexArray(win->gl.vao);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
 }
 
 void gbcc_window_destroy(struct gbcc_window *win)
 {
-	free(win->buffer);
 	gbcc_fontmap_destroy(&win->font);
-	SDL_DestroyTexture(win->texture);
-	SDL_DestroyRenderer(win->renderer);
+	glDeleteBuffers(1, &win->gl.vbo);
+	glDeleteVertexArrays(1, &win->gl.vao);
+	glDeleteBuffers(1, &win->gl.ebo);
+	glDeleteFramebuffers(1, &win->gl.fbo);
+	glDeleteTextures(1, &win->gl.fbo_texture);
+	glDeleteRenderbuffers(1, &win->gl.rbo);
+	glDeleteTextures(1, &win->gl.texture);
+	for (size_t i = 0; i < sizeof(win->gl.shaders) / sizeof(*win->gl.shaders); i++) {
+		glDeleteProgram(win->gl.shaders[i].program);
+	}
+	glDeleteProgram(win->gl.base_shader);
 	SDL_DestroyWindow(win->window);
 }
 
 void gbcc_window_update(struct gbcc_window *win)
 {
-	int err;
 	uint32_t *screen = win->gbc->ppu.screen.sdl;
+	bool screenshot = win->screenshot || win->raw_screenshot;
 
-	switch (win->scaling.type) {
-		case SCALING_NONE:
-			if (win->gbc->mode == GBC || !win->gbc->ppu.palette.precorrected) {
-				for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-					uint8_t r = (uint8_t)(screen[i] >> 19u) & 0x1Fu;
-					uint8_t g = (uint8_t)(screen[i] >> 11u) & 0x1Fu;
-					uint8_t b = (uint8_t)(screen[i] >> 3u) & 0x1Fu;
-					win->buffer[i] = gbcc_lerp_colour(r, g, b);
-				}
-			} else {
-				for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-					win->buffer[i] = screen[i];
-				}
-			}
-			break;
-		case SCALING_SUBPIXEL:
-			for (size_t i = 0; i < GBC_SCREEN_SIZE; i++) {
-				size_t x = (i % GBC_SCREEN_WIDTH) * 7;
-				size_t y = (i / GBC_SCREEN_WIDTH) * 7;
-				uint8_t r = (screen[i] >> 19u) & 0x1Fu;
-				uint8_t g = (screen[i] >> 11u) & 0x1Fu;
-				uint8_t b = (screen[i] >> 3u) & 0x1Fu;
-				uint8_t r2 = 0;
-				uint8_t b2 = 0;
-				if (x < 7 * (GBC_SCREEN_WIDTH - 1)) {
-					r2 = (screen[i + 1] >> 19u) & 0x1Fu;
-				}
-				if (x > 0) {
-					b2 = (screen[i - 1] >> 3u) & 0x1Fu;
-				}
-				for (int n = 0; n < 6; n++) {
-					size_t j = (y + n) * 7 * GBC_SCREEN_WIDTH + x;
-					win->buffer[j++] = subpixel_lut[r][g][b2][0];
-					win->buffer[j++] = subpixel_lut[r][g][b][1];
-					win->buffer[j++] = subpixel_lut[r][g][b][2];
-					win->buffer[j++] = subpixel_lut[r][g][b][3];
-					win->buffer[j++] = subpixel_lut[r][g][b][4];
-					win->buffer[j++] = subpixel_lut[r2][g][b][5];
-					win->buffer[j] = gbcc_add_colours(0, subpixel_lut[r2][g][b][0], 0.7);
-					win->buffer[j] = gbcc_add_colours(win->buffer[j], subpixel_lut[r][g][b][5], 0.7);
-				}
-				for (int m = 0; m < 7; m++) {
-					size_t j = (y + 6) * 7 * GBC_SCREEN_WIDTH + x + m;
-					win->buffer[j] = 0;
-				}
-			}
-			break;
-	}
-	if (win->screenshot || win->raw_screenshot) {
-		gbcc_screenshot(win);
-		win->screenshot = false;
-		win->raw_screenshot = false;
-	}
+	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
+
 	update_text(win);
 	if (win->fps_counter.show) {
 		char fps_text[16];
 		snprintf(fps_text, 16, " FPS: %.0f ", win->fps_counter.fps);
 		render_text(win, fps_text, 0, 0);
 	}
-	if (win->msg.time_left > 0) {
+	if (win->msg.time_left > 0 && !screenshot) {
 		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
 	}
-	switch (win->scaling.type) {
-		case SCALING_NONE:
-			err = SDL_UpdateTexture(
-					win->texture,
-					NULL,
-					win->buffer,
-					GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
-					);
-			break;
-		case SCALING_SUBPIXEL:
-			err = SDL_UpdateTexture(
-					win->texture,
-					NULL,
-					win->buffer,
-					7 * GBC_SCREEN_WIDTH * sizeof(win->buffer[0])
-					);
-			break;
-	}
-	if (err < 0) {
-		gbcc_log_error("Error updating texture: %s\n", SDL_GetError());
-		exit(EXIT_FAILURE);
+
+	/* First pass - render the gbc screen to the framebuffer */
+	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
+	glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
+			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->buffer);
+	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	if (screenshot) {
+		gbcc_screenshot(win);
 	}
 
-	err = SDL_RenderClear(win->renderer);
-	if (err < 0) {
-		gbcc_log_error("Error clearing renderer: %s\n", SDL_GetError());
-		if (win->renderer == NULL) {
-			gbcc_log_error("NULL Renderer!\n");
+	/* Second pass - render the framebuffer to the screen */
+	int width;
+	int height;
+	SDL_GL_GetDrawableSize(win->window, &width, &height);
+	int scale = min(width / GBC_SCREEN_WIDTH, height / GBC_SCREEN_HEIGHT);
+	int scaled_width = scale * GBC_SCREEN_WIDTH;
+	int scaled_height = scale * GBC_SCREEN_HEIGHT;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport((width - scaled_width) / 2, (height - scaled_height) / 2, scaled_width, scaled_height);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
+	glUseProgram(win->gl.base_shader);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	SDL_GL_SwapWindow(win->window);
+}
+
+void load_shader(GLuint shader, const char *filename)
+{
+	FILE *fp = fopen(filename, "rbe");
+	if (!fp) {
+		gbcc_log_error("Failed to load shader %s.\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	fseek(fp, 0, SEEK_END);
+	int size = ftell(fp);
+	GLchar *source = malloc(size);
+	rewind(fp);
+	fread(source, 1, size, fp);
+	fclose(fp);
+	glShaderSource(shader, 1, (const GLchar *const *)&source, &size);
+	free(source);
+
+	glCompileShader(shader);
+
+	GLint status;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE) {
+		gbcc_log_error("Failed to compile shader %s!\n", filename);
+
+		GLint info_length = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_length);
+		if (info_length > 1) {
+			char *log = malloc(info_length * sizeof(*log));
+			glGetShaderInfoLog(shader, info_length, NULL, log);
+			gbcc_log_append_error("%s\n", log);
+			free(log);
 		}
 		exit(EXIT_FAILURE);
 	}
+}
 
-	err = SDL_RenderCopy(win->renderer, win->texture, NULL, NULL);
-	if (err < 0) {
-		gbcc_log_error("Error copying texture: %s\n", SDL_GetError());
-		exit(EXIT_FAILURE);
-	}
+GLuint create_shader_program(const char *vert, const char *frag)
+{
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	load_shader(vertexShader, vert);
 
-	SDL_RenderPresent(win->renderer);
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	load_shader(fragmentShader, frag);
+
+	GLuint shader = glCreateProgram();
+	glAttachShader(shader, vertexShader);
+	glAttachShader(shader, fragmentShader);
+	glBindFragDataLocation(shader, 0, "out_colour");
+	glLinkProgram(shader);
+	glUseProgram(shader);
+	return shader;
 }
 
 void gbcc_window_show_message(struct gbcc_window *win, const char *msg, int seconds)
@@ -293,26 +325,23 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 	for (uint32_t j = 0; j < th; j++) {
 		for (uint32_t i = 0; i < tw; i++) {
 			uint32_t src_px = char_y + j * (16 * tw) + char_x + i;
-			for (uint32_t n = 0; n < win->scaling.factor; n++) {
-				for (uint32_t m = 0; m < win->scaling.factor; m++) {
-					uint32_t dst_px = (n + (j + y) * win->scaling.factor) * win->scaling.factor * GBC_SCREEN_WIDTH + m + (i + x) * win->scaling.factor;
-					if (win->font.bitmap[src_px] > 0) {
-						win->buffer[dst_px] = 0xFFFFFFu;
-					} else {
-						uint8_t r = (win->buffer[dst_px] >> 16u) & 0xFFu;
-						uint8_t g = (win->buffer[dst_px] >> 8u) & 0xFFu;
-						uint8_t b = (win->buffer[dst_px] >> 0u) & 0xFFu;
-						uint32_t res = 0;
-						r = (uint8_t)round(r / 4.0);
-						g = (uint8_t)round(g / 4.0);
-						b = (uint8_t)round(b / 4.0);
-						res |= (uint32_t)(r << 16u);
-						res |= (uint32_t)(g << 8u);
-						res |= (uint32_t)(b << 0u);
-						win->buffer[dst_px] = res;
-					}
-				}
+			uint32_t dst_px = (j + y) * GBC_SCREEN_WIDTH + (i + x);
+			if (win->font.bitmap[src_px] > 0) {
+				win->buffer[dst_px] = 0xFFFFFF00u;
+				continue;
 			}
+			uint8_t r = (win->buffer[dst_px] >> 24u) & 0xFFu;
+			uint8_t g = (win->buffer[dst_px] >> 16u) & 0xFFu;
+			uint8_t b = (win->buffer[dst_px] >> 8u) & 0xFFu;
+			uint32_t res = 0;
+			r = (uint8_t)round(r / 4.0);
+			g = (uint8_t)round(g / 4.0);
+			b = (uint8_t)round(b / 4.0);
+			res |= (uint32_t)(r << 24u);
+			res |= (uint32_t)(g << 16u);
+			res |= (uint32_t)(b << 8u);
+			res |= 0xFFu;
+			win->buffer[dst_px] = res;
 		}
 	}
 }

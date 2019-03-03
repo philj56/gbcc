@@ -60,9 +60,14 @@ void gbcc_screenshot(struct gbcc_window *win)
 		return;
 	}
 
-	int size_mult = win->scaling.factor;
+	int size_mult;
+	uint8_t *buffer;
 	if (win->raw_screenshot) {
 		size_mult = 1;
+	} else {
+		size_mult = FBO_WIDTH / GBC_SCREEN_WIDTH;
+		buffer = malloc(FBO_SIZE * 3 * sizeof(*buffer));
+		glReadPixels(0, 0, FBO_WIDTH, FBO_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
 	}
 	/* Initialize rows of PNG. */
 	png_bytepp row_pointers = png_malloc(png_ptr, size_mult * GBC_SCREEN_HEIGHT * sizeof(png_bytep));
@@ -70,16 +75,18 @@ void gbcc_screenshot(struct gbcc_window *win)
 		png_bytep row = png_malloc(png_ptr, size_mult * GBC_SCREEN_WIDTH * 3);
 		row_pointers[y] = row;
 		for (int x = 0; x < size_mult * GBC_SCREEN_WIDTH; x++) {
-			int idx = y * size_mult * GBC_SCREEN_WIDTH + x;
-			uint32_t pixel;
 			if (win->raw_screenshot) {
-				pixel = win->gbc->ppu.screen.sdl[idx];
+				int idx = y * size_mult * GBC_SCREEN_WIDTH + x;
+				uint32_t pixel = win->buffer[idx];
+				*row++ = (pixel & 0xFF000000u) >> 24u;
+				*row++ = (pixel & 0x00FF0000u) >> 16u;
+				*row++ = (pixel & 0x0000FF00u) >> 8u;
 			} else {
-				pixel = win->buffer[idx];
+				int idx = 3 * ((size_mult * GBC_SCREEN_HEIGHT - y - 1) * size_mult * GBC_SCREEN_WIDTH + x);
+				*row++ = buffer[idx++];
+				*row++ = buffer[idx++];
+				*row++ = buffer[idx++];
 			}
-			*row++ = (pixel & 0xFF0000u) >> 16u;
-			*row++ = (pixel & 0x00FF00u) >> 8u;
-			*row++ = (pixel & 0x0000FFu) >> 0u;
 		}
 	}
 
@@ -99,8 +106,13 @@ void gbcc_screenshot(struct gbcc_window *win)
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 	fclose(fp);
 
+	if (!win->raw_screenshot) {
+		free(buffer);
+	}
+
 	gbcc_log_info("Saved screenshot %s\n", fname);
 	char message[MAX_NAME_LEN];
-	snprintf(message, MAX_NAME_LEN, "Saved screenshot: %s ", fname);
 	gbcc_window_show_message(win, message, 2);
+	win->screenshot = false;
+	win->raw_screenshot = false;
 }

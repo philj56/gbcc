@@ -79,7 +79,6 @@ int main(int argc, char **argv)
 	struct gbcc_window win = {0};
 	struct gbcc_vram_window vwin = {0};
 	bool vram_window = false;
-	enum scaling_type scaling = SCALING_NONE;
 	opterr = 0;
 
 	struct option long_options[] = {
@@ -104,6 +103,8 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	gbcc_initialise(&gbc, argv[optind]);
+	gbcc_audio_initialise(&audio, &gbc);
+	gbcc_window_initialise(&win, &gbc);
 	SDL_Init(0);
 
 	optind = 1;
@@ -121,7 +122,7 @@ int main(int argc, char **argv)
 				gbcc_log_debug("%s palette selected\n", gbc.ppu.palette.name);
 				break;
 			case 's':
-				scaling = SCALING_SUBPIXEL;
+				win.gl.cur_shader = 1;
 				break;
 			case 't':
 				/* TODO: error check */
@@ -149,8 +150,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-       	gbcc_audio_initialise(&audio, &gbc);
-	gbcc_window_initialise(&win, &gbc, scaling);
 	if (vram_window) {
 		gbcc_vram_window_initialise(&vwin, &gbc);
 	}

@@ -129,12 +129,12 @@ struct gbc {
 	/* Memory map */
 	struct {
 		/* GBC areas */
-		uint8_t *rom0;	/* Non-switchable ROM */
-		uint8_t *romx;	/* Switchable ROM */
-		uint8_t *vram;	/* VRAM (switchable in GBC mode) */
-		uint8_t *sram;	/* Cartridge RAM */
-		uint8_t *wram0;	/* Non-switchable Work RAM */
-		uint8_t *wramx;	/* Work RAM (switchable in GBC mode) */
+		uint8_t * restrict rom0;	/* Non-switchable ROM */
+		uint8_t * restrict romx;	/* Switchable ROM */
+		uint8_t * restrict vram;	/* VRAM (switchable in GBC mode) */
+		uint8_t * restrict sram;	/* Cartridge RAM */
+		uint8_t * restrict wram0;	/* Non-switchable Work RAM */
+		uint8_t * restrict wramx;	/* Work RAM (switchable in GBC mode) */
 		uint8_t *echo;	/* Mirror of WRAM */
 		uint8_t oam[OAM_SIZE];	/* Object Attribute Table */
 		uint8_t unused[UNUSED_SIZE];	/* Complicated unused memory */
