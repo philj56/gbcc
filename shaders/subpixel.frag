@@ -24,7 +24,7 @@ const vec3 b = vec3(
         255.0 / 255.0
 );
         
-const float radius = 3.0;
+const float radius = 2.0;
 const float radius2 = radius * radius;
 
 vec3 circ(vec3 x)
@@ -40,10 +40,10 @@ vec3 square(vec3 x)
 void main()
 {
         vec3 src;
-        src.r = texture(tex, Texcoord + vec2(1.0 / 320.0, 0)).r;
+        src.r = texture(tex, Texcoord + vec2(1.0 / 480.0, 0)).r;
         src.g = texture(tex, Texcoord).g;
-        src.b = texture(tex, Texcoord - vec2(1.0 / 320.0, 0)).b;
-        vec3 x = mod(Texcoord.x * 160 * 7 - vec3(0, 2, 4), 7);
+        src.b = texture(tex, Texcoord - vec2(1.0 / 480.0, 0)).b;
+        vec3 x = mod(Texcoord.x * 160 * 7 + vec3(3, 1, -1), 7) - 3;
         vec3 weight = circ(x);
         float y = mod(Texcoord.y * 144 * 7, 7);
         vec3 dst = vec3(0);

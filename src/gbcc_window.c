@@ -201,7 +201,7 @@ void gbcc_window_update(struct gbcc_window *win)
 	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
 
 	update_text(win);
-	if (win->fps_counter.show) {
+	if (win->fps_counter.show && !screenshot) {
 		char fps_text[16];
 		snprintf(fps_text, 16, " FPS: %.0f ", win->fps_counter.fps);
 		render_text(win, fps_text, 0, 0);
