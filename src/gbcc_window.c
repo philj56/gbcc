@@ -132,11 +132,11 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 
 	glGenTextures(1, &win->gl.fbo_texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, FBO_WIDTH, FBO_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, win->gl.fbo_texture, 0);
@@ -146,7 +146,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	 * renderbuffer */
 	glGenRenderbuffers(1, &win->gl.rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, win->gl.rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, FBO_WIDTH, FBO_HEIGHT);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, win->gl.rbo);
@@ -167,7 +167,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -212,12 +212,34 @@ void gbcc_window_update(struct gbcc_window *win)
 
 	/* First pass - render the gbc screen to the framebuffer */
 	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
-	glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
+	glViewport(0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT);
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
 			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->buffer);
+	glUseProgram(win->gl.base_shader);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	/* Second pass - render the framebuffer to the screen */
+	int width;
+	int height;
+	SDL_GL_GetDrawableSize(win->window, &width, &height);
+	double scale;
+	if (win->fractional_scaling) {
+		scale = min((double)width / GBC_SCREEN_WIDTH, (double)height / GBC_SCREEN_HEIGHT);
+	} else {
+		scale = min(width / GBC_SCREEN_WIDTH, height / GBC_SCREEN_HEIGHT);
+	}
+	win->width = scale * GBC_SCREEN_WIDTH;
+	win->height = scale * GBC_SCREEN_HEIGHT;
+	win->x = (width - win->width) / 2;
+	win->y = (height - win->height) / 2;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(win->x, win->y, win->width, win->height);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -225,20 +247,6 @@ void gbcc_window_update(struct gbcc_window *win)
 		gbcc_screenshot(win);
 	}
 
-	/* Second pass - render the framebuffer to the screen */
-	int width;
-	int height;
-	SDL_GL_GetDrawableSize(win->window, &width, &height);
-	int scale = min(width / GBC_SCREEN_WIDTH, height / GBC_SCREEN_HEIGHT);
-	int scaled_width = scale * GBC_SCREEN_WIDTH;
-	int scaled_height = scale * GBC_SCREEN_HEIGHT;
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport((width - scaled_width) / 2, (height - scaled_height) / 2, scaled_width, scaled_height);
-	glClearColor(0.0, 0.0, 0.0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
-	glUseProgram(win->gl.base_shader);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	SDL_GL_SwapWindow(win->window);
 }
 

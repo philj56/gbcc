@@ -10,10 +10,6 @@
 
 #define MSG_BUF_SIZE 128
 
-#define FBO_WIDTH (7 * GBC_SCREEN_WIDTH)
-#define FBO_HEIGHT (7 * GBC_SCREEN_HEIGHT)
-#define FBO_SIZE (FBO_WIDTH * FBO_HEIGHT)
-
 struct shader {
 	char *name;
 	GLuint program;
@@ -23,6 +19,10 @@ struct gbcc_window {
 	struct gbc *gbc;
 	struct gbcc_fontmap font;
 	SDL_Window *window;
+	uint32_t width;
+	uint32_t height;
+	uint32_t x;
+	uint32_t y;
 	uint32_t buffer[GBC_SCREEN_SIZE];
 	struct {
 		GLuint vbo;
@@ -37,9 +37,6 @@ struct gbcc_window {
 		struct shader shaders[2];
 	} gl;
 	struct {
-		uint32_t factor;
-	} scaling;
-	struct {
 		uint64_t last_frame;
 		struct timespec last_time;
 		uint8_t last_ly;
@@ -53,6 +50,7 @@ struct gbcc_window {
 	} msg;
 	bool screenshot;
 	bool raw_screenshot;
+	bool fractional_scaling;
 };
 
 void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc);

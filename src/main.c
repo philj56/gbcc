@@ -32,14 +32,15 @@ void quit(int sig)
 
 void usage()
 {
-	printf("Usage: gbcc [-hisvV] [-p palette] [-t speed] rom_file\n"
+	printf("Usage: gbcc [-fhisvV] [-p palette] [-t speed] rom_file\n"
+	       "  -f, --fractional      Enable fractional scaling.\n"
 	       "  -h, --help            Print this message and exit.\n"
 	       "  -i, --interlace       Enable interlacing (experimental).\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
 	       "  -s, --subpixel        Enable subpixel scaling.\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
 	       "                        (0 = unlimited).\n"
-	       "  -v, --vsync           Enable VSync.\n"
+	       "  -v, --vsync           Enable VSync (currently ineffective).\n"
 	       "  -V, --vram-window     Display a window with all vram tile data.\n"
 	      );
 }
@@ -82,6 +83,7 @@ int main(int argc, char **argv)
 	opterr = 0;
 
 	struct option long_options[] = {
+		{"fractional", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{"interlace", no_argument, NULL, 'i'},
 		{"palette", required_argument, NULL, 'p'},
@@ -111,6 +113,9 @@ int main(int argc, char **argv)
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		switch (opt) {
+			case 'f':
+				win.fractional_scaling = true;
+				exit(EXIT_SUCCESS);
 			case 'h':
 				usage();
 				exit(EXIT_SUCCESS);

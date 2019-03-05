@@ -19,11 +19,15 @@ data_location = join_paths(
   'gbcc'
 )
 
-shader_location = join_paths(
-  get_option('prefix'),
-  get_option('datadir'),
-  'gbcc',
+tileset_location = join_paths(
+  data_location,
   'tileset.png'
+)
+
+shader_location = join_paths(
+  data_location,
+  'shaders',
+  ''
 )
 
 add_project_arguments(
@@ -32,8 +36,8 @@ add_project_arguments(
     '-mtune=native',
     '-Wno-unused-parameter',
     '-Wno-missing-field-initializers',
-    '-DTILESET_PATH="@0@"'.format(join_paths(data_location, 'tileset.png')),
-    '-DSHADER_PATH="@0@"'.format(join_paths(data_location, 'shaders', '')),
+    '-DTILESET_PATH="@0@"'.format(tileset_location),
+    '-DSHADER_PATH="@0@"'.format(shader_location),
   ],
   language: 'c'
 )
@@ -99,6 +103,7 @@ install_data(
 )
 
 scdoc = find_program('scdoc', required: get_option('man-pages'))
+sed = find_program('sed', required: get_option('man-pages'))
 if scdoc.found()
   sh = find_program('sh')
   mandir = get_option('mandir')
@@ -109,7 +114,7 @@ if scdoc.found()
     input: manpage,
     output: output,
     command: [
-      sh, '-c', '@0@ < @INPUT@ > @1@'.format(scdoc.path(), output)
+      sh, '-c', '@0@ < @INPUT@ | sed "s|TILESET_PATH|@1@|g; s|SHADER_PATH|@2@|g" > @3@'.format(scdoc.path(), tileset_location, shader_location, output)
     ],
     install: true,
     install_dir: '@0@/man6'.format(mandir)

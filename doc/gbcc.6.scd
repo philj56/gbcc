@@ -6,7 +6,7 @@ gbcc - Game Boy Color emulator written in C
 
 # SYNOPSIS
 
-*gbcc* [-hisvV] [-p _palette_] [-t _speed_] rom_file
+*gbcc* [-fhisvV] [-p _palette_] [-t _speed_] rom_file
 
 # DESCRIPTION
 
@@ -15,6 +15,9 @@ development and writing a large project in C. Development is ongoing (though
 slow).
 
 # OPTIONS
+
+*-f, --fractional*
+	Enable fractional scaling (default is integer).
 
 *-h, --help*
 	Show help message and exit.
@@ -26,7 +29,7 @@ slow).
 	Select the color palette for use in DMG mode.
 
 *-s, --subpixel*
-	Enable 3x 'subpixel' scaling.
+	Enable 3x 'subpixel' scaling by default.
 
 *-t, --turbo*=_speed_
 	Set a fractional speed limit for turbo mode. Defaults to 0 (unlimited).
@@ -37,16 +40,63 @@ slow).
 *-V, --vram-window*
 	Display a window containing VRAM tile data.
 
+# KEYS
+
+The following are the keybindings as for a standard QWERTY keyboard, and will
+vary for others.
+
+z
+	A button.
+
+x
+	B button.
+
+<Return>
+	Start.
+
+<Space>
+	Select.
+
+<Arrow keys>
+	D-Pad.
+
+<Right Shift>
+	Turbo mode (toggle).
+
+s
+	Filtered & scaled screenshot.
+
+S
+	'Raw' screenshot.
+
+p
+	Pause emulation.
+
+f
+	Toggle FPS counter.
+
+v
+	Cycle through available shaders.
+
+<F_n_>
+	Load savestate _n_.
+
+<Left Shift + F_n_>
+	Save savestate _n_.
+
 # FILES
 
 Note: these are the defaults as defined at compile time.
 
-_/usr/share/games/gbcc/tileset.png_
+_TILESET_PATH_
 	Tileset used for the on-screen display.
+
+_SHADER_PATH_
+	Folder containing all GLSL shaders used for rendering.
 
 # BUGS
 
-Hahahaha....
+Too many to count.
 
 # AUTHORS
 
