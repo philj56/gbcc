@@ -46,43 +46,43 @@ The following are the keybindings as for a standard QWERTY keyboard, and will
 vary for others.
 
 z
-	A button.
+	A button
 
 x
-	B button.
+	B button
 
 <Return>
-	Start.
+	Start
 
 <Space>
-	Select.
+	Select
 
 <Arrow keys>
-	D-Pad.
+	D-Pad
 
 <Right Shift>
-	Turbo mode (toggle).
+	Turbo mode (toggle)
 
 s
-	Filtered & scaled screenshot.
+	Filtered & scaled screenshot
 
 S
-	'Raw' screenshot.
+	'Raw' screenshot
 
 p
-	Pause emulation.
+	Pause emulation
 
 f
-	Toggle FPS counter.
+	Toggle FPS counter
 
 v
-	Cycle through available shaders.
+	Cycle through available shaders
 
-<F_n_>
-	Load savestate _n_.
+<F _n_>
+	Load savestate _n_
 
-<Left Shift + F_n_>
-	Save savestate _n_.
+<Left Shift + F _n_>
+	Save savestate _n_
 
 # FILES
 
