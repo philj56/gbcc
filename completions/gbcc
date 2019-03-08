@@ -37,7 +37,7 @@ _gbcc()
                         ;;
                 *)
                         if ! containsElement '.*.gbc?' "${COMP_WORDS[@]}"; then
-                                _filedir "*.@(gb|gbc)"
+                                _filedir_xspec "*.@(gb|gbc)"
                                 return 0
                         fi
                         remaining=$(echo ${opts[@]} ${COMP_WORDS[@]} ${COMP_WORDS[@]} | tr ' ' '\n' | sort | uniq -u)
