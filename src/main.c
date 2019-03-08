@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "hip:st:vV";
+	const char *short_options = "fhip:st:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 		switch (opt) {
 			case 'f':
 				win.fractional_scaling = true;
-				exit(EXIT_SUCCESS);
+				break;
 			case 'h':
 				usage();
 				exit(EXIT_SUCCESS);
