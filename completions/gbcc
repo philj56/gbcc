@@ -1,0 +1,50 @@
+# vi: ft=bash
+
+containsElement () {
+        local e match="$1"
+        shift
+        for e; do [[ "$e" =~ $match ]] && return 0; done
+        return 1
+}
+
+_gbcc() 
+{
+        local cur prev opts
+        COMPREPLY=()
+        cur="${COMP_WORDS[COMP_CWORD]}"
+        prev="${COMP_WORDS[COMP_CWORD-1]}"
+        opts="--fractional --help --interlace --palette --subpixel --turbo --vsync --vram-window"
+        palettes="blue brown dark-blue dark-brown dark-green green grey invert orange pastel red yellow"
+
+
+        case "${prev}" in
+                --palette|-p)
+                        COMPREPLY=( $(compgen -W "${palettes}" -- ${cur}) )
+                        return 0
+                        ;;
+                --turbo|-t)
+                        return 0
+                        ;;
+        esac
+        case "${cur}" in
+                -[a-zA-Z])
+                        COMPREPLY=$cur
+                        ;;
+                -*)
+                        remaining=$(echo ${opts[@]} ${COMP_WORDS[@]} ${COMP_WORDS[@]} | tr ' ' '\n' | sort | uniq -u)
+                        COMPREPLY=( $(compgen -W "${remaining}" -- ${cur}) )
+                        return 0
+                        ;;
+                *)
+                        if ! containsElement '.*.gbc?' "${COMP_WORDS[@]}"; then
+                                _filedir "*.@(gb|gbc)"
+                                return 0
+                        fi
+                        remaining=$(echo ${opts[@]} ${COMP_WORDS[@]} ${COMP_WORDS[@]} | tr ' ' '\n' | sort | uniq -u)
+                        COMPREPLY=( $(compgen -W "${remaining}" -- ${cur}) )
+                        return 0
+                        ;;
+        esac
+        true
+}
+complete -F _gbcc gbcc

@@ -28,7 +28,7 @@ static const struct palette palettes[NUM_PALETTES] = {
 		.sprite2    = {0xffffffu, 0x65a49bu, 0x0000feu, 0x000000u}
 	},
 	{ /* darkbrown: up b */
-		.name = "DarkBrown",
+		.name = "Dark-Brown",
 		.precorrected = false,
 		.background = {0xffe7c5u, 0xce9c85u, 0x846b29u, 0x5b3109u},
 		.sprite1    = {0xffffffu, 0xffad63u, 0x833100u, 0x000000u},
@@ -63,7 +63,7 @@ static const struct palette palettes[NUM_PALETTES] = {
 		.sprite2    = {0xffffffu, 0x7bff30u, 0x008300u, 0x000000u}
 	},
 	{ /* darkblue: left a */
-		.name = "DarkBlue",
+		.name = "Dark-Blue",
 		.precorrected = false,
 		.background = {0xffffffu, 0x8b8cdeu, 0x53528cu, 0x000000u},
 		.sprite1    = {0xffffffu, 0xff8584u, 0x943a3au, 0x000000u},
@@ -84,7 +84,7 @@ static const struct palette palettes[NUM_PALETTES] = {
 		.sprite2    = {0xffffffu, 0x51ff00u, 0xff4200u, 0x000000u}
 	},
 	{ /* darkgreen: right a */
-		.name = "DarkGreen",
+		.name = "Dark-Green",
 		.precorrected = false,
 		.background = {0xffffffu, 0x7bff30u, 0x0163c6u, 0x000000u},
 		.sprite1    = {0xffffffu, 0xff8584u, 0x943a3au, 0x000000u},

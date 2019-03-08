@@ -30,6 +30,13 @@ shader_location = join_paths(
   ''
 )
 
+completion_location = join_paths(
+  get_option('prefix'),
+  get_option('datadir'),
+  'bash-completion',
+  'completions'
+)
+
 add_project_arguments(
   [
     '-march=native',
@@ -100,6 +107,11 @@ license_dir = join_paths(
 install_data(
   'LICENSE',
   install_dir: license_dir
+)
+
+install_data(
+  'completions/gbcc',
+  install_dir: completion_location
 )
 
 scdoc = find_program('scdoc', required: get_option('man-pages'))

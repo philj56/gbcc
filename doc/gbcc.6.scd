@@ -29,7 +29,7 @@ slow).
 	Select the color palette for use in DMG mode.
 
 *-s, --subpixel*
-	Enable 3x 'subpixel' scaling by default.
+	Enable 7x 'subpixel' scaling by default.
 
 *-t, --turbo*=_speed_
 	Set a fractional speed limit for turbo mode. Defaults to 0 (unlimited).
@@ -67,7 +67,7 @@ s
 	Filtered & scaled screenshot
 
 S
-	'Raw' screenshot
+	Raw screenshot
 
 p
 	Pause emulation
