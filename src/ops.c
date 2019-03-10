@@ -1,9 +1,9 @@
 #include "gbcc.h"
-#include "gbcc_bit_utils.h"
-#include "gbcc_cpu.h"
-#include "gbcc_debug.h"
-#include "gbcc_memory.h"
-#include "gbcc_ops.h"
+#include "bit_utils.h"
+#include "cpu.h"
+#include "debug.h"
+#include "memory.h"
+#include "ops.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

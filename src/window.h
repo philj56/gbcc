@@ -2,8 +2,8 @@
 #define GBCC_WINDOW_H
 
 #include "gbcc.h"
-#include "gbcc_constants.h"
-#include "gbcc_fontmap.h"
+#include "constants.h"
+#include "fontmap.h"
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <stdint.h>

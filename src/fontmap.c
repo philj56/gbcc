@@ -1,5 +1,5 @@
-#include "gbcc_debug.h"
-#include "gbcc_fontmap.h"
+#include "debug.h"
+#include "fontmap.h"
 #include <errno.h>
 #include <png.h>
 #include <stdint.h>

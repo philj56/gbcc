@@ -1,6 +1,6 @@
 #include "gbcc.h"
-#include "gbcc_hdma.h"
-#include "gbcc_memory.h"
+#include "hdma.h"
+#include "memory.h"
 
 void gbcc_hdma_copy(struct gbc *gbc)
 {

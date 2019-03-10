@@ -1,9 +1,9 @@
 #include "gbcc.h"
-#include "gbcc_apu.h"
-#include "gbcc_bit_utils.h"
-#include "gbcc_debug.h"
-#include "gbcc_memory.h"
-#include "gbcc_time.h"
+#include "apu.h"
+#include "bit_utils.h"
+#include "debug.h"
+#include "memory.h"
+#include "time.h"
 #include <stdint.h>
 #include <time.h>
 

@@ -1,8 +1,8 @@
 #ifndef GBCC_PPU_H
 #define GBCC_PPU_H
 
-#include "gbcc_constants.h"
-#include "gbcc_palettes.h"
+#include "constants.h"
+#include "palettes.h"
 #include <stdbool.h>
 #include <stdint.h>
 

@@ -1,13 +1,13 @@
 #include "gbcc.h"
-#include "gbcc_colour.h"
-#include "gbcc_constants.h"
-#include "gbcc_debug.h"
-#include "gbcc_fontmap.h"
-#include "gbcc_input.h"
-#include "gbcc_memory.h"
-#include "gbcc_screenshot.h"
-#include "gbcc_time.h"
-#include "gbcc_window.h"
+#include "colour.h"
+#include "constants.h"
+#include "debug.h"
+#include "fontmap.h"
+#include "input.h"
+#include "memory.h"
+#include "screenshot.h"
+#include "time.h"
+#include "window.h"
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
@@ -72,22 +72,22 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 			SHADER_PATH "nothing.frag"
 			);
 
-	win->gl.shaders[0].name = " Nothing ";
+	win->gl.shaders[0].name = " Colour Correct ";
 	win->gl.shaders[0].program = create_shader_program(
-			SHADER_PATH "vert.vert",
-			SHADER_PATH "nothing.frag"
-			);
-
-	win->gl.shaders[1].name = " Colour Correct ";
-	win->gl.shaders[1].program = create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "colour-correct.frag"
 			);
 
-	win->gl.shaders[2].name = " Subpixel ";
-	win->gl.shaders[2].program = create_shader_program(
+	win->gl.shaders[1].name = " Subpixel ";
+	win->gl.shaders[1].program = create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "subpixel.frag"
+			);
+
+	win->gl.shaders[2].name = " Nothing ";
+	win->gl.shaders[2].program = create_shader_program(
+			SHADER_PATH "vert.vert",
+			SHADER_PATH "nothing.frag"
 			);
 
 	/* Buffer texture param for colour correction LUT */
@@ -105,8 +105,8 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	glBindTexture(GL_TEXTURE_BUFFER, lut);
 	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA8, tbo);
 
-	GLint loc = glGetUniformLocation(win->gl.shaders[1].program, "lut");
-	glUseProgram(win->gl.shaders[1].program);
+	GLint loc = glGetUniformLocation(win->gl.shaders[0].program, "lut");
+	glUseProgram(win->gl.shaders[0].program);
 	glUniform1i(loc, 1);
 	glActiveTexture(GL_TEXTURE0);
 

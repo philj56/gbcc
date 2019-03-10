@@ -1,8 +1,8 @@
 #include "gbcc.h"
-#include "gbcc_bit_utils.h"
-#include "gbcc_debug.h"
-#include "gbcc_mbc.h"
-#include "gbcc_time.h"
+#include "bit_utils.h"
+#include "debug.h"
+#include "mbc.h"
+#include "time.h"
 #include <stdio.h>
 #include <time.h>
 

@@ -1,9 +1,9 @@
 #ifndef GBCC_H
 #define GBCC_H
 
-#include "gbcc_apu.h"
-#include "gbcc_constants.h"
-#include "gbcc_ppu.h"
+#include "apu.h"
+#include "constants.h"
+#include "ppu.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>

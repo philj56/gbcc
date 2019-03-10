@@ -1,4 +1,4 @@
-#include "gbcc_bit_utils.h"
+#include "bit_utils.h"
 
 /* 
  * TODO: These should all probably be macros, as they are called very

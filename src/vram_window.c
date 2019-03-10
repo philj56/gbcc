@@ -1,9 +1,9 @@
 #include "gbcc.h"
-#include "gbcc_bit_utils.h"
-#include "gbcc_debug.h"
-#include "gbcc_input.h"
-#include "gbcc_memory.h"
-#include "gbcc_vram_window.h"
+#include "bit_utils.h"
+#include "debug.h"
+#include "input.h"
+#include "memory.h"
+#include "vram_window.h"
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>

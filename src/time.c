@@ -1,4 +1,4 @@
-#include "gbcc_time.h"
+#include "time.h"
 
 uint64_t gbcc_time_diff(const struct timespec * const cur,
 		const struct timespec * const old)

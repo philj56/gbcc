@@ -1,11 +1,11 @@
 #include "gbcc.h"
-#include "gbcc_apu.h"
-#include "gbcc_bit_utils.h"
-#include "gbcc_debug.h"
-#include "gbcc_hdma.h"
-#include "gbcc_mbc.h"
-#include "gbcc_memory.h"
-#include "gbcc_ppu.h"
+#include "apu.h"
+#include "bit_utils.h"
+#include "debug.h"
+#include "hdma.h"
+#include "mbc.h"
+#include "memory.h"
+#include "ppu.h"
 #include <stdio.h>
 
 static const uint8_t ioreg_read_masks[0x80] = {

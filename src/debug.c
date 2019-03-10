@@ -1,7 +1,7 @@
 #include "gbcc.h"
-#include "gbcc_debug.h"
-#include "gbcc_memory.h"
-#include "gbcc_ops.h"
+#include "debug.h"
+#include "memory.h"
+#include "ops.h"
 #include <stdarg.h>
 #include <stdio.h>
 

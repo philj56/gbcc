@@ -1,7 +1,7 @@
 #include "gbcc.h"
-#include "gbcc_debug.h"
-#include "gbcc_screenshot.h"
-#include "gbcc_window.h"
+#include "debug.h"
+#include "screenshot.h"
+#include "window.h"
 #include <errno.h>
 #include <png.h>
 #include <stdio.h>

@@ -1,8 +1,8 @@
 #include "gbcc.h"
-#include "gbcc_audio.h"
-#include "gbcc_bit_utils.h"
-#include "gbcc_debug.h"
-#include "gbcc_memory.h"
+#include "audio.h"
+#include "bit_utils.h"
+#include "debug.h"
+#include "memory.h"
 #include <SDL2/SDL.h>
 #include <stdint.h>
 #include <time.h>

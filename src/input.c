@@ -1,9 +1,9 @@
 #include "gbcc.h"
-#include "gbcc_debug.h"
-#include "gbcc_input.h"
-#include "gbcc_memory.h"
-#include "gbcc_save.h"
-#include "gbcc_window.h"
+#include "debug.h"
+#include "input.h"
+#include "memory.h"
+#include "save.h"
+#include "window.h"
 #include <SDL2/SDL.h>
 
 static const SDL_Scancode keymap[22] = {

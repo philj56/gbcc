@@ -1,6 +1,6 @@
-#include "gbcc_colour.h"
-#include "gbcc_debug.h"
-#include "gbcc_palettes.h"
+#include "colour.h"
+#include "debug.h"
+#include "palettes.h"
 #include <strings.h>
 
 #define NUM_PALETTES 13

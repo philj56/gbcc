@@ -2,7 +2,7 @@
 #define GBCC_VRAM_WINDOW_H
 
 #include "gbcc.h"
-#include "gbcc_constants.h"
+#include "constants.h"
 #include <SDL2/SDL.h>
 
 #define VRAM_WINDOW_WIDTH (8*24)
