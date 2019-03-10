@@ -44,7 +44,7 @@ add_project_arguments(
     '-Wno-unused-parameter',
     '-Wno-missing-field-initializers',
     '-DTILESET_PATH="@0@"'.format(tileset_location),
-    #'-DSHADER_PATH="@0@"'.format(shader_location),
+    '-DSHADER_PATH="@0@"'.format(shader_location),
     '-g',
     #'-fprofile-instr-use'
   ],
