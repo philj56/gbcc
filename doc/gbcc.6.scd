@@ -78,11 +78,11 @@ f
 v
 	Cycle through available shaders
 
-<F _n_>
-	Load savestate _n_
+<F0-9>
+	Load savestate 0-9
 
-<Left Shift + F _n_>
-	Save savestate _n_
+<Left Shift + F0-9>
+	Save savestate 0-9
 
 # FILES
 

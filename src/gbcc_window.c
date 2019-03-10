@@ -78,11 +78,38 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 			SHADER_PATH "nothing.frag"
 			);
 
-	win->gl.shaders[1].name = " Subpixel ";
+	win->gl.shaders[1].name = " Colour Correct ";
 	win->gl.shaders[1].program = create_shader_program(
+			SHADER_PATH "vert.vert",
+			SHADER_PATH "colour-correct.frag"
+			);
+
+	win->gl.shaders[2].name = " Subpixel ";
+	win->gl.shaders[2].program = create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "subpixel.frag"
 			);
+
+	/* Buffer texture param for colour correction LUT */
+	GLuint tbo;
+	glGenBuffers(1, &tbo);
+	glBindBuffer(GL_TEXTURE_BUFFER, tbo);
+	uint8_t *lut_data = malloc(32 * 32 * 32 * sizeof(GLuint));
+	gbcc_fill_lut(lut_data);
+	glBufferData(GL_TEXTURE_BUFFER, 32 * 32 * 32 * sizeof(GLuint), lut_data, GL_STATIC_DRAW);
+	free(lut_data);
+
+	glActiveTexture(GL_TEXTURE0+1);
+	GLuint lut;
+	glGenTextures(1, &lut);
+	glBindTexture(GL_TEXTURE_BUFFER, lut);
+	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA8, tbo);
+
+	GLint loc = glGetUniformLocation(win->gl.shaders[1].program, "lut");
+	glUseProgram(win->gl.shaders[1].program);
+	glUniform1i(loc, 1);
+	glActiveTexture(GL_TEXTURE0);
+
 
 	/* Create a vertex buffer for a quad filling the screen */
 	float vertices[] = {
@@ -298,7 +325,6 @@ GLuint create_shader_program(const char *vert, const char *frag)
 	glAttachShader(shader, fragmentShader);
 	glBindFragDataLocation(shader, 0, "out_colour");
 	glLinkProgram(shader);
-	glUseProgram(shader);
 	return shader;
 }
 
@@ -335,7 +361,7 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 			uint32_t src_px = char_y + j * (16 * tw) + char_x + i;
 			uint32_t dst_px = (j + y) * GBC_SCREEN_WIDTH + (i + x);
 			if (win->font.bitmap[src_px] > 0) {
-				win->buffer[dst_px] = 0xFFFFFF00u;
+				win->buffer[dst_px] = 0xFFFFFFFFu;
 				continue;
 			}
 			uint8_t r = (win->buffer[dst_px] >> 24u) & 0xFFu;

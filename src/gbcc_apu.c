@@ -12,11 +12,11 @@
 #define SLEEP_TIME (SECOND / SYNC_FREQ)
 #define SLEEP_DETECT (SECOND / 10)
 
-static const uint8_t duty_table[4] = {
-	0x01, 	/* 00000001b */
-	0x81, 	/* 10000001b */
-	0x87, 	/* 10000111b */
-	0x7E 	/* 01111110b */
+static const uint8_t duty_table[4][8] = {
+	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, 	/* 00000001b */
+	{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, 	/* 10000001b */
+	{0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01}, 	/* 10000111b */
+	{0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00}  	/* 01111110b */
 };
 
 static void length_counter_clock(struct channel *ch);
@@ -37,6 +37,7 @@ void gbcc_apu_init(struct gbc *gbc)
 	gbc->apu.noise.timer.period = 8;
 	timer_reset(&gbc->apu.noise.timer);
 	gbc->apu.wave.addr = WAVE_START;
+	clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 }
 
 void gbcc_apu_clock(struct gbc *gbc)
@@ -50,9 +51,9 @@ void gbcc_apu_clock(struct gbc *gbc)
 	if (gbc->apu.disabled) {
 		return;
 	}
-	if (gbc->apu.start_time.tv_sec == 0) {
+	/*if (gbc->apu.start_time.tv_sec == 0) {
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
-	}
+	}*/
 
 	/* Duty */
 	gbc->apu.ch1.state = duty_clock(&gbc->apu.ch1.duty);
@@ -117,7 +118,7 @@ bool duty_clock(struct duty *duty)
 		duty->counter++;
 		duty->counter %= 8u;
 	}
-	return duty_table[duty->cycle] & bit(duty->counter);
+	return duty_table[duty->cycle][duty->counter];
 }
 
 void envelope_clock(struct envelope *envelope)

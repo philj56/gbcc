@@ -44,7 +44,9 @@ add_project_arguments(
     '-Wno-unused-parameter',
     '-Wno-missing-field-initializers',
     '-DTILESET_PATH="@0@"'.format(tileset_location),
-    '-DSHADER_PATH="@0@"'.format(shader_location),
+    #'-DSHADER_PATH="@0@"'.format(shader_location),
+    '-g',
+    #'-fprofile-instr-use'
   ],
   language: 'c'
 )
@@ -86,7 +88,7 @@ executable(
   sources,
   dependencies: [m, sdl, png, gl, glew],
   install: true,
-  link_args: []
+  link_args: ['-g']
 )
 
 install_data(

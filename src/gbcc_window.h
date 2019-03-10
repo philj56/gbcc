@@ -34,7 +34,7 @@ struct gbcc_window {
 		GLuint texture;
 		GLuint base_shader;
 		int cur_shader;
-		struct shader shaders[2];
+		struct shader shaders[3];
 	} gl;
 	struct {
 		uint64_t last_frame;

@@ -60,11 +60,11 @@ void gbcc_ppu_clock(struct gbc *gbc)
 	if (ppu->lcd_disable) {
 		return;
 	}
-	ppu->clock++;
-	ppu->clock %= 456;
 	uint8_t mode = get_video_mode(gbc);
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
+	ppu->clock++;
+	ppu->clock %= 456;
 
 	/* Line-drawing timings */
 	if (mode != GBC_LCD_MODE_VBLANK) {
@@ -173,10 +173,9 @@ void draw_background_line(struct gbc *gbc)
 		} else {
 			colour = 0xFF;
 		}
-		memset(ppu->bg_line.colour, colour, sizeof(ppu->bg_line.colour));
-		/*for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			ppu->screen.gbc[ly * GBC_SCREEN_WIDTH + x] = colour;
-		}*/
+		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
+			ppu->bg_line.colour[x] = colour;
+		}
 		return;
 	}
 
@@ -186,7 +185,6 @@ void draw_background_line(struct gbc *gbc)
 			uint8_t xoff = (scx + x) % 8u;
 			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 			uint16_t tile_addr;
-			/* TODO: Put this somewhere better */
 			if (check_bit(lcdc, 4)) {
 				tile_addr = VRAM_START + 16 * tile;
 			} else {
@@ -280,7 +278,6 @@ void draw_window_line(struct gbc *gbc)
 			uint8_t xoff = (x - wx + 7) % 8;
 			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 			uint16_t tile_addr;
-			/* TODO: Put this somewhere better */
 			if (check_bit(lcdc, 4)) {
 				tile_addr = VRAM_START + 16 * tile;
 			} else {
@@ -445,18 +442,16 @@ void composite_line(struct gbc *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
-	for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-		uint16_t pixel = ly * GBC_SCREEN_WIDTH + x;
+	uint32_t *line = &ppu->screen.gbc[ly * GBC_SCREEN_WIDTH];
 
+	memcpy(line, ppu->bg_line.colour, GBC_SCREEN_WIDTH * sizeof(line[0]));
+	for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
 		uint8_t bg_attr = ppu->bg_line.attr[x];
 		uint8_t win_attr = ppu->window_line.attr[x];
 		uint8_t ob_attr = ppu->sprite_line.attr[x];
-		if (bg_attr & ATTR_DRAWN) {
-			ppu->screen.gbc[pixel] = ppu->bg_line.colour[x];
-		}
 
 		if (win_attr & ATTR_DRAWN) {
-			ppu->screen.gbc[pixel] = ppu->window_line.colour[x];
+			line[x] = ppu->window_line.colour[x];
 		}
 
 		if (ob_attr & ATTR_DRAWN) {
@@ -476,7 +471,7 @@ void composite_line(struct gbc *gbc)
 					continue;
 				}
 			}
-			ppu->screen.gbc[pixel] = ppu->sprite_line.colour[x];
+			line[x] = ppu->sprite_line.colour[x];
 		}
 	}
 }
