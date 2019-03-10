@@ -9,7 +9,7 @@ containsElement () {
 
 _gbcc() 
 {
-        local cur prev opts
+        local cur prev opts palettes remaining
         COMPREPLY=()
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -36,7 +36,7 @@ _gbcc()
                         return 0
                         ;;
                 *)
-                        if ! containsElement '.*.gbc?' "${COMP_WORDS[@]}"; then
+                        if ! containsElement '.*\.gbc?' "${COMP_WORDS[@]}"; then
                                 _filedir '*@(gb|gbc)'
                                 return 0
                         fi
