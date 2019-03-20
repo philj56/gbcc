@@ -130,7 +130,7 @@ void gbcc_screenshot(struct gbcc_window *win)
 	gbcc_log_info("Saved screenshot %s\n", fname);
 	char message[MAX_NAME_LEN];
 	snprintf(message, MAX_NAME_LEN, "Saved screenshot: %s ", fname);
-	gbcc_window_show_message(win, message, 2);
+	gbcc_window_show_message(win, message, 2, false);
 	win->screenshot = false;
 	win->raw_screenshot = false;
 }

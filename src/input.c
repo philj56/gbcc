@@ -104,7 +104,7 @@ void gbcc_input_process_all(struct gbcc_window *win)
 			case 12:
 				win->gl.cur_shader += val;
 				win->gl.cur_shader %= sizeof(win->gl.shaders) / sizeof(win->gl.shaders[0]);
-				gbcc_window_show_message(win, win->gl.shaders[win->gl.cur_shader].name, 1);
+				gbcc_window_show_message(win, win->gl.shaders[win->gl.cur_shader].name, 1, true);
 				break;
 			case 13:
 			case 14:

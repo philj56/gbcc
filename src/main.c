@@ -51,10 +51,6 @@ int emulation_loop(void *_audio)
 	struct gbc *gbc = audio->gbc;
 	gbcc_load(gbc);
 	while (!gbc->quit) {
-		while (gbc->pause) {
-			const struct timespec time = {.tv_sec = 0, .tv_nsec = 10000000};
-			nanosleep(&time, NULL);
-		}
 		gbcc_emulate_cycle(gbc);
 		if (gbc->load_state > 0) {
 			gbcc_load_state(gbc);
@@ -62,6 +58,13 @@ int emulation_loop(void *_audio)
 			gbcc_save_state(gbc);
 		}
 		gbcc_audio_update(audio);
+		while (gbc->pause) {
+			const struct timespec time = {.tv_sec = 0, .tv_nsec = 10000000};
+			nanosleep(&time, NULL);
+			if (gbc->quit) {
+				break;
+			}
+		}
 	}
 	gbcc_save(gbc);
 	return 0;
@@ -127,7 +130,7 @@ int main(int argc, char **argv)
 				gbcc_log_debug("%s palette selected\n", gbc.ppu.palette.name);
 				break;
 			case 's':
-				win.gl.cur_shader = 1;
+				gbcc_window_use_shader(&win, "Subpixel");
 				break;
 			case 't':
 				/* TODO: error check */

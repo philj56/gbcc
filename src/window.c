@@ -72,19 +72,19 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 			SHADER_PATH "nothing.frag"
 			);
 
-	win->gl.shaders[0].name = " Colour Correct ";
+	win->gl.shaders[0].name = "Colour Correct";
 	win->gl.shaders[0].program = create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "colour-correct.frag"
 			);
 
-	win->gl.shaders[1].name = " Subpixel ";
+	win->gl.shaders[1].name = "Subpixel";
 	win->gl.shaders[1].program = create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "subpixel.frag"
 			);
 
-	win->gl.shaders[2].name = " Nothing ";
+	win->gl.shaders[2].name = "Nothing";
 	win->gl.shaders[2].program = create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "nothing.frag"
@@ -314,23 +314,43 @@ void load_shader(GLuint shader, const char *filename)
 
 GLuint create_shader_program(const char *vert, const char *frag)
 {
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	load_shader(vertexShader, vert);
+	GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+	load_shader(vertex_shader, vert);
 
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	load_shader(fragmentShader, frag);
+	GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+	load_shader(fragment_shader, frag);
 
 	GLuint shader = glCreateProgram();
-	glAttachShader(shader, vertexShader);
-	glAttachShader(shader, fragmentShader);
+	glAttachShader(shader, vertex_shader);
+	glAttachShader(shader, fragment_shader);
 	glBindFragDataLocation(shader, 0, "out_colour");
 	glLinkProgram(shader);
 	return shader;
 }
 
-void gbcc_window_show_message(struct gbcc_window *win, const char *msg, int seconds)
+void gbcc_window_use_shader(struct gbcc_window *win, const char *name)
 {
-	strncpy(win->msg.text, msg, MSG_BUF_SIZE);
+	int num_shaders = sizeof(win->gl.shaders) / sizeof(win->gl.shaders[0]);
+	int s;
+	for (s = 0; s < num_shaders; s++) {
+		if (strcasecmp(name, win->gl.shaders[s].name) == 0) {
+			break;
+		}
+	}
+	if (s >= num_shaders) {
+		gbcc_log_error("Invalid shader \"%s\"\n", name);
+	} else {
+		win->gl.cur_shader = s;
+	}
+}
+
+void gbcc_window_show_message(struct gbcc_window *win, const char *msg, int seconds, bool pad)
+{
+	if (pad) {
+		snprintf(win->msg.text, MSG_BUF_SIZE, " %s ", msg);
+	} else {
+		strncpy(win->msg.text, msg, MSG_BUF_SIZE);
+	}
 	win->msg.lines = 1 + strlen(win->msg.text) / (GBC_SCREEN_WIDTH / win->font.tile_width);
 	win->msg.time_left = seconds * 1000000000;
 }
