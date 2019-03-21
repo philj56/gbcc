@@ -16,6 +16,9 @@ slow).
 
 # OPTIONS
 
+*-c, --config*
+	Specify path to custom config file.
+
 *-f, --fractional*
 	Enable fractional scaling (default is integer).
 
@@ -93,6 +96,9 @@ _TILESET_PATH_
 
 _SHADER_PATH_
 	Folder containing all GLSL shaders used for rendering.
+
+$XDG_CONFIG_HOME/gbcc/config.
+        Config file.
 
 # BUGS
 

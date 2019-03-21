@@ -1,6 +1,7 @@
 #include "gbcc.h"
 #include "apu.h"
 #include "audio.h"
+#include "config.h"
 #include "cpu.h"
 #include "debug.h"
 #include "input.h"
@@ -32,7 +33,8 @@ void quit(int sig)
 
 void usage()
 {
-	printf("Usage: gbcc [-fhisvV] [-p palette] [-t speed] rom_file\n"
+	printf("Usage: gbcc [-cfhisvV] [-p palette] [-t speed] rom_file\n"
+	       "  -c, --config=PATH     Path to custom config file.\n"
 	       "  -f, --fractional      Enable fractional scaling.\n"
 	       "  -h, --help            Print this message and exit.\n"
 	       "  -i, --interlace       Enable interlacing (experimental).\n"
@@ -86,6 +88,7 @@ int main(int argc, char **argv)
 	opterr = 0;
 
 	struct option long_options[] = {
+		{"config", required_argument, NULL, 'c'},
 		{"fractional", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{"interlace", no_argument, NULL, 'i'},
@@ -95,7 +98,7 @@ int main(int argc, char **argv)
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "fhip:st:vV";
+	const char *short_options = "c:fhip:st:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -110,12 +113,23 @@ int main(int argc, char **argv)
 	gbcc_initialise(&gbc, argv[optind]);
 	gbcc_audio_initialise(&audio, &gbc);
 	gbcc_window_initialise(&win, &gbc);
+
+	char *config = NULL;
+	optind = 1;
+	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
+		if (opt == 'c') {
+			config = optarg;
+		}
+	}
+	gbcc_load_config(&win, config);
+
 	SDL_Init(0);
 
 	optind = 1;
-
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		switch (opt) {
+			case 'c':
+				break;
 			case 'f':
 				win.fractional_scaling = true;
 				break;

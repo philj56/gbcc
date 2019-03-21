@@ -13,7 +13,7 @@ _gbcc()
         COMPREPLY=()
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
-        opts="--fractional --help --interlace --palette --subpixel --turbo --vsync --vram-window"
+        opts="--config --fractional --help --interlace --palette --subpixel --turbo --vsync --vram-window"
         palettes="blue brown dark-blue dark-brown dark-green green grey invert orange pastel red yellow"
 
 
@@ -23,6 +23,10 @@ _gbcc()
                         return 0
                         ;;
                 --turbo|-t)
+                        return 0
+                        ;;
+                --config|-c)
+                        _filedir
                         return 0
                         ;;
         esac
