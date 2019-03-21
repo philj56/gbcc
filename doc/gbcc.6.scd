@@ -98,7 +98,7 @@ _SHADER_PATH_
 	Folder containing all GLSL shaders used for rendering.
 
 $XDG_CONFIG_HOME/gbcc/config.
-        Config file.
+	Config file.
 
 # BUGS
 
