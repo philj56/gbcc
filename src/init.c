@@ -102,7 +102,7 @@ void load_rom(struct gbc *gbc, const char *filename)
 		exit(EXIT_FAILURE);
 	}
 	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
-	gbcc_log_info("\tCartridge size: 0x%X bytes (%u banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
+	gbcc_log_info("\tCartridge size: 0x%zX bytes (%zu banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
 
 	gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
 	if (gbc->cart.rom == NULL) {
@@ -145,7 +145,7 @@ void parse_header(struct gbc *gbc)
 
 void verify_cartridge(struct gbc *gbc)
 {
-	for (size_t i = CART_LOGO_START; i < CART_LOGO_GBC_CHECK_END; i++) {
+	for (uint16_t i = CART_LOGO_START; i < CART_LOGO_GBC_CHECK_END; i++) {
 		if (gbc->cart.rom[i] != nintendo_logo[i - CART_LOGO_START]) {
 			gbcc_log_error("Cartridge logo check failed on byte %04X\n", i);
 			exit(EXIT_FAILURE);
@@ -160,7 +160,7 @@ void verify_cartridge(struct gbc *gbc)
 	if (sum) {
 		gbcc_log_error("Cartridge checksum failed with value %04X.\n", sum);
 		exit(EXIT_FAILURE);
-	}	
+	}
 	gbcc_log_info("\tCartridge checksum passed.\n");
 }
 
@@ -187,7 +187,7 @@ void print_licensee_code(struct gbc *gbc)
 		new_code[CART_NEW_LICENSEE_CODE_SIZE] = '\0';
 		snprintf(buffer, len, "\tLicensee code: %s\n", new_code);
 	}
-	gbcc_log_info(buffer);
+	gbcc_log_info("%s", buffer);
 }
 
 void init_mode(struct gbc *gbc)
@@ -357,7 +357,7 @@ void init_ram(struct gbc *gbc)
 
 	if (gbc->cart.ram_size > 0) {
 		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;
-		gbcc_log_info("\tCartridge RAM: 0x%0X bytes (%u banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
+		gbcc_log_info("\tCartridge RAM: 0x%0zX bytes (%zu banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
 		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
 		if (gbc->cart.ram == NULL) {
 			gbcc_log_error("Error allocating RAM.\n");
