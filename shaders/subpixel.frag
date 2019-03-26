@@ -32,18 +32,13 @@ vec3 circ(vec3 x)
 	return sqrt(max(radius2 - x * x, 0)) / radius;
 }
 
-vec3 square(vec3 x)
-{
-	return ceil(circ(x));
-}
-
 void main()
 {
 	vec3 src;
 	src.r = texture(tex, Texcoord + vec2(1.0 / 480.0, 0)).r;
 	src.g = texture(tex, Texcoord).g;
 	src.b = texture(tex, Texcoord - vec2(1.0 / 480.0, 0)).b;
-	vec3 x = mod(Texcoord.x * 160 * 7 + vec3(3, 1, -1), 7) - 3;
+	vec3 x = mod(Texcoord.x * 160 * 7 + vec3(3, 1, 4), 7) - vec3(3, 3, 1);
 	vec3 weight = circ(x);
 	float y = mod(Texcoord.y * 144 * 7, 7);
 	vec3 dst = vec3(0);
