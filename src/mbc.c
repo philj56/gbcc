@@ -6,8 +6,30 @@
 #include <stdio.h>
 #include <time.h>
 
-static void update_mbc1_banks(struct gbc *gbc);
-static void update_mbc5_banks(struct gbc *gbc);
+static void set_mbc_banks(struct gbc *gbc);
+
+void set_mbc_banks(struct gbc *gbc)
+{
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
+	/*
+	 * Perform some sanity checks on selected values,
+	 * discarding bits that don't make sense.
+	 */
+	if (mbc->romx_bank >= gbc->cart.rom_banks) {
+		gbcc_log_debug("Invalid rom bank %u.\n", mbc->romx_bank);
+		mbc->rom0_bank &= (gbc->cart.rom_banks - 1);
+		mbc->romx_bank &= (gbc->cart.rom_banks - 1);
+	}
+	if (mbc->sram_bank >= gbc->cart.ram_banks) {
+		gbcc_log_debug("Invalid ram bank %u.\n", mbc->sram_bank);
+		mbc->sram_bank &= (gbc->cart.ram_banks - 1);
+	}
+
+	/* And finally update the actual banks */
+	gbc->memory.rom0 = gbc->cart.rom + mbc->rom0_bank * ROM0_SIZE;
+	gbc->memory.romx = gbc->cart.rom + mbc->romx_bank * ROMX_SIZE;
+	gbc->memory.sram = gbc->cart.ram + mbc->sram_bank * SRAM_SIZE;
+}
 
 uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
 {
@@ -58,32 +80,28 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr)
 
 void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
+
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
 			gbcc_log_debug("Trying to write to SRAM when there isn't any!\n");
-		} else if (gbc->cart.mbc.sram_enable) {
+		} else if (mbc->sram_enable) {
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
 			gbcc_log_debug("SRAM not enabled!\n");
 		}
 	} else if (addr < 0x2000u) {
-		gbc->cart.mbc.ramg = val;
+		mbc->ramg = val;
 	} else if (addr < 0x4000u) {
-		gbc->cart.mbc.romb0 = val;
+		mbc->romb0 = val;
 	} else if (addr < 0x6000u) {
-		gbc->cart.mbc.romb1 = val;
+		mbc->romb1 = val;
 	} else if (addr < 0x8000u) {
-		gbc->cart.mbc.ramb = val;
+		mbc->ramb = val;
 	} else {
 		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
 		return;
 	}
-	update_mbc1_banks(gbc);
-}
-
-void update_mbc1_banks(struct gbc *gbc)
-{
-	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
 	/* RAMG switches on SRAM when it has 0x0A in the lower 4 bits. */
 	mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
@@ -116,24 +134,7 @@ void update_mbc1_banks(struct gbc *gbc)
 		mbc->romx_bank |= (mbc->romb1 & 0x03u) << 5u;
 	}
 
-	/*
-	 * Perform some sanity checks on selected values,
-	 * discarding bits that don't make sense.
-	 */
-	if (mbc->romx_bank > gbc->cart.rom_banks - 1) {
-		gbcc_log_debug("Invalid rom bank %u.\n", mbc->romx_bank);
-		mbc->rom0_bank &= (gbc->cart.rom_banks - 1);
-		mbc->romx_bank &= (gbc->cart.rom_banks - 1);
-	}
-	if (mbc->sram_bank > gbc->cart.ram_banks - 1) {
-		gbcc_log_debug("Invalid ram bank %u.\n", mbc->sram_bank);
-		mbc->sram_bank &= (gbc->cart.ram_banks - 1);
-	}
-
-	/* And finally update the actual banks */
-	gbc->memory.rom0 = gbc->cart.rom + mbc->rom0_bank * ROM0_SIZE;
-	gbc->memory.romx = gbc->cart.rom + mbc->romx_bank * ROMX_SIZE;
-	gbc->memory.sram = gbc->cart.ram + mbc->sram_bank * SRAM_SIZE;
+	set_mbc_banks(gbc);
 }
 
 uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr)
@@ -299,31 +300,27 @@ uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr)
 
 void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
+
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
 			gbcc_log_debug("Trying to write to SRAM when there isn't any!\n");
-		} else if (gbc->cart.mbc.sram_enable) {
+		} else if (mbc->sram_enable) {
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
 			gbcc_log_debug("SRAM not enabled!\n");
 		}
 	} else if (addr < 0x2000u) {
-		gbc->cart.mbc.ramg = val;
+		mbc->ramg = val;
 	} else if (addr < 0x3000u) {
-		gbc->cart.mbc.romb0 = val;
+		mbc->romb0 = val;
 	} else if (addr < 0x4000u) {
-		gbc->cart.mbc.romb1 = val;
+		mbc->romb1 = val;
 	} else if (addr < 0x6000u) {
-		gbc->cart.mbc.ramb = val;
+		mbc->ramb = val;
 	} else {
 		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
 	}
-	update_mbc5_banks(gbc);
-}
-
-void update_mbc5_banks(struct gbc *gbc)
-{
-	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
 	/* RAMG switches on SRAM when it has 0x0A in the lower 4 bits. */
 	mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
@@ -337,24 +334,7 @@ void update_mbc5_banks(struct gbc *gbc)
 	/* Lower 4 bits of RAMB select SRAM bank number */
 	mbc->sram_bank = mbc->ramb & 0x0Fu;
 
-	/*
-	 * Perform some sanity checks on selected values,
-	 * discarding bits that don't make sense.
-	 */
-	if (mbc->romx_bank > gbc->cart.rom_banks - 1) {
-		gbcc_log_debug("Invalid rom bank %u.\n", mbc->romx_bank);
-		mbc->rom0_bank &= (gbc->cart.rom_banks - 1);
-		mbc->romx_bank &= (gbc->cart.rom_banks - 1);
-	}
-	if (mbc->sram_bank > gbc->cart.ram_banks - 1) {
-		gbcc_log_debug("Invalid ram bank %u.\n", mbc->sram_bank);
-		mbc->sram_bank &= (gbc->cart.ram_banks - 1);
-	}
-
-	/* And finally update the actual banks */
-	gbc->memory.rom0 = gbc->cart.rom + mbc->rom0_bank * ROM0_SIZE;
-	gbc->memory.romx = gbc->cart.rom + mbc->romx_bank * ROMX_SIZE;
-	gbc->memory.sram = gbc->cart.ram + mbc->sram_bank * SRAM_SIZE;
+	set_mbc_banks(gbc);
 }
 
 uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr)
