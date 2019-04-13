@@ -6,7 +6,6 @@
 
 struct palette {
 	const char *name;
-	bool precorrected;
 	uint32_t background[4];
 	uint32_t sprite1[4];
 	uint32_t sprite2[4];
