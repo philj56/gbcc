@@ -142,7 +142,7 @@ void clock_div(struct gbc *gbc)
 				gbcc_memory_set_bit(gbc, IF, 2, false);
 			}
 		}
-		if (cpu->tima_reload == 0) {
+		else if (cpu->tima_reload == 0) {
 			gbcc_memory_copy(gbc, TMA, TIMA, false);
 		}
 	}
