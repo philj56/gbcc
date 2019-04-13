@@ -20,7 +20,7 @@ void set_mbc_banks(struct gbc *gbc)
 		mbc->rom0_bank &= (gbc->cart.rom_banks - 1);
 		mbc->romx_bank &= (gbc->cart.rom_banks - 1);
 	}
-	if (mbc->sram_bank >= gbc->cart.ram_banks) {
+	if (mbc->sram_bank >= gbc->cart.ram_banks && gbc->cart.ram_banks > 0) {
 		gbcc_log_debug("Invalid ram bank %u.\n", mbc->sram_bank);
 		mbc->sram_bank &= (gbc->cart.ram_banks - 1);
 	}

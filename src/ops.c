@@ -8,40 +8,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define YIELD {gbc->instruction.step++; return;}
+#define YIELD {cpu->instruction.step++; return;}
 
 static uint8_t READ_OPERAND_MOD(struct gbc *gbc);
 static void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val);
 static void WRITE_OPERAND_DIV(struct gbc *gbc, uint8_t offset, uint8_t val);
-static bool mod_is_hl(struct gbc *gbc);
-static bool div_is_hl(struct gbc *gbc, uint8_t offset);
-static void done(struct gbc *gbc);
+static bool mod_is_hl(struct cpu *cpu);
+static bool div_is_hl(struct cpu *cpu, uint8_t offset);
+static void done(struct cpu *cpu);
 
-static uint8_t get_flag(struct gbc *gbc, uint8_t flag)
+static uint8_t get_flag(struct cpu *cpu, uint8_t flag)
 {
-	return !!(gbc->reg.f & flag);
+	return !!(cpu->reg.f & flag);
 }
 
-static void set_flag(struct gbc *gbc, uint8_t flag)
+static void set_flag(struct cpu *cpu, uint8_t flag)
 {
-	gbc->reg.f |= flag;
+	cpu->reg.f |= flag;
 }
 
-static void clear_flag(struct gbc *gbc, uint8_t flag)
+static void clear_flag(struct cpu *cpu, uint8_t flag)
 {
-	gbc->reg.f &= (uint8_t)~flag;
+	cpu->reg.f &= (uint8_t)~flag;
 }
 
-static void toggle_flag(struct gbc *gbc, uint8_t flag)
+static void toggle_flag(struct cpu *cpu, uint8_t flag)
 {
-	gbc->reg.f ^= flag;
+	cpu->reg.f ^= flag;
 }
 
-static void cond_flag(struct gbc *gbc, uint8_t flag, bool cond) {
+static void cond_flag(struct cpu *cpu, uint8_t flag, bool cond) {
 	if (cond) {
-		set_flag(gbc, flag);
+		set_flag(cpu, flag);
 	} else {
-		clear_flag(gbc, flag);
+		clear_flag(cpu, flag);
 	}
 }
 
@@ -116,67 +116,68 @@ void (*const gbcc_ops[0x100])(struct gbc *gbc) = {
 
 void INTERRUPT(struct gbc *gbc)
 {
-	if (gbc->halt.no_interrupt) {
-		if (gbc->instruction.step < 20) {
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->halt.no_interrupt) {
+		if (cpu->instruction.step < 20) {
 			YIELD;
 		}
-		gbc->halt.no_interrupt = false;
-		gbc->halt.set = false;
-		done(gbc);
+		cpu->halt.no_interrupt = false;
+		cpu->halt.set = false;
+		done(cpu);
 		return;
 	}
 	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
 	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
 	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
-	if (!interrupt && gbc->instruction.step < 4) {
-		if (gbc->instruction.step < 3) {
-			gbc->interrupt.request = false;
-			done(gbc);
+	if (!interrupt && cpu->instruction.step < 4) {
+		if (cpu->instruction.step < 3) {
+			cpu->interrupt.request = false;
+			done(cpu);
 			return;
 		}
 		/* 
 		 * Interrupt was cancelled by writing over a flag when pushing
 		 * the high byte of pc.
 		 */
-		gbc->reg.pc = 0x0000u;
-		gbc->ime = false;
-		gbc->interrupt.request = false;
-		done(gbc);
+		cpu->reg.pc = 0x0000u;
+		cpu->ime = false;
+		cpu->interrupt.request = false;
+		done(cpu);
 		return;
 	}
-	switch (gbc->instruction.step) {
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
 			YIELD;
 		case 2:
-			gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), false);
+			gbcc_memory_write(gbc, --cpu->reg.sp, high_byte(cpu->reg.pc), false);
 			YIELD;
 		case 3:
-			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
+			gbcc_memory_write(gbc, --cpu->reg.sp, low_byte(cpu->reg.pc), false);
 			/* 
 			 * Interrupt address is calculated here according to
 			 * mooneye's tests. Interrupt priority is in memory
 			 * address order; lower adresses have higher priority.
 			 */
 			if (check_bit(interrupt, 0)) {
-				gbc->interrupt.addr = INT_VBLANK;
+				cpu->interrupt.addr = INT_VBLANK;
 			} else if (check_bit(interrupt, 1)) {
-				gbc->interrupt.addr = INT_LCDSTAT;
+				cpu->interrupt.addr = INT_LCDSTAT;
 			} else if (check_bit(interrupt, 2)) {
-				gbc->interrupt.addr = INT_TIMER;
+				cpu->interrupt.addr = INT_TIMER;
 			} else if (check_bit(interrupt, 3)) {
-				gbc->interrupt.addr = INT_SERIAL;
+				cpu->interrupt.addr = INT_SERIAL;
 			} else if (check_bit(interrupt, 4)) {
-				gbc->interrupt.addr = INT_JOYPAD;
+				cpu->interrupt.addr = INT_JOYPAD;
 			}
 			YIELD;
 		case 4:
-			if (gbc->halt.set) {
+			if (cpu->halt.set) {
 				YIELD;
 			}
 	}
-	switch (gbc->interrupt.addr) {
+	switch (cpu->interrupt.addr) {
 		case INT_VBLANK:
 			gbcc_memory_clear_bit(gbc, IF, 0, false);
 			break;
@@ -193,9 +194,9 @@ void INTERRUPT(struct gbc *gbc)
 			gbcc_memory_clear_bit(gbc, IF, 4, false);
 			break;
 	}
-	gbc->reg.pc = gbc->interrupt.addr;
-	gbc->ime = false;
-	done(gbc);
+	cpu->reg.pc = cpu->interrupt.addr;
+	cpu->ime = false;
+	done(cpu);
 }
 
 /* Miscellaneous */
@@ -203,14 +204,15 @@ void INTERRUPT(struct gbc *gbc)
 __attribute__((noreturn))
 void INVALID(struct gbc *gbc)
 {
-	gbcc_log_error("Invalid opcode: 0x%02X\n", gbc->opcode);
+	struct cpu *cpu = &gbc->cpu;
+	gbcc_log_error("Invalid opcode: 0x%02X\n", cpu->opcode);
 	exit(EXIT_FAILURE);
 }
 
 void NOP(struct gbc *gbc)
 {
 	(void) gbc;
-	done(gbc);
+	done(&gbc->cpu);
 }
 
 void STOP(struct gbc *gbc)
@@ -224,79 +226,84 @@ void STOP(struct gbc *gbc)
 		gbc->stop = true;
 	}
 	gbcc_fetch_instruction(gbc); /* Discard next byte */
-	done(gbc);
+	done(&gbc->cpu);
 }
 
 void HALT(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
 	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
 	bool interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
-	if (gbc->ime) {
+	if (cpu->ime) {
 		/* HALT proceeds normally */
-		gbc->halt.set = true;
-		gbc->halt.no_interrupt = false;
-		gbc->halt.skip = false;
+		cpu->halt.set = true;
+		cpu->halt.no_interrupt = false;
+		cpu->halt.skip = false;
 	} else if (!interrupt) {
 		/* HALT proceeds, but on resumption the interrupt isn't executed */
-		gbc->halt.set = true;
-		gbc->halt.no_interrupt = true;
-		gbc->halt.skip = false;
+		cpu->halt.set = true;
+		cpu->halt.no_interrupt = true;
+		cpu->halt.skip = false;
 	} else {
 		/* HALT bug; next instruction doesn't increase PC */
-		gbc->halt.set = false;
-		gbc->halt.no_interrupt = false;
-		gbc->halt.skip = true;
+		cpu->halt.set = false;
+		cpu->halt.no_interrupt = false;
+		cpu->halt.skip = true;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void DAA(struct gbc *gbc)
 {
-	uint8_t *op = &(gbc->reg.a);
-	if (get_flag(gbc, NF)) {
-		if (get_flag(gbc, CF)) {
+	struct cpu *cpu = &gbc->cpu;
+	uint8_t *op = &(cpu->reg.a);
+	if (get_flag(cpu, NF)) {
+		if (get_flag(cpu, CF)) {
 			*op -= 0x60u;
 		}
-		if (get_flag(gbc, HF)) {
+		if (get_flag(cpu, HF)) {
 			*op -= 0x06u;
 		}
 	} else {
-		if (get_flag(gbc, CF) || *op > 0x99u) {
+		if (get_flag(cpu, CF) || *op > 0x99u) {
 			*op += 0x60u;
-			set_flag(gbc, CF);
+			set_flag(cpu, CF);
 		}
-		if (get_flag(gbc, HF) || (*op & 0x0Fu) > 0x09u) {
+		if (get_flag(cpu, HF) || (*op & 0x0Fu) > 0x09u) {
 			*op += 0x06u;
 		}
 	}
-	cond_flag(gbc, ZF, (*op == 0));
-	clear_flag(gbc, HF);
-	done(gbc);
+	cond_flag(cpu, ZF, (*op == 0));
+	clear_flag(cpu, HF);
+	done(cpu);
 }
 
 void CPL(struct gbc *gbc)
 {
-	gbc->reg.a = ~gbc->reg.a;
-	set_flag(gbc, NF);
-	set_flag(gbc, HF);
-	done(gbc);
+	struct cpu *cpu = &gbc->cpu;
+	cpu->reg.a = ~cpu->reg.a;
+	set_flag(cpu, NF);
+	set_flag(cpu, HF);
+	done(cpu);
 }
 
 void SCF(struct gbc *gbc)
 {
-	set_flag(gbc, CF);
-	clear_flag(gbc, NF);
-	clear_flag(gbc, HF);
-	done(gbc);
+	struct cpu *cpu = &gbc->cpu;
+	set_flag(cpu, CF);
+	clear_flag(cpu, NF);
+	clear_flag(cpu, HF);
+	done(cpu);
 }
 
 void CCF(struct gbc *gbc)
 {
-	toggle_flag(gbc, CF);
-	clear_flag(gbc, NF);
-	clear_flag(gbc, HF);
-	done(gbc);
+	struct cpu *cpu = &gbc->cpu;
+	toggle_flag(cpu, CF);
+	clear_flag(cpu, NF);
+	clear_flag(cpu, HF);
+	done(cpu);
 }
 
 /* 
@@ -308,21 +315,23 @@ void CCF(struct gbc *gbc)
  */
 void EI(struct gbc *gbc)
 {
-	gbc->ime_timer.target_state = true;
-	gbc->ime_timer.timer = 2;
-	done(gbc);
+	struct cpu *cpu = &gbc->cpu;
+	cpu->ime_timer.target_state = true;
+	cpu->ime_timer.timer = 2;
+	done(cpu);
 }
 
 void DI(struct gbc *gbc)
 {
-	if (gbc->ime_timer.timer > 0 && gbc->ime_timer.target_state == true) {
-		gbc->ime = false;
-		done(gbc);
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->ime_timer.timer > 0 && cpu->ime_timer.target_state == true) {
+		cpu->ime = false;
+		done(cpu);
 		return;
 	}
-	gbc->ime_timer.target_state = false;
-	gbc->ime_timer.timer = 2;
-	done(gbc);
+	cpu->ime_timer.target_state = false;
+	cpu->ime_timer.timer = 2;
+	done(cpu);
 }
 
 /* Loads */
@@ -330,84 +339,88 @@ void DI(struct gbc *gbc)
 void LD_REG_REG(struct gbc *gbc)
 {
 	WRITE_OPERAND_DIV(gbc, 0x40u, READ_OPERAND_MOD(gbc));
-	done(gbc);
+	done(&gbc->cpu);
 }
 
 void LD_REG_HL(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = READ_OPERAND_MOD(gbc);
-			WRITE_OPERAND_DIV(gbc, 0x40u, gbc->instruction.op1);
+			cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
+			WRITE_OPERAND_DIV(gbc, 0x40u, cpu->instruction.op1);
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void LD_d8(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
-			if (div_is_hl(gbc, 0x00u)) {
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
+			if (div_is_hl(cpu, 0x00u)) {
 				YIELD;
 			}
 		case 2:
-			WRITE_OPERAND_DIV(gbc, 0x00u, gbc->instruction.op1);
+			WRITE_OPERAND_DIV(gbc, 0x00u, cpu->instruction.op1);
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void LD_d16(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
 	}
-	uint16_t val = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
-	switch (gbc->opcode / 0x10u) {
+	uint16_t val = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
+	switch (cpu->opcode / 0x10u) {
 		case 0:
-			gbc->reg.bc = val;
+			cpu->reg.bc = val;
 			break;
 		case 1:
-			gbc->reg.de = val;
+			cpu->reg.de = val;
 			break;
 		case 2:
-			gbc->reg.hl = val;
+			cpu->reg.hl = val;
 			break;
 		case 3:
-			gbc->reg.sp = val;
+			cpu->reg.sp = val;
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_d16\n");
 			return;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void LD_A(struct gbc *gbc)
 {
-	if (gbc->instruction.step == 0) {
-		switch (gbc->opcode / 0x10u) {
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->instruction.step == 0) {
+		switch (cpu->opcode / 0x10u) {
 			case 0:
-				gbc->instruction.addr = gbc->reg.bc;
+				cpu->instruction.addr = cpu->reg.bc;
 				break;
 			case 1:
-				gbc->instruction.addr = gbc->reg.de;
+				cpu->instruction.addr = cpu->reg.de;
 				break;
 			case 2:	/* LDI */
-				gbc->instruction.addr = gbc->reg.hl++;
+				cpu->instruction.addr = cpu->reg.hl++;
 				break;
 			case 3:	/* LDD */
-				gbc->instruction.addr = gbc->reg.hl--;
+				cpu->instruction.addr = cpu->reg.hl--;
 				break;
 			default:
 				gbcc_log_error("Impossible case in LD_A\n");
@@ -415,194 +428,202 @@ void LD_A(struct gbc *gbc)
 		}
 		YIELD;
 	}
-	switch((gbc->opcode % 0x10u) / 0x08u) {
+	switch((cpu->opcode % 0x10u) / 0x08u) {
 		case 0:
-			gbcc_memory_write(gbc, gbc->instruction.addr, gbc->reg.a, false);
+			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a, false);
 			break;
 		case 1:
-			gbc->reg.a = gbcc_memory_read(gbc, gbc->instruction.addr, false);
+			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr, false);
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_A\n");
 			return;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void LD_a16(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
 			YIELD;
 	}
-	uint16_t addr = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
-	switch ((gbc->opcode - 0xE0u) / 0x10u) {
+	uint16_t addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
+	switch ((cpu->opcode - 0xE0u) / 0x10u) {
 		case 0:
-			gbcc_memory_write(gbc, addr, gbc->reg.a, false);
+			gbcc_memory_write(gbc, addr, cpu->reg.a, false);
 			break;
 		case 1:
-			gbc->reg.a = gbcc_memory_read(gbc, addr, false);
+			cpu->reg.a = gbcc_memory_read(gbc, addr, false);
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_a16\n");
 			break;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void LDH_a8(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.addr = 0xFF00u + gbcc_fetch_instruction(gbc);
+			cpu->instruction.addr = 0xFF00u + gbcc_fetch_instruction(gbc);
 			YIELD;
 	}
-	switch ((gbc->opcode - 0xE0u) / 0x10u) {
+	switch ((cpu->opcode - 0xE0u) / 0x10u) {
 		case 0:
-			gbcc_memory_write(gbc, gbc->instruction.addr, gbc->reg.a, false);
+			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a, false);
 			break;
 		case 1:
-			gbc->reg.a = gbcc_memory_read(gbc, gbc->instruction.addr, false);
+			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr, false);
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_OFFSET\n");
 			return;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void LDH_C(struct gbc *gbc)
 {
-	if (gbc->instruction.step == 0) {
-		gbc->instruction.addr = 0xFF00u + gbc->reg.c;
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->instruction.step == 0) {
+		cpu->instruction.addr = 0xFF00u + cpu->reg.c;
 		YIELD;
 	}
 
-	switch ((gbc->opcode - 0xE0u) / 0x10u) {
+	switch ((cpu->opcode - 0xE0u) / 0x10u) {
 		case 0:
-			gbcc_memory_write(gbc, gbc->instruction.addr, gbc->reg.a, false);
+			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a, false);
 			break;
 		case 1:
-			gbc->reg.a = gbcc_memory_read(gbc, gbc->instruction.addr, false);
+			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr, false);
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_OFFSET\n");
 			return;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void STORE_SP(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 3:
-			gbc->instruction.addr = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
-			gbcc_memory_write(gbc, gbc->instruction.addr, low_byte(gbc->reg.sp), false);
+			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
+			gbcc_memory_write(gbc, cpu->instruction.addr, low_byte(cpu->reg.sp), false);
 			YIELD;
 		case 4:
-			gbcc_memory_write(gbc, gbc->instruction.addr+1, high_byte(gbc->reg.sp), false);
+			gbcc_memory_write(gbc, cpu->instruction.addr+1, high_byte(cpu->reg.sp), false);
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void LD_HL_SP(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 	}
-	uint16_t tmp = gbc->reg.sp;
-	uint16_t tmp2 = (uint16_t)(gbc->reg.sp + (int8_t)gbc->instruction.op1);
-	gbc->reg.hl = tmp2;
-	cond_flag(gbc, HF, (tmp2 & 0x0Fu) < (tmp & 0x0Fu));
-	cond_flag(gbc, CF, (tmp2 & 0xFFu) < (tmp & 0xFFu));
-	clear_flag(gbc, ZF);
-	clear_flag(gbc, NF);
-	done(gbc);
+	uint16_t tmp = cpu->reg.sp;
+	uint16_t tmp2 = (uint16_t)(cpu->reg.sp + (int8_t)cpu->instruction.op1);
+	cpu->reg.hl = tmp2;
+	cond_flag(cpu, HF, (tmp2 & 0x0Fu) < (tmp & 0x0Fu));
+	cond_flag(cpu, CF, (tmp2 & 0xFFu) < (tmp & 0xFFu));
+	clear_flag(cpu, ZF);
+	clear_flag(cpu, NF);
+	done(cpu);
 }
 
 void LD_SP_HL(struct gbc *gbc)
 {
-	if (gbc->instruction.step == 0) {
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->instruction.step == 0) {
 		YIELD;
 	}
-	gbc->reg.sp = gbc->reg.hl;
-	done(gbc);
+	cpu->reg.sp = cpu->reg.hl;
+	done(cpu);
 }
 
 void POP(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
 	}
-	uint16_t tmp = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
-	switch ((gbc->opcode % 0x40u) / 0x10u) {
+	uint16_t tmp = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
+	switch ((cpu->opcode % 0x40u) / 0x10u) {
 		case 0:
-			gbc->reg.bc = tmp;
+			cpu->reg.bc = tmp;
 			break;
 		case 1:
-			gbc->reg.de = tmp;
+			cpu->reg.de = tmp;
 			break;
 		case 2:
-			gbc->reg.hl = tmp;
+			cpu->reg.hl = tmp;
 			break;
 		case 3:
-			gbc->reg.af = tmp;
+			cpu->reg.af = tmp;
 			/* Lower 4 bits of AF are always 0 */
-			gbc->reg.af &= 0xFFF0u;
+			cpu->reg.af &= 0xFFF0u;
 			break;
 		default:
 			gbcc_log_error("Impossible case in PUSH_POP\n");
 			return;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void PUSH(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
-			switch ((gbc->opcode % 0x40u) / 0x10u) {
+			switch ((cpu->opcode % 0x40u) / 0x10u) {
 				case 0:
-					gbc->instruction.op1 = gbc->reg.b;
-					gbc->instruction.op2 = gbc->reg.c;
+					cpu->instruction.op1 = cpu->reg.b;
+					cpu->instruction.op2 = cpu->reg.c;
 					break;
 				case 1:
-					gbc->instruction.op1 = gbc->reg.d;
-					gbc->instruction.op2 = gbc->reg.e;
+					cpu->instruction.op1 = cpu->reg.d;
+					cpu->instruction.op2 = cpu->reg.e;
 					break;
 				case 2:
-					gbc->instruction.op1 = gbc->reg.h;
-					gbc->instruction.op2 = gbc->reg.l;
+					cpu->instruction.op1 = cpu->reg.h;
+					cpu->instruction.op2 = cpu->reg.l;
 					break;
 				case 3:
-					gbc->instruction.op1 = gbc->reg.a;
-					gbc->instruction.op2 = gbc->reg.f;
+					cpu->instruction.op1 = cpu->reg.a;
+					cpu->instruction.op2 = cpu->reg.f;
 					break;
 				default:
 					gbcc_log_error("Impossible case in PUSH_POP\n");
@@ -612,28 +633,29 @@ void PUSH(struct gbc *gbc)
 		case 1:
 			YIELD;
 		case 2:
-			gbcc_memory_write(gbc, --(gbc->reg.sp), gbc->instruction.op1, false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), cpu->instruction.op1, false);
 			YIELD;
 		case 3:
-			gbcc_memory_write(gbc, --(gbc->reg.sp), gbc->instruction.op2, false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), cpu->instruction.op2, false);
 	}
-	done(gbc);
+	done(cpu);
 }
 
 /* ALU */
 
 void ALU_OP(struct gbc *gbc)
 {
-	uint8_t *op1 = &(gbc->reg.a);
+	struct cpu *cpu = &gbc->cpu;
+	uint8_t *op1 = &(cpu->reg.a);
 	uint8_t op2;
 	uint8_t tmp;
 	uint8_t offset;
 	
-	if (gbc->instruction.step == 0 && mod_is_hl(gbc)) {
+	if (cpu->instruction.step == 0 && mod_is_hl(cpu)) {
 		YIELD;
 	}
 
-	if (gbc->opcode < 0xC0u) {
+	if (cpu->opcode < 0xC0u) {
 		op2 = READ_OPERAND_MOD(gbc);
 		offset = 0x80u;
 	} else {
@@ -641,196 +663,199 @@ void ALU_OP(struct gbc *gbc)
 		offset = 0xC0u;
 	}
 
-	switch ((gbc->opcode - offset) / 0x08u) {
+	switch ((cpu->opcode - offset) / 0x08u) {
 		case 0: /* ADD */
-			cond_flag(gbc, HF, (((*op1 & 0x0Fu) + (op2 & 0x0Fu)) & 0x10u) == 0x10u);
+			cond_flag(cpu, HF, (((*op1 & 0x0Fu) + (op2 & 0x0Fu)) & 0x10u) == 0x10u);
 			tmp = *op1;
 			*op1 += op2;
-			cond_flag(gbc, ZF, (*op1 == 0));
-			clear_flag(gbc, NF);
-			cond_flag(gbc, CF, *op1 < tmp);
+			cond_flag(cpu, ZF, (*op1 == 0));
+			clear_flag(cpu, NF);
+			cond_flag(cpu, CF, *op1 < tmp);
 			break;
 		case 1: /* ADC */
-			cond_flag(gbc, HF, (((*op1 & 0x0Fu) + (op2 & 0x0Fu) + get_flag(gbc, CF)) & 0x10u) == 0x10u);
-			*op1 += get_flag(gbc, CF);
-			if (*op1 == 0 && get_flag(gbc, CF)) {
-				set_flag(gbc, CF);
+			cond_flag(cpu, HF, (((*op1 & 0x0Fu) + (op2 & 0x0Fu) + get_flag(cpu, CF)) & 0x10u) == 0x10u);
+			*op1 += get_flag(cpu, CF);
+			if (*op1 == 0 && get_flag(cpu, CF)) {
+				set_flag(cpu, CF);
 			} else {
-				clear_flag(gbc, CF);
+				clear_flag(cpu, CF);
 			}
 			tmp = *op1;
 			*op1 += op2;
 			if (*op1 < tmp) {
-				set_flag(gbc, CF);
+				set_flag(cpu, CF);
 			}
-			cond_flag(gbc, ZF, (*op1 == 0));
-			clear_flag(gbc, NF);
+			cond_flag(cpu, ZF, (*op1 == 0));
+			clear_flag(cpu, NF);
 			break;
 		case 2: /* SUB */
-			cond_flag(gbc, HF, ((*op1 & 0x0Fu) - (op2 & 0x0Fu)) > 0x0Fu);
+			cond_flag(cpu, HF, ((*op1 & 0x0Fu) - (op2 & 0x0Fu)) > 0x0Fu);
 			tmp = *op1;
 			*op1 -= op2;
-			cond_flag(gbc, ZF, (*op1 == 0));
-			set_flag(gbc, NF);
-			cond_flag(gbc, CF, *op1 > tmp);
+			cond_flag(cpu, ZF, (*op1 == 0));
+			set_flag(cpu, NF);
+			cond_flag(cpu, CF, *op1 > tmp);
 			break;
 		case 3: /* SBC */
-			cond_flag(gbc, HF, ((*op1 & 0x0Fu) - (op2 & 0x0Fu) - get_flag(gbc, CF)) > 0x0Fu);
-			*op1 -= get_flag(gbc, CF);
-			if (*op1 == 0xFF && get_flag(gbc, CF)) {
-				set_flag(gbc, CF);
+			cond_flag(cpu, HF, ((*op1 & 0x0Fu) - (op2 & 0x0Fu) - get_flag(cpu, CF)) > 0x0Fu);
+			*op1 -= get_flag(cpu, CF);
+			if (*op1 == 0xFF && get_flag(cpu, CF)) {
+				set_flag(cpu, CF);
 			} else {
-				clear_flag(gbc, CF);
+				clear_flag(cpu, CF);
 			}
 			tmp = *op1;
 			*op1 -= op2;
 			if (*op1 > tmp) {
-				set_flag(gbc, CF);
+				set_flag(cpu, CF);
 			}
-			cond_flag(gbc, ZF, (*op1 == 0));
-			set_flag(gbc, NF);
+			cond_flag(cpu, ZF, (*op1 == 0));
+			set_flag(cpu, NF);
 			break;
 		case 4: /* AND */
 			*op1 &= op2;
-			cond_flag(gbc, ZF, (*op1 == 0));
-			clear_flag(gbc, NF);
-			set_flag(gbc, HF);
-			clear_flag(gbc, CF);
+			cond_flag(cpu, ZF, (*op1 == 0));
+			clear_flag(cpu, NF);
+			set_flag(cpu, HF);
+			clear_flag(cpu, CF);
 			break;
 		case 5: /* XOR */
 			*op1 ^= op2;
-			cond_flag(gbc, ZF, (*op1 == 0));
-			clear_flag(gbc, NF);
-			clear_flag(gbc, HF);
-			clear_flag(gbc, CF);
+			cond_flag(cpu, ZF, (*op1 == 0));
+			clear_flag(cpu, NF);
+			clear_flag(cpu, HF);
+			clear_flag(cpu, CF);
 			break;
 		case 6: /* OR */
 			*op1 |= op2;
-			cond_flag(gbc, ZF, (*op1 == 0));
-			clear_flag(gbc, NF);
-			clear_flag(gbc, HF);
-			clear_flag(gbc, CF);
+			cond_flag(cpu, ZF, (*op1 == 0));
+			clear_flag(cpu, NF);
+			clear_flag(cpu, HF);
+			clear_flag(cpu, CF);
 			break;
 		case 7: /* CP */
-			cond_flag(gbc, HF, ((*op1 & 0x0Fu) - (op2 & 0x0Fu)) > 0x0Fu);
+			cond_flag(cpu, HF, ((*op1 & 0x0Fu) - (op2 & 0x0Fu)) > 0x0Fu);
 			tmp = *op1 - op2;
-			cond_flag(gbc, ZF, (tmp == 0));
-			set_flag(gbc, NF);
-			cond_flag(gbc, CF, tmp > *op1);
+			cond_flag(cpu, ZF, (tmp == 0));
+			set_flag(cpu, NF);
+			cond_flag(cpu, CF, tmp > *op1);
 			break;
 		default:
 			gbcc_log_error("Impossible case in ALU_OP\n");
 			return;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void INC_DEC_REG(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	uint8_t op;
 
-	switch (gbc->opcode / 0x08u) {
+	switch (cpu->opcode / 0x08u) {
 		case 0:
-			op = gbc->reg.b;
+			op = cpu->reg.b;
 			break;
 		case 1:
-			op = gbc->reg.c;
+			op = cpu->reg.c;
 			break;
 		case 2:
-			op = gbc->reg.d;
+			op = cpu->reg.d;
 			break;
 		case 3:
-			op = gbc->reg.e;
+			op = cpu->reg.e;
 			break;
 		case 4:
-			op = gbc->reg.h;
+			op = cpu->reg.h;
 			break;
 		case 5:
-			op = gbc->reg.l;
+			op = cpu->reg.l;
 			break;
 		case 6:
-			op = gbcc_memory_read(gbc, gbc->reg.hl, false);
+			op = gbcc_memory_read(gbc, cpu->reg.hl, false);
 			break;
 		case 7:
-			op = gbc->reg.a;
+			op = cpu->reg.a;
 			break;
 		default:
 			gbcc_log_error("Impossible case in INC_DEC_8_BIT\n");
 			return;
 	}
 
-	switch ((gbc->opcode % 0x08u) / 0x05u) {
+	switch ((cpu->opcode % 0x08u) / 0x05u) {
 		case 0:	/* INC */
-			clear_flag(gbc, NF);
-			cond_flag(gbc, HF, (((op & 0x0Fu) + 1) & 0x10u) == 0x10u);
+			clear_flag(cpu, NF);
+			cond_flag(cpu, HF, (((op & 0x0Fu) + 1) & 0x10u) == 0x10u);
 			WRITE_OPERAND_DIV(gbc, 0x00u, ++op);
 			break;
 		case 1:	/* DEC */
-			set_flag(gbc, NF);
-			cond_flag(gbc, HF, (((op & 0x0Fu) - 1) & 0x10u) == 0x10u);
+			set_flag(cpu, NF);
+			cond_flag(cpu, HF, (((op & 0x0Fu) - 1) & 0x10u) == 0x10u);
 			WRITE_OPERAND_DIV(gbc, 0x00u, --op);
 			break;
 		default:
 			gbcc_log_error("Impossible case in INC_DEC_8_BIT\n");
 			return;
 	}
-	cond_flag(gbc, ZF, (op == 0));
-	done(gbc);
+	cond_flag(cpu, ZF, (op == 0));
+	done(cpu);
 }
 
 void INC_DEC_HL(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_memory_read(gbc, gbc->reg.hl, false);
+			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.hl, false);
 			YIELD;
 	}
-	uint8_t op = gbc->instruction.op1;
-	switch ((gbc->opcode % 0x08u) / 0x05u) {
+	uint8_t op = cpu->instruction.op1;
+	switch ((cpu->opcode % 0x08u) / 0x05u) {
 		case 0:	/* INC */
-			clear_flag(gbc, NF);
-			cond_flag(gbc, HF, (((op & 0x0Fu) + 1) & 0x10u) == 0x10u);
+			clear_flag(cpu, NF);
+			cond_flag(cpu, HF, (((op & 0x0Fu) + 1) & 0x10u) == 0x10u);
 			WRITE_OPERAND_DIV(gbc, 0x00u, ++op);
 			break;
 		case 1:	/* DEC */
-			set_flag(gbc, NF);
-			cond_flag(gbc, HF, (((op & 0x0Fu) - 1) & 0x10u) == 0x10u);
+			set_flag(cpu, NF);
+			cond_flag(cpu, HF, (((op & 0x0Fu) - 1) & 0x10u) == 0x10u);
 			WRITE_OPERAND_DIV(gbc, 0x00u, --op);
 			break;
 		default:
 			gbcc_log_error("Impossible case in INC_DEC_8_BIT\n");
 			return;
 	}
-	cond_flag(gbc, ZF, (op == 0));
-	done(gbc);
+	cond_flag(cpu, ZF, (op == 0));
+	done(cpu);
 }
 
 void INC_DEC_16_BIT(struct gbc *gbc)
 {
-	if (gbc->instruction.step == 0) {
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->instruction.step == 0) {
 		YIELD;
 	}
 	uint16_t *op;
-	switch (gbc->opcode / 0x10u) {
+	switch (cpu->opcode / 0x10u) {
 		case 0:
-			op = &(gbc->reg.bc);
+			op = &(cpu->reg.bc);
 			break;
 		case 1:
-			op = &(gbc->reg.de);
+			op = &(cpu->reg.de);
 			break;
 		case 2:
-			op = &(gbc->reg.hl);
+			op = &(cpu->reg.hl);
 			break;
 		case 3:
-			op = &(gbc->reg.sp);
+			op = &(cpu->reg.sp);
 			break;
 		default:
 			gbcc_log_error("Impossible case in INC_DEC_16_BIT\n");
 			return;
 	}
-	switch ((gbc->opcode % 0x10u) / 0x08u) {
+	switch ((cpu->opcode % 0x10u) / 0x08u) {
 		case 0:	/* INC */
 			*op += 1u;
 			break;
@@ -841,203 +866,211 @@ void INC_DEC_16_BIT(struct gbc *gbc)
 			gbcc_log_error("Impossible case in INC_DEC_16_BIT\n");
 			return;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void ADD_HL(struct gbc *gbc)
 {
-	if (gbc->instruction.step == 0) {
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->instruction.step == 0) {
 		YIELD;
 	}
 	uint16_t op;
 	uint16_t tmp;
-	switch (gbc->opcode / 0x10u) {
+	switch (cpu->opcode / 0x10u) {
 		case 0:
-			op = gbc->reg.bc;
+			op = cpu->reg.bc;
 			break;
 		case 1:
-			op = gbc->reg.de;
+			op = cpu->reg.de;
 			break;
 		case 2:
-			op = gbc->reg.hl;
+			op = cpu->reg.hl;
 			break;
 		case 3:
-			op = gbc->reg.sp;
+			op = cpu->reg.sp;
 			break;
 		default:
 			gbcc_log_error("Impossible case in ADD_HL\n");
 			return;
 	}
-	cond_flag(gbc, HF, (((gbc->reg.hl & 0x0FFFu) + (op & 0x0FFFu)) & 0x1000u) == 0x1000u);
-	tmp = gbc->reg.hl;
-	gbc->reg.hl += op;
-	cond_flag(gbc, CF, (tmp > gbc->reg.hl));
-	clear_flag(gbc, NF);
-	done(gbc);
+	cond_flag(cpu, HF, (((cpu->reg.hl & 0x0FFFu) + (op & 0x0FFFu)) & 0x1000u) == 0x1000u);
+	tmp = cpu->reg.hl;
+	cpu->reg.hl += op;
+	cond_flag(cpu, CF, (tmp > cpu->reg.hl));
+	clear_flag(cpu, NF);
+	done(cpu);
 }
 
 void ADD_SP(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
 			YIELD;
 	}
-	uint16_t tmp = gbc->reg.sp;
-	gbc->reg.sp += (int8_t)gbc->instruction.op1;
-	cond_flag(gbc, HF, (gbc->reg.sp & 0x0Fu) < (tmp & 0x0Fu));
-	cond_flag(gbc, CF, (gbc->reg.sp & 0xFFu) < (tmp & 0xFFu));
-	clear_flag(gbc, ZF);
-	clear_flag(gbc, NF);
-	done(gbc);
+	uint16_t tmp = cpu->reg.sp;
+	cpu->reg.sp += (int8_t)cpu->instruction.op1;
+	cond_flag(cpu, HF, (cpu->reg.sp & 0x0Fu) < (tmp & 0x0Fu));
+	cond_flag(cpu, CF, (cpu->reg.sp & 0xFFu) < (tmp & 0xFFu));
+	clear_flag(cpu, ZF);
+	clear_flag(cpu, NF);
+	done(cpu);
 }
 
 void SHIFT_A(struct gbc *gbc)
 {
-	uint8_t *op = &(gbc->reg.a);
+	struct cpu *cpu = &gbc->cpu;
+	uint8_t *op = &(cpu->reg.a);
 	uint8_t tmp;
 
-	switch (gbc->opcode / 0x08u) {
+	switch (cpu->opcode / 0x08u) {
 		case 0:	/* RLC */
-			cond_flag(gbc, CF, (*op & 0x80u) >> 7u);
+			cond_flag(cpu, CF, (*op & 0x80u) >> 7u);
 			*op = (uint8_t)(*op << 1u) | (uint8_t)(*op >> 7u);
 			break;
 		case 1:	/* RRC */
-			cond_flag(gbc, CF, *op & 1u);
+			cond_flag(cpu, CF, *op & 1u);
 			*op = (uint8_t)(*op >> 1u) | (uint8_t)(*op << 7u);
 			break;
 		case 2:	/* RL */
-			tmp = get_flag(gbc, CF);
-			cond_flag(gbc, CF, (*op & 0x80u) >> 7u);
+			tmp = get_flag(cpu, CF);
+			cond_flag(cpu, CF, (*op & 0x80u) >> 7u);
 			*op = (uint8_t)(*op << 1u) | tmp;
 			break;
 		case 3:	/* RR */
-			tmp = get_flag(gbc, CF);
-			cond_flag(gbc, CF, *op & 1u);
+			tmp = get_flag(cpu, CF);
+			cond_flag(cpu, CF, *op & 1u);
 			*op = (uint8_t)(*op >> 1u) | (uint8_t)(tmp << 7u);
 			break;
 		default:
 			gbcc_log_error("Impossible case in SHIFT_A\n");
 			return;
 	}
-	clear_flag(gbc, ZF);
-	clear_flag(gbc, NF);
-	clear_flag(gbc, HF);
-	done(gbc);
+	clear_flag(cpu, ZF);
+	clear_flag(cpu, NF);
+	clear_flag(cpu, HF);
+	done(cpu);
 }
 
 /* Jumps */
 
 void JP(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
 			YIELD;
 	}
-	gbc->reg.pc = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
-	done(gbc);
+	cpu->reg.pc = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
+	done(cpu);
 }
 
 void JP_HL(struct gbc *gbc)
 {
-	gbc->reg.pc = gbc->reg.hl;
-	done(gbc);
+	struct cpu *cpu = &gbc->cpu;
+	cpu->reg.pc = cpu->reg.hl;
+	done(cpu);
 }
 
 void JP_COND(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	bool jp = false;
-	switch (gbc->instruction.step) {
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_fetch_instruction(gbc);
-			gbc->instruction.addr = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
-			switch ((gbc->opcode - 0xC0u) / 0x08u) {
+			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
+			switch ((cpu->opcode - 0xC0u) / 0x08u) {
 				case 0:	/* JP NZ */
-					jp = !get_flag(gbc, ZF);
+					jp = !get_flag(cpu, ZF);
 					break;
 				case 1:	/* JP Z */
-					jp = get_flag(gbc, ZF);
+					jp = get_flag(cpu, ZF);
 					break;
 				case 2:	/* JP NC */
-					jp = !get_flag(gbc, CF);
+					jp = !get_flag(cpu, CF);
 					break;
 				case 3:	/* JP C */
-					jp = get_flag(gbc, CF);
+					jp = get_flag(cpu, CF);
 					break;
 			}
 			if (jp) {
-				gbc->reg.pc = gbc->instruction.addr;
+				cpu->reg.pc = cpu->instruction.addr;
 				YIELD;
 			} else {
 				break;
 			}
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void JR(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
-			gbc->reg.pc += (int8_t)gbc->instruction.op1;
+			cpu->reg.pc += (int8_t)cpu->instruction.op1;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void JR_COND(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			break;
 		case 2: /* Jump was taken */
-			done(gbc);
+			done(cpu);
 			return;
 	}
-	switch ((gbc->opcode - 0x20u) / 0x08u) {
+	switch ((cpu->opcode - 0x20u) / 0x08u) {
 		case 0:	/* JR NZ */
-			if (!get_flag(gbc, ZF)) {
-				gbc->reg.pc += (int8_t)gbc->instruction.op1;
+			if (!get_flag(cpu, ZF)) {
+				cpu->reg.pc += (int8_t)cpu->instruction.op1;
 				YIELD;
 			}
 			break;
 		case 1:	/* JR Z */
-			if (get_flag(gbc, ZF)) {
-				gbc->reg.pc += (int8_t)gbc->instruction.op1;
+			if (get_flag(cpu, ZF)) {
+				cpu->reg.pc += (int8_t)cpu->instruction.op1;
 				YIELD;
 			}
 			break;
 		case 2:	/* JR NC */
-			if (!get_flag(gbc, CF)) {
-				gbc->reg.pc += (int8_t)gbc->instruction.op1;
+			if (!get_flag(cpu, CF)) {
+				cpu->reg.pc += (int8_t)cpu->instruction.op1;
 				YIELD;
 			}
 			break;
 		case 3:	/* JR C */
-			if (get_flag(gbc, CF)) {
-				gbc->reg.pc += (int8_t)gbc->instruction.op1;
+			if (get_flag(cpu, CF)) {
+				cpu->reg.pc += (int8_t)cpu->instruction.op1;
 				YIELD;
 			}
 			break;
@@ -1045,126 +1078,131 @@ void JR_COND(struct gbc *gbc)
 			gbcc_log_error("Impossible case in JR_COND\n");
 			return;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 /* Calls */
 
 void CALL(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 3:
-			gbc->instruction.addr = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
+			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 			YIELD;
 		case 4:
-			gbcc_memory_write(gbc, --(gbc->reg.sp), high_byte(gbc->reg.pc), false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), high_byte(cpu->reg.pc), false);
 			YIELD;
 		case 5:
-			gbcc_memory_write(gbc, --(gbc->reg.sp), low_byte(gbc->reg.pc), false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), low_byte(cpu->reg.pc), false);
 	}
-	gbc->reg.pc = gbc->instruction.addr;
-	done(gbc);
+	cpu->reg.pc = cpu->instruction.addr;
+	done(cpu);
 }
 
 void CALL_COND(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_fetch_instruction(gbc);
+			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_fetch_instruction(gbc);
-			switch ((gbc->opcode - 0xC0u) / 0x08u) {
+			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
+			switch ((cpu->opcode - 0xC0u) / 0x08u) {
 				case 0:	/* CALL NZ */
-					if (!get_flag(gbc, ZF)) {
+					if (!get_flag(cpu, ZF)) {
 						YIELD;
 					}
 					break;
 				case 1:	/* CALL Z */
-					if (get_flag(gbc, ZF)) {
+					if (get_flag(cpu, ZF)) {
 						YIELD;
 					}
 					break;
 				case 2:	/* CALL NC */
-					if (!get_flag(gbc, CF)) {
+					if (!get_flag(cpu, CF)) {
 						YIELD;
 					}
 					break;
 				case 3:	/* CALL C */
-					if (get_flag(gbc, CF)) {
+					if (get_flag(cpu, CF)) {
 						YIELD;
 					}
 					break;
 			}
 			break;
 		case 3:
-			gbc->instruction.addr = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
+			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 			YIELD;
 		case 4:
-			gbcc_memory_write(gbc, --(gbc->reg.sp), high_byte(gbc->reg.pc), false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), high_byte(cpu->reg.pc), false);
 			YIELD;
 		case 5:
-			gbcc_memory_write(gbc, --(gbc->reg.sp), low_byte(gbc->reg.pc), false);
-			gbc->reg.pc = gbc->instruction.addr;
+			gbcc_memory_write(gbc, --(cpu->reg.sp), low_byte(cpu->reg.pc), false);
+			cpu->reg.pc = cpu->instruction.addr;
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void RET(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->instruction.op1 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
 			YIELD;
 		case 2:
-			gbc->instruction.op2 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
 			YIELD;
 		case 3:
-			gbc->reg.pc = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
+			cpu->reg.pc = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void RETI(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	RET(gbc);
-	if (!gbc->instruction.running) {
+	if (!cpu->instruction.running) {
 		/* RET has finished */
-		gbc->ime = true;
+		cpu->ime = true;
 	}
 }
 
 void RET_COND(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	bool ret = false;
-	switch (gbc->instruction.step) {
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			switch ((gbc->opcode - 0xC0u) / 0x08u) {
+			switch ((cpu->opcode - 0xC0u) / 0x08u) {
 				case 0:	/* RET NZ */
-					ret = !get_flag(gbc, ZF);
+					ret = !get_flag(cpu, ZF);
 					break;
 				case 1:	/* RET Z */
-					ret = get_flag(gbc, ZF);
+					ret = get_flag(cpu, ZF);
 					break;
 				case 2:	/* RET NC */
-					ret = !get_flag(gbc, CF);
+					ret = !get_flag(cpu, CF);
 					break;
 				case 3:	/* RET C */
-					ret = get_flag(gbc, CF);
+					ret = get_flag(cpu, CF);
 					break;
 			}
 			if (ret) {
@@ -1173,46 +1211,48 @@ void RET_COND(struct gbc *gbc)
 				break;
 			}
 		case 2:
-			gbc->instruction.op1 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
 			YIELD;
 		case 3:
-			gbc->instruction.op2 = gbcc_memory_read(gbc, gbc->reg.sp++, false);
+			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
 			YIELD;
 		case 4:
-			gbc->reg.pc = cat_bytes(gbc->instruction.op1, gbc->instruction.op2);
+			cpu->reg.pc = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 	}
-	done(gbc);
+	done(cpu);
 }
 
 void RST(struct gbc *gbc)
 {
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
 			YIELD;
 		case 2:
-			gbcc_memory_write(gbc, --gbc->reg.sp, high_byte(gbc->reg.pc), false);
+			gbcc_memory_write(gbc, --cpu->reg.sp, high_byte(cpu->reg.pc), false);
 			YIELD;
 		case 3:
-			gbcc_memory_write(gbc, --gbc->reg.sp, low_byte(gbc->reg.pc), false);
+			gbcc_memory_write(gbc, --cpu->reg.sp, low_byte(cpu->reg.pc), false);
 	}
-	gbc->reg.pc = gbc->opcode - 0xC7u;
-	done(gbc);
+	cpu->reg.pc = cpu->opcode - 0xC7u;
+	done(cpu);
 }
 
 /* CB-prefix */
 
 void PREFIX_CB(struct gbc *gbc)
 {
-	gbc->instruction.prefix_cb = true;
-	switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	cpu->instruction.prefix_cb = true;
+	switch (cpu->instruction.step) {
 		case 0:
 			YIELD;
 		case 1:
-			gbc->opcode = gbcc_fetch_instruction(gbc);
+			cpu->opcode = gbcc_fetch_instruction(gbc);
 	}
-	switch (gbc->opcode / 0x40u) {
+	switch (cpu->opcode / 0x40u) {
 		case 0:
 			CB_SHIFT_OP(gbc);
 			break;
@@ -1230,142 +1270,147 @@ void PREFIX_CB(struct gbc *gbc)
 
 void CB_SHIFT_OP(struct gbc *gbc)
 {
-	if (mod_is_hl(gbc)) {
-		switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	if (mod_is_hl(cpu)) {
+		switch (cpu->instruction.step) {
 			case 1:
 				YIELD;
 			case 2:
-				gbc->instruction.op1 = READ_OPERAND_MOD(gbc);
+				cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
 				YIELD;
 		}
 	} else {
-		gbc->instruction.op1 = READ_OPERAND_MOD(gbc);
+		cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
 	}
-	uint8_t op = gbc->instruction.op1;
+	uint8_t op = cpu->instruction.op1;
 	uint8_t tmp;
 
-	switch (gbc->opcode / 0x08u) {
+	switch (cpu->opcode / 0x08u) {
 		case 0:	/* RLC */
-			cond_flag(gbc, CF, check_bit(op, 7));
+			cond_flag(cpu, CF, check_bit(op, 7));
 			op = (uint8_t)(op << 1u) | (uint8_t)(op >> 7u);
 			break;
 		case 1:	/* RRC */
-			cond_flag(gbc, CF, check_bit(op, 0));
+			cond_flag(cpu, CF, check_bit(op, 0));
 			op = (uint8_t)(op >> 1u) | (uint8_t)(op << 7u);
 			break;
 		case 2:	/* RL */
-			tmp = get_flag(gbc, CF);
-			cond_flag(gbc, CF, check_bit(op, 7));
+			tmp = get_flag(cpu, CF);
+			cond_flag(cpu, CF, check_bit(op, 7));
 			op = (uint8_t)(op << 1u) | tmp;
 			break;
 		case 3:	/* RR */
-			tmp = get_flag(gbc, CF);
-			cond_flag(gbc, CF, check_bit(op, 0));
+			tmp = get_flag(cpu, CF);
+			cond_flag(cpu, CF, check_bit(op, 0));
 			op = (uint8_t)(op >> 1u) | (uint8_t)(tmp << 7u);
 			break;
 		case 4:	/* SLA */
-			cond_flag(gbc, CF, check_bit(op, 7));
+			cond_flag(cpu, CF, check_bit(op, 7));
 			op <<= 1u;
 			break;
 		case 5:	/* SRA */
-			cond_flag(gbc, CF, check_bit(op, 0));
+			cond_flag(cpu, CF, check_bit(op, 0));
 			op = (uint8_t)(op >> 1u) | (uint8_t)(op & 0x80u);
 			break;
 		case 6:	/* SWAP */
-			clear_flag(gbc, CF);
+			clear_flag(cpu, CF);
 			op = (uint8_t)((op & 0x0Fu) << 4u) | (uint8_t)((op & 0xF0u) >> 4u);
 			break;
 		case 7:	/* SRL */
-			cond_flag(gbc, CF, check_bit(op, 0));
+			cond_flag(cpu, CF, check_bit(op, 0));
 			op >>= 1u;
 			break;
 		default:
 			gbcc_log_error("Impossible case in CB_SHIFT_OP\n");
 			return;
 	}
-	cond_flag(gbc, ZF, (op == 0));
-	clear_flag(gbc, NF);
-	clear_flag(gbc, HF);
+	cond_flag(cpu, ZF, (op == 0));
+	clear_flag(cpu, NF);
+	clear_flag(cpu, HF);
 
 	WRITE_OPERAND_MOD(gbc, op);
-	done(gbc);
+	done(cpu);
 }
 
 void CB_BIT(struct gbc *gbc)
 {
-	if (gbc->instruction.step == 1 && mod_is_hl(gbc)) {
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->instruction.step == 1 && mod_is_hl(cpu)) {
 		YIELD;
 	}
 	uint8_t op = READ_OPERAND_MOD(gbc);
-	uint8_t b = (gbc->opcode - 0x40u) / 0x08u;
+	uint8_t b = (cpu->opcode - 0x40u) / 0x08u;
 
-	cond_flag(gbc, ZF, !check_bit(op, b));
-	clear_flag(gbc, NF);
-	set_flag(gbc, HF);
-	done(gbc);
+	cond_flag(cpu, ZF, !check_bit(op, b));
+	clear_flag(cpu, NF);
+	set_flag(cpu, HF);
+	done(cpu);
 }
 
 void CB_RES(struct gbc *gbc)
 {
-	if (mod_is_hl(gbc)) {
-		switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	if (mod_is_hl(cpu)) {
+		switch (cpu->instruction.step) {
 			case 1:
 				YIELD;
 			case 2:
-				gbc->instruction.op1 = READ_OPERAND_MOD(gbc);
+				cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
 				YIELD;
 		}
 	} else {
-		gbc->instruction.op1 = READ_OPERAND_MOD(gbc);
+		cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
 	}
-	uint8_t b = (gbc->opcode - 0x80u) / 0x08u;
+	uint8_t b = (cpu->opcode - 0x80u) / 0x08u;
 
-	WRITE_OPERAND_MOD(gbc, clear_bit(gbc->instruction.op1, b));
-	done(gbc);
+	WRITE_OPERAND_MOD(gbc, clear_bit(cpu->instruction.op1, b));
+	done(cpu);
 }
 
 void CB_SET(struct gbc *gbc)
 {
-	if (mod_is_hl(gbc)) {
-		switch (gbc->instruction.step) {
+	struct cpu *cpu = &gbc->cpu;
+	if (mod_is_hl(cpu)) {
+		switch (cpu->instruction.step) {
 			case 1:
 				YIELD;
 			case 2:
-				gbc->instruction.op1 = READ_OPERAND_MOD(gbc);
+				cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
 				YIELD;
 		}
 	} else {
-		gbc->instruction.op1 = READ_OPERAND_MOD(gbc);
+		cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
 	}
-	uint8_t b = (gbc->opcode - 0xC0u) / 0x08u;
+	uint8_t b = (cpu->opcode - 0xC0u) / 0x08u;
 
-	WRITE_OPERAND_MOD(gbc, set_bit(gbc->instruction.op1, b));
-	done(gbc);
+	WRITE_OPERAND_MOD(gbc, set_bit(cpu->instruction.op1, b));
+	done(cpu);
 }
 
 /* Helper functions */
 
 uint8_t READ_OPERAND_MOD(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	uint8_t ret;
-	switch (gbc->opcode % 0x08u) {
+	switch (cpu->opcode % 0x08u) {
 		case 0:
-			return gbc->reg.b;
+			return cpu->reg.b;
 		case 1:
-			return gbc->reg.c;
+			return cpu->reg.c;
 		case 2:
-			return gbc->reg.d;
+			return cpu->reg.d;
 		case 3:
-			return gbc->reg.e;
+			return cpu->reg.e;
 		case 4:
-			return gbc->reg.h;
+			return cpu->reg.h;
 		case 5:
-			return gbc->reg.l;
+			return cpu->reg.l;
 		case 6:
-			ret = gbcc_memory_read(gbc, gbc->reg.hl, false);
+			ret = gbcc_memory_read(gbc, cpu->reg.hl, false);
 			return ret;
 		case 7:
-			return gbc->reg.a;
+			return cpu->reg.a;
 		default:
 			return 0;
 	}
@@ -1373,77 +1418,79 @@ uint8_t READ_OPERAND_MOD(struct gbc *gbc)
 
 void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val)
 {
-	switch (gbc->opcode % 0x08u) {
+	struct cpu *cpu = &gbc->cpu;
+	switch (cpu->opcode % 0x08u) {
 		case 0:
-			gbc->reg.b = val;
+			cpu->reg.b = val;
 			break;
 		case 1:
-			gbc->reg.c = val;
+			cpu->reg.c = val;
 			break;
 		case 2:
-			gbc->reg.d = val;
+			cpu->reg.d = val;
 			break;
 		case 3:
-			gbc->reg.e = val;
+			cpu->reg.e = val;
 			break;
 		case 4:
-			gbc->reg.h = val;
+			cpu->reg.h = val;
 			break;
 		case 5:
-			gbc->reg.l = val;
+			cpu->reg.l = val;
 			break;
 		case 6:
-			gbcc_memory_write(gbc, gbc->reg.hl, val, false);
+			gbcc_memory_write(gbc, cpu->reg.hl, val, false);
 			break;
 		case 7:
-			gbc->reg.a = val;
+			cpu->reg.a = val;
 			break;
 	}
 }
 
 void WRITE_OPERAND_DIV(struct gbc *gbc, uint8_t offset, uint8_t val)
 {
-	switch ((gbc->opcode - offset) / 0x08u) {
+	struct cpu *cpu = &gbc->cpu;
+	switch ((cpu->opcode - offset) / 0x08u) {
 		case 0:
-			gbc->reg.b = val;
+			cpu->reg.b = val;
 			break;
 		case 1:
-			gbc->reg.c = val;
+			cpu->reg.c = val;
 			break;
 		case 2:
-			gbc->reg.d = val;
+			cpu->reg.d = val;
 			break;
 		case 3:
-			gbc->reg.e = val;
+			cpu->reg.e = val;
 			break;
 		case 4:
-			gbc->reg.h = val;
+			cpu->reg.h = val;
 			break;
 		case 5:
-			gbc->reg.l = val;
+			cpu->reg.l = val;
 			break;
 		case 6:
-			gbcc_memory_write(gbc, gbc->reg.hl, val, false);
+			gbcc_memory_write(gbc, cpu->reg.hl, val, false);
 			break;
 		case 7:
-			gbc->reg.a = val;
+			cpu->reg.a = val;
 			break;
 	}
 }
 
-bool mod_is_hl(struct gbc *gbc)
+bool mod_is_hl(struct cpu *cpu)
 {
-	return (gbc->opcode % 0x08u) == 6;
+	return (cpu->opcode % 0x08u) == 6;
 }
 
-bool div_is_hl(struct gbc *gbc, uint8_t offset)
+bool div_is_hl(struct cpu *cpu, uint8_t offset)
 {
-	return (gbc->opcode - offset) / 0x08u == 6;
+	return (cpu->opcode - offset) / 0x08u == 6;
 }
 
-void done(struct gbc *gbc)
+void done(struct cpu *cpu)
 {
-	gbc->instruction.step = 0;
-	gbc->instruction.running = false;
-	gbc->instruction.prefix_cb = false;
+	cpu->instruction.step = 0;
+	cpu->instruction.running = false;
+	cpu->instruction.prefix_cb = false;
 }

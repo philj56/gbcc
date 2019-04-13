@@ -46,26 +46,26 @@ static const uint8_t ioreg_write_masks[0x80] = {
 /* 0xFF78 */	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static uint8_t gbcc_vram_read(struct gbc *gbc, uint16_t addr);
-static void gbcc_vram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
+static uint8_t vram_read(struct gbc *gbc, uint16_t addr);
+static void vram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
-static uint8_t gbcc_wram_read(struct gbc *gbc, uint16_t addr);
-static void gbcc_wram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
+static uint8_t wram_read(struct gbc *gbc, uint16_t addr);
+static void wram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
-static uint8_t gbcc_echo_read(struct gbc *gbc, uint16_t addr);
-static void gbcc_echo_write(struct gbc *gbc, uint16_t addr, uint8_t val);
+static uint8_t echo_read(struct gbc *gbc, uint16_t addr);
+static void echo_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
-static uint8_t gbcc_oam_read(struct gbc *gbc, uint16_t addr, bool override);
-static void gbcc_oam_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override);
+static uint8_t oam_read(struct gbc *gbc, uint16_t addr, bool override);
+static void oam_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override);
 
-static uint8_t gbcc_unused_read(struct gbc *gbc, uint16_t addr);
-static void gbcc_unused_write(struct gbc *gbc, uint16_t addr, uint8_t val);
+static uint8_t unused_read(struct gbc *gbc, uint16_t addr);
+static void unused_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
-static uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override);
-static void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override);
+static uint8_t ioreg_read(struct gbc *gbc, uint16_t addr, bool override);
+static void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override);
 
-static uint8_t gbcc_hram_read(struct gbc *gbc, uint16_t addr);
-static void gbcc_hram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
+static uint8_t hram_read(struct gbc *gbc, uint16_t addr);
+static void hram_write(struct gbc *gbc, uint16_t addr, uint8_t val);
 
 void gbcc_memory_increment(struct gbc *gbc, uint16_t addr, bool override)
 {
@@ -106,25 +106,25 @@ uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr, bool override)
 		}
 	}
 	if (addr >= VRAM_START && addr < VRAM_END) {
-		return gbcc_vram_read(gbc, addr);
+		return vram_read(gbc, addr);
 	}
 	if (addr >= WRAM0_START && addr < WRAMX_END) {
-		return gbcc_wram_read(gbc, addr);
+		return wram_read(gbc, addr);
 	}
 	if (addr >= ECHO_START && addr < ECHO_END) {
-		return gbcc_echo_read(gbc, addr);
+		return echo_read(gbc, addr);
 	}
 	if (addr >= OAM_START && addr < OAM_END) {
-		return gbcc_oam_read(gbc, addr, override);
+		return oam_read(gbc, addr, override);
 	}
 	if (addr >= UNUSED_START && addr < UNUSED_END) {
-		return gbcc_unused_read(gbc, addr);
+		return unused_read(gbc, addr);
 	}
 	if (addr >= IOREG_START && addr < IOREG_END) {
-		return gbcc_ioreg_read(gbc, addr, override);
+		return ioreg_read(gbc, addr, override);
 	}
 	if (addr >= HRAM_START && addr < HRAM_END) {
-		return gbcc_hram_read(gbc, addr);
+		return hram_read(gbc, addr);
 	}
 	if (addr == IE) {
 		return gbc->memory.iereg;
@@ -159,19 +159,19 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool overrid
 		return;
 	}
 	if (addr >= VRAM_START && addr < VRAM_END) {
-		gbcc_vram_write(gbc, addr, val);
+		vram_write(gbc, addr, val);
 	} else if (addr >= WRAM0_START && addr < WRAMX_END) {
-		gbcc_wram_write(gbc, addr, val);
+		wram_write(gbc, addr, val);
 	} else if (addr >= ECHO_START && addr < ECHO_END) {
-		gbcc_echo_write(gbc, addr, val);
+		echo_write(gbc, addr, val);
 	} else if (addr >= OAM_START && addr < OAM_END) {
-		gbcc_oam_write(gbc, addr, val, override);
+		oam_write(gbc, addr, val, override);
 	} else if (addr >= UNUSED_START && addr < UNUSED_END) {
-		gbcc_unused_write(gbc, addr, val);
+		unused_write(gbc, addr, val);
 	} else if (addr >= IOREG_START && addr < IOREG_END) {
-		gbcc_ioreg_write(gbc, addr, val, override);
+		ioreg_write(gbc, addr, val, override);
 	} else if (addr >= HRAM_START && addr < HRAM_END) {
-		gbcc_hram_write(gbc, addr, val);
+		hram_write(gbc, addr, val);
 	} else if (addr == IE) {
 		gbc->memory.iereg = val;
 	} else {
@@ -179,17 +179,17 @@ void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool overrid
 	}
 }
 
-uint8_t gbcc_vram_read(struct gbc *gbc, uint16_t addr)
+uint8_t vram_read(struct gbc *gbc, uint16_t addr)
 {
 	return gbc->memory.vram[addr - VRAM_START];
 }
 
-void gbcc_vram_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void vram_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	gbc->memory.vram[addr - VRAM_START] = val;
 }
 
-uint8_t gbcc_wram_read(struct gbc *gbc, uint16_t addr)
+uint8_t wram_read(struct gbc *gbc, uint16_t addr)
 {
 	if (addr < WRAMX_START) {
 		return gbc->memory.wram0[addr - WRAM0_START];
@@ -197,7 +197,7 @@ uint8_t gbcc_wram_read(struct gbc *gbc, uint16_t addr)
 	return gbc->memory.wramx[addr - WRAMX_START];
 }
 
-void gbcc_wram_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void wram_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	if (addr < WRAMX_START) {
 		gbc->memory.wram0[addr - WRAM0_START] = val;
@@ -206,33 +206,33 @@ void gbcc_wram_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	}
 }
 
-uint8_t gbcc_echo_read(struct gbc *gbc, uint16_t addr)
+uint8_t echo_read(struct gbc *gbc, uint16_t addr)
 {
-	return gbcc_wram_read(gbc, addr - WRAMX_SIZE - WRAM0_SIZE);
+	return wram_read(gbc, addr - WRAMX_SIZE - WRAM0_SIZE);
 }
 
-void gbcc_echo_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void echo_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	gbcc_wram_write(gbc, addr - WRAMX_SIZE - WRAM0_SIZE, val);
+	wram_write(gbc, addr - WRAMX_SIZE - WRAM0_SIZE, val);
 }
 
-uint8_t gbcc_oam_read(struct gbc *gbc, uint16_t addr, bool override)
+uint8_t oam_read(struct gbc *gbc, uint16_t addr, bool override)
 {
-	if (gbc->dma.running && !override) {
+	if (gbc->cpu.dma.running && !override) {
 		return 0xFFu;
 	}
 	return gbc->memory.oam[addr - OAM_START];
 }
 
-void gbcc_oam_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
+void oam_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 {
-	if (gbc->dma.running && !override) {
+	if (gbc->cpu.dma.running && !override) {
 		return;
 	}
 	gbc->memory.oam[addr - OAM_START] = val;
 }
 
-uint8_t gbcc_unused_read(struct gbc *gbc, uint16_t addr)
+uint8_t unused_read(struct gbc *gbc, uint16_t addr)
 {
 	uint16_t offset;
 	if (addr < 0xFED0u) {
@@ -243,7 +243,7 @@ uint8_t gbcc_unused_read(struct gbc *gbc, uint16_t addr)
 	return gbc->memory.unused[addr - UNUSED_START - offset];
 }
 
-void gbcc_unused_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void unused_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	uint16_t offset;
 	if (addr < 0xFED0u) {
@@ -254,7 +254,7 @@ void gbcc_unused_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	gbc->memory.unused[addr - UNUSED_START - offset] = val;
 }
 
-uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
+uint8_t ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 {
 	/* Ignore GBC-specific registers when in DMG mode */
 	if (gbc->mode == DMG) {
@@ -315,7 +315,7 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 			/* TODO: implement properly */
 			return 0x01u;
 		case DIV:
-			return high_byte(gbc->div_timer);
+			return high_byte(gbc->cpu.div_timer);
 		case NR52:
 			ret &= 0xF0u;
 			ret |= (uint8_t)(gbc->apu.ch1.enabled << 0u);
@@ -336,7 +336,7 @@ uint8_t gbcc_ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 	return ret | (uint8_t)~mask;
 }
 
-void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
+void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 {
 	/* Ignore GBC-specific registers when in DMG mode */
 	if (gbc->mode == DMG) {
@@ -396,7 +396,7 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			break;
 		case DIV:
 			//printf("DIV reset from %04X\n", gbc->div_timer);
-			gbc->div_timer = 0;
+			gbc->cpu.div_timer = 0;
 			break;
 		case LCDC:
 			if (check_bit(val, 7)) {
@@ -407,12 +407,12 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 			*dest = tmp | (uint8_t)(val & mask);
 			break;
 		case DMA:
-			gbc->dma.new_source = (uint16_t)val << 8u;
-			if (gbc->dma.new_source > WRAMX_END) {
+			gbc->cpu.dma.new_source = (uint16_t)val << 8u;
+			if (gbc->cpu.dma.new_source > WRAMX_END) {
 				/* Can't DMA from ECHO or IOREG areas */
-				gbc->dma.new_source -= 0x2000u;
+				gbc->cpu.dma.new_source -= 0x2000u;
 			}
-			gbc->dma.requested = true;
+			gbc->cpu.dma.requested = true;
 			*dest = tmp | (uint8_t)(val & mask);
 			break;
 		case VBK:
@@ -490,12 +490,12 @@ void gbcc_ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override
 	}
 }
 
-uint8_t gbcc_hram_read(struct gbc *gbc, uint16_t addr)
+uint8_t hram_read(struct gbc *gbc, uint16_t addr)
 {
 	return gbc->memory.hram[addr - HRAM_START];
 }
 
-void gbcc_hram_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void hram_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	gbc->memory.hram[addr - HRAM_START] = val;
 }

@@ -13,78 +13,77 @@
 
 static void clock_div(struct gbc *gbc);
 static void check_interrupts(struct gbc *gbc);
-static void gbcc_cpu_clock(struct gbc *gbc);
+static void cpu_clock(struct gbc *gbc);
 
 /* TODO: Check order of all of these */
 void gbcc_emulate_cycle(struct gbc *gbc)
 {
-	gbc->debug_clock++;
-	gbc->clock++;
-	gbc->clock &= 3u;
 	check_interrupts(gbc);
 	gbcc_apu_clock(gbc);
 	gbcc_ppu_clock(gbc);
-	gbcc_cpu_clock(gbc);
+	cpu_clock(gbc);
 	clock_div(gbc);
 	if (gbc->double_speed) {
-		gbcc_cpu_clock(gbc);
+		cpu_clock(gbc);
 		clock_div(gbc);
 	}
 }
 
-void gbcc_cpu_clock(struct gbc *gbc)
+void cpu_clock(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	/* CPU clocks every 4 cycles */
-	gbc->cpu_clock++;
-	gbc->cpu_clock &= 3u;
-	if (gbc->cpu_clock != 0) {
+	cpu->clock++;
+	cpu->clock &= 3u;
+	if (cpu->clock != 0) {
 		return;
 	}
-	if (gbc->ime_timer.timer > 0) {
-		gbc->ime_timer.timer--;
-		if (gbc->ime_timer.timer == 1) {
-			gbc->ime = gbc->ime_timer.target_state;
+	if (cpu->ime_timer.timer > 0) {
+		cpu->ime_timer.timer--;
+		if (cpu->ime_timer.timer == 1) {
+			cpu->ime = cpu->ime_timer.target_state;
 		}
 	}
-	if (!gbc->halt.set && !gbc->stop) {
-		if (gbc->dma.timer > 0) {
-			gbc->dma.running = true;
-			gbc->memory.oam[low_byte(gbc->dma.source)] = gbcc_memory_read(gbc, gbc->dma.source, false);
-			gbc->dma.timer--;
-			gbc->dma.source++;
+	if (!cpu->halt.set && !gbc->stop) {
+		if (cpu->dma.timer > 0) {
+			cpu->dma.running = true;
+			gbc->memory.oam[low_byte(cpu->dma.source)] = gbcc_memory_read(gbc, cpu->dma.source, false);
+			cpu->dma.timer--;
+			cpu->dma.source++;
 		} else {
-			gbc->dma.running = false;
+			cpu->dma.running = false;
 		}
-		if (gbc->dma.requested) {
-			gbc->dma.requested = false;
-			gbc->dma.timer = DMA_TIMER;
-			gbc->dma.source = gbc->dma.new_source;
+		if (cpu->dma.requested) {
+			cpu->dma.requested = false;
+			cpu->dma.timer = DMA_TIMER;
+			cpu->dma.source = cpu->dma.new_source;
 		}
 	}
-	if (!gbc->instruction.running) {
-		if (gbc->ime && gbc->interrupt.request) {
+	if (!cpu->instruction.running) {
+		if (cpu->ime && cpu->interrupt.request) {
 			INTERRUPT(gbc);
 			return;
 		}
-		if (gbc->halt.set || gbc->stop) {
+		if (cpu->halt.set || gbc->stop) {
 			return;
 		}
-		//printf("%04X\n", gbc->reg.pc);
-		gbc->opcode = gbcc_fetch_instruction(gbc);
+		//printf("%04X\n", cpu->reg.pc);
+		cpu->opcode = gbcc_fetch_instruction(gbc);
 		//gbcc_print_op(gbc);
-		gbc->instruction.running = true;
+		cpu->instruction.running = true;
 	}
-	if (gbc->instruction.prefix_cb) {
+	if (cpu->instruction.prefix_cb) {
 		gbcc_ops[0xCB](gbc);
 	} else {
-		gbcc_ops[gbc->opcode](gbc);
+		gbcc_ops[cpu->opcode](gbc);
 	}
 }
 
 void clock_div(struct gbc *gbc)
 {
-	//printf("Div clock = %04X\n", gbc->div_timer);
-	gbc->div_timer++;
+	struct cpu *cpu = &gbc->cpu;
+	//printf("Div clock = %04X\n", cpu->div_timer);
+	cpu->div_timer++;
 	uint8_t tac = gbcc_memory_read(gbc, TAC, false);
 	uint16_t mask;
 	switch (tac & 0x03u) {
@@ -107,7 +106,7 @@ void clock_div(struct gbc *gbc)
 	}
 	/* If TAC is disabled, this will always see 0 */
 	mask *= check_bit(tac, 2);
-	if (!(gbc->div_timer & mask) && gbc->tac_bit) {
+	if (!(cpu->div_timer & mask) && cpu->tac_bit) {
 		/* 
 		 * The selected bit was previously high, and is now low, so
 		 * the tima increment logic triggers.
@@ -122,14 +121,14 @@ void clock_div(struct gbc *gbc)
 			 * so we just queue it here. This also affects the
 			 * interrupt.
 			 */
-			gbc->tima_reload = 8;
+			cpu->tima_reload = 8;
 		}
 		gbcc_memory_write(gbc, TIMA, tima, false);
 	}
-	gbc->tac_bit = gbc->div_timer & mask;
-	if (gbc->tima_reload > 0) {
-		gbc->tima_reload--;
-		if (gbc->tima_reload == 4) {
+	cpu->tac_bit = cpu->div_timer & mask;
+	if (cpu->tima_reload > 0) {
+		cpu->tima_reload--;
+		if (cpu->tima_reload == 4) {
 			/*
 			 * Some more weird behaviour here: if TIMA has been
 			 * written to while this copy & interrupt are waiting,
@@ -137,13 +136,13 @@ void clock_div(struct gbc *gbc)
 			 * normal.
 			 */
 			if (gbcc_memory_read(gbc, TIMA, false) != 0) {
-				gbc->tima_reload = 0;
+				cpu->tima_reload = 0;
 			} else {
 				gbcc_memory_copy(gbc, TMA, TIMA, false);
 				gbcc_memory_set_bit(gbc, IF, 2, false);
 			}
 		}
-		if (gbc->tima_reload == 0) {
+		if (cpu->tima_reload == 0) {
 			gbcc_memory_copy(gbc, TMA, TIMA, false);
 		}
 	}
@@ -154,33 +153,35 @@ void clock_div(struct gbc *gbc)
 		} else {
 			mask = bit16(12);
 		}
-		if (!(gbc->div_timer & mask) && gbc->apu.div_bit) {
+		if (!(cpu->div_timer & mask) && gbc->apu.div_bit) {
 			gbcc_apu_sequencer_clock(gbc);
 		}
-		gbc->apu.div_bit = gbc->div_timer & mask;
+		gbc->apu.div_bit = cpu->div_timer & mask;
 	}
 }
 
 void check_interrupts(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
 	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
 	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
 	if (interrupt) {
-		gbc->halt.set = false;
+		cpu->halt.set = false;
 		gbc->stop = false;
-		if (gbc->ime) {
-			gbc->interrupt.request = true;
+		if (cpu->ime) {
+			cpu->interrupt.request = true;
 		}
 	}
 }
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc)
 {
-	if (gbc->halt.skip) {
+	struct cpu *cpu = &gbc->cpu;
+	if (cpu->halt.skip) {
 		/* HALT bug; CPU fails to increment pc */
-		gbc->halt.skip = false;
-		return gbcc_memory_read(gbc, gbc->reg.pc, false);
+		cpu->halt.skip = false;
+		return gbcc_memory_read(gbc, cpu->reg.pc, false);
 	} 
-	return gbcc_memory_read(gbc, gbc->reg.pc++, false);
+	return gbcc_memory_read(gbc, cpu->reg.pc++, false);
 }

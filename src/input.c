@@ -119,9 +119,9 @@ void gbcc_input_process_all(struct gbcc_window *win)
 					break;
 				}
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					gbc->save_state = (int8_t)(key - 11);
+					gbc->save_state = (int8_t)(key - 12);
 				} else {
-					gbc->load_state = (int8_t)(key - 11);
+					gbc->load_state = (int8_t)(key - 12);
 				}
 				break;
 			default:

@@ -35,12 +35,12 @@ static void init_ioreg(struct gbc *gbc);
 
 void gbcc_initialise(struct gbc *gbc, const char *filename)
 {
-	*gbc = (const struct gbc){{{{0}}}};
+	*gbc = (const struct gbc){{{{{0}}}}};
 	gbc->cart.filename = filename;
 	gbc->cart.mbc.type = NONE;
 	gbc->cart.mbc.romx_bank = 0x01u;
 	gbc->cart.mbc.sram_bank = 0x00u;
-	gbc->ime = true;
+	gbc->cpu.ime = true;
 	gbc->ppu.clock = GBC_LCD_MODE_PERIOD;
 	gbc->ppu.palette = gbcc_get_palette("default");
 	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
@@ -383,22 +383,23 @@ void print_destination_code(struct gbc *gbc)
 }
 
 void init_registers(struct gbc *gbc) {
+	struct cpu *cpu = &gbc->cpu;
 	switch (gbc->mode) {
 		case DMG:
-			gbc->reg.af = 0x01B0u;
-			gbc->reg.bc = 0x0013u;
-			gbc->reg.de = 0x00D8u;
-			gbc->reg.hl = 0x014Du;
-			gbc->reg.sp = 0xFFFEu;
-			gbc->reg.pc = 0x0100u;
+			cpu->reg.af = 0x01B0u;
+			cpu->reg.bc = 0x0013u;
+			cpu->reg.de = 0x00D8u;
+			cpu->reg.hl = 0x014Du;
+			cpu->reg.sp = 0xFFFEu;
+			cpu->reg.pc = 0x0100u;
 			break;
 		case GBC:
-			gbc->reg.af = 0x1180u;
-			gbc->reg.bc = 0x0000u;
-			gbc->reg.de = 0xFF56u;
-			gbc->reg.hl = 0x000Du;
-			gbc->reg.sp = 0xFFFEu;
-			gbc->reg.pc = 0x0100u;
+			cpu->reg.af = 0x1180u;
+			cpu->reg.bc = 0x0000u;
+			cpu->reg.de = 0xFF56u;
+			cpu->reg.hl = 0x000Du;
+			cpu->reg.sp = 0xFFFEu;
+			cpu->reg.pc = 0x0100u;
 			break;
 	}
 }

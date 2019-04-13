@@ -162,27 +162,29 @@ static const char* const cb_op_dissassemblies[0x100] = {
 
 void gbcc_print_registers(struct gbc *gbc)
 {
+	struct cpu *cpu = &gbc->cpu;
 	gbcc_log_debug("Registers:\n");
-	gbcc_log_debug("\ta: %u\t\taf: %04X\n", gbc->reg.a, gbc->reg.af);
-	gbcc_log_debug("\tb: %u\t\tbc: %04X\n", gbc->reg.b, gbc->reg.bc);
-	gbcc_log_debug("\tc: %u\t\tde: %04X\n", gbc->reg.c, gbc->reg.de);
-	gbcc_log_debug("\td: %u\t\thl: %04X\n", gbc->reg.d, gbc->reg.hl);
-	gbcc_log_debug("\te: %u\t\tz: %u\n", gbc->reg.e, !!(gbc->reg.f & ZF));
-	gbcc_log_debug("\th: %u\t\tn: %u\n", gbc->reg.h, !!(gbc->reg.f & NF));
-	gbcc_log_debug("\tl: %u\t\th: %u\n", gbc->reg.l, !!(gbc->reg.f & HF));
-	gbcc_log_debug("\tsp: %04X\tc: %u\n", gbc->reg.sp, !!(gbc->reg.f & CF));
-	gbcc_log_debug("\tpc: %04X\n", gbc->reg.pc);
+	gbcc_log_debug("\ta: %u\t\taf: %04X\n", cpu->reg.a, cpu->reg.af);
+	gbcc_log_debug("\tb: %u\t\tbc: %04X\n", cpu->reg.b, cpu->reg.bc);
+	gbcc_log_debug("\tc: %u\t\tde: %04X\n", cpu->reg.c, cpu->reg.de);
+	gbcc_log_debug("\td: %u\t\thl: %04X\n", cpu->reg.d, cpu->reg.hl);
+	gbcc_log_debug("\te: %u\t\tz: %u\n", cpu->reg.e, !!(cpu->reg.f & ZF));
+	gbcc_log_debug("\th: %u\t\tn: %u\n", cpu->reg.h, !!(cpu->reg.f & NF));
+	gbcc_log_debug("\tl: %u\t\th: %u\n", cpu->reg.l, !!(cpu->reg.f & HF));
+	gbcc_log_debug("\tsp: %04X\tc: %u\n", cpu->reg.sp, !!(cpu->reg.f & CF));
+	gbcc_log_debug("\tpc: %04X\n", cpu->reg.pc);
 }
 
 void gbcc_print_op(struct gbc *gbc)
 {
-	uint8_t op = gbc->opcode;
+	struct cpu *cpu = &gbc->cpu;
+	uint8_t op = cpu->opcode;
 	gbcc_log_debug("%02X", op);
 	for (uint8_t i = 0; i < gbcc_op_sizes[op] - 1; i++) {
-		gbcc_log_append_debug("%02X", gbcc_memory_read(gbc, gbc->reg.pc + i, false));
+		gbcc_log_append_debug("%02X", gbcc_memory_read(gbc, cpu->reg.pc + i, false));
 	}
 	if (op == 0xCB) {
-		uint8_t cb_op = gbcc_memory_read(gbc, gbc->reg.pc, false);
+		uint8_t cb_op = gbcc_memory_read(gbc, cpu->reg.pc, false);
 		gbcc_log_append_debug("%02X", cb_op);
 		gbcc_log_append_debug("\t%s\n", cb_op_dissassemblies[cb_op]);
 	} else {
