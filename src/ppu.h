@@ -56,7 +56,7 @@ struct ppu {
 	/* Internal variables */
 	bool last_stat;
 	uint8_t x;
-	uint8_t next_dot;
+	uint16_t next_dot;
 	uint8_t n_sprites;
 	struct sprite sprites[10];
 	struct tile bg_tile;

@@ -321,8 +321,11 @@ void draw_sprite_pixel(struct gbc *gbc)
 			/*
 			 * Each new sprite causes a delay in rendering
 			 * depending on its position over the background.
+			 * TODO: This should take a different amount of time
+			 * when drawing over the window - ppu->scx should be
+			 * replaced with (255 - ppu->wx)
 			 */
-			//ppu->next_dot += 11 - MIN(5, (ppu->x + ppu->scx) % 8);
+			ppu->next_dot += 11 - MIN(5, (ppu->x + ppu->scx) % 8);
 		}
 		uint8_t x = ppu->x + 8 - s->x;
 		if (check_bit(s->tile.attr, 5)) {
