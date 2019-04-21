@@ -472,13 +472,13 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 				 */
 				dst_hi &= 0x1Fu;
 				dst_hi |= 0x80u;
+				dst_lo &= 0xF0u;
 				gbc->hdma.source = cat_bytes(src_lo, src_hi);
 				gbc->hdma.dest = cat_bytes(dst_lo, dst_hi);
 				gbc->hdma.length = ((val & 0x7Fu) + 1u) * 0x10u;
 				*dest = val;
 				if (check_bit(val, 7)) {
 					/* H-Blank DMA */
-					gbc->hdma.to_copy = 0x10u;
 					gbc->hdma.hblank = true;
 				} else {
 					/* General DMA */
