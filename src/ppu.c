@@ -299,6 +299,10 @@ void draw_sprite_pixel(struct gbc *gbc)
 		/* Sprites are disabled */
 		return;
 	}
+	if (gbc->cpu.dma.running) {
+		/* Sprites are disabled while DMA is running*/
+		return;
+	}
 	for (int i = 0; i < ppu->n_sprites; i++) {
 		struct sprite *s = &ppu->sprites[i];
 		if (ppu->x + 8 < s->x || ppu->x >= s->x) {
