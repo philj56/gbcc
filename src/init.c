@@ -40,8 +40,8 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->cart.mbc.type = NONE;
 	gbc->cart.mbc.romx_bank = 0x01u;
 	gbc->cart.mbc.sram_bank = 0x00u;
-	gbc->cpu.ime = true;
-	gbc->ppu.clock = GBC_LCD_MODE_PERIOD;
+	gbc->cpu.ime = false;
+	gbc->ppu.clock = 0;
 	gbc->ppu.palette = gbcc_get_palette("default");
 	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
 	gbc->ppu.screen.sdl = gbc->ppu.screen.buffer_1;

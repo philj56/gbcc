@@ -81,6 +81,15 @@ f
 v
 	Cycle through available shaders
 
+1
+	Toggle background display
+
+2
+	Toggle window display
+
+3
+	Toggle sprites display
+
 <F0-9>
 	Load savestate 0-9
 

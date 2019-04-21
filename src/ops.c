@@ -132,6 +132,7 @@ void INTERRUPT(struct gbc *gbc)
 	if (!interrupt && cpu->instruction.step < 4) {
 		if (cpu->instruction.step < 3) {
 			cpu->interrupt.request = false;
+			cpu->interrupt.running = false;
 			done(cpu);
 			return;
 		}
@@ -142,11 +143,14 @@ void INTERRUPT(struct gbc *gbc)
 		cpu->reg.pc = 0x0000u;
 		cpu->ime = false;
 		cpu->interrupt.request = false;
+		cpu->interrupt.running = false;
 		done(cpu);
 		return;
 	}
 	switch (cpu->instruction.step) {
 		case 0:
+			cpu->ime = false;
+			cpu->interrupt.running = true;
 			YIELD;
 		case 1:
 			YIELD;
@@ -196,6 +200,7 @@ void INTERRUPT(struct gbc *gbc)
 	}
 	cpu->reg.pc = cpu->interrupt.addr;
 	cpu->ime = false;
+	cpu->interrupt.running = false;
 	done(cpu);
 }
 

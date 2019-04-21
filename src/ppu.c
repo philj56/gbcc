@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 #define BACKGROUND_MAP_BANK_1 0x9800u
 #define BACKGROUND_MAP_BANK_2 0x9C00u
 #define NUM_SPRITES 40
@@ -27,19 +29,44 @@
 
 enum palette_flag { BACKGROUND, SPRITE_1, SPRITE_2 };
 
-static void draw_line(struct gbc *gbc);
-static void draw_background_line(struct gbc *gbc);
-static void draw_window_line(struct gbc *gbc);
-static void draw_sprite_line(struct gbc *gbc);
+static void draw_background_pixel(struct gbc *gbc);
+static void draw_window_pixel(struct gbc *gbc);
+static void draw_sprite_pixel(struct gbc *gbc);
 static void composite_line(struct gbc *gbc);
-static uint8_t get_video_mode(struct gbc *gbc);
-static void set_video_mode(struct gbc *gbc, uint8_t mode);
+static uint8_t get_video_mode(uint8_t stat);
+static uint8_t set_video_mode(uint8_t stat, uint8_t mode);
 static uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum palette_flag pf);
+static void load_bg_tile(struct gbc *gbc);
+static void load_window_tile(struct gbc *gbc);
+static void load_sprite_tile(struct gbc *gbc, int n);
+static uint8_t get_tile_pixel(uint8_t hi, uint8_t lo, uint8_t x, bool flip);
 
 void gbcc_disable_lcd(struct gbc *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
+	if (gbc->mode == GBC) {
+		memset(ppu->screen.sdl, 0xFFu, sizeof(ppu->screen.buffer_0));
+	} else {
+		uint32_t colour = get_palette_colour(gbc, 0, 0, BACKGROUND);
+		for (int y = 0; y < GBC_SCREEN_HEIGHT; y++) {
+			for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
+				ppu->screen.sdl[y * GBC_SCREEN_WIDTH + x] = colour;
+			}
+		}
+		for (int y = 0; y < GBC_SCREEN_HEIGHT; y++) {
+			for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
+				ppu->screen.gbc[y * GBC_SCREEN_WIDTH + x] = colour;
+			}
+		}
+	}
 	ppu->lcd_disable = true;
+	ppu->ly = 0;
+	gbcc_memory_clear_bit(gbc, IF, 1, true);
+	gbcc_memory_write(gbc, LY, 0, true);
+	
+	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
+	stat = set_video_mode(stat, GBC_LCD_MODE_HBLANK);
+	gbcc_memory_write(gbc, STAT, stat, true);
 }
 
 void gbcc_enable_lcd(struct gbc *gbc)
@@ -49,9 +76,13 @@ void gbcc_enable_lcd(struct gbc *gbc)
 		return;
 	}
 	ppu->lcd_disable = false;
-	ppu->clock = 4;
-	set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
-	gbcc_memory_write(gbc, LY, 0, true);
+	ppu->clock = 0;
+	/* 
+	 * TODO: Mooneye's test roms seem to imply that when enabling the
+	 * screen, it starts in HBLANK? Is this true? 
+	 * (Currently, it skips the first line of the first frame)
+	 */
+	ppu->clock = 248;
 }
 
 void gbcc_ppu_clock(struct gbc *gbc)
@@ -60,348 +91,249 @@ void gbcc_ppu_clock(struct gbc *gbc)
 	if (ppu->lcd_disable) {
 		return;
 	}
-	uint8_t mode = get_video_mode(gbc);
-	uint8_t ly = gbcc_memory_read(gbc, LY, true);
 	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
+
+	/* Start of a new scanline */
+	if (ppu->clock == 0 && get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
+		/* Clear our buffers */
+		memset(ppu->bg_line.attr, 0, sizeof(ppu->bg_line.attr));
+		memset(ppu->window_line.attr, 0, sizeof(ppu->window_line.attr));
+		memset(ppu->sprite_line.attr, 0, sizeof(ppu->sprite_line.attr));
+
+		/* 
+		 * The ppu ignores writes to some variables during a scanline,
+		 * so we make copies of them here, and again just before
+		 * rendering starts.
+		 */
+		ppu->scy = gbcc_memory_read(gbc, SCY, true);
+		ppu->scx = gbcc_memory_read(gbc, SCX, true);
+		ppu->ly = gbcc_memory_read(gbc, LY, true);
+		ppu->lyc = gbcc_memory_read(gbc, LYC, true);
+		ppu->wy = gbcc_memory_read(gbc, WY, true);
+		ppu->wx = gbcc_memory_read(gbc, WX, true);
+
+		/*
+		 * First off, we enter OAM scanning mode for 80 cycles. As the
+		 * OAM is inaccessable by the CPU during this time, we can just
+		 * do all the calculation at once and then wait for 79 cycles.
+		 */
+		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_READ);
+
+		ppu->n_sprites = 0;
+		uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
+		bool double_size = check_bit(lcdc, 2); /* 8x8 or 8x16 tiles */
+		for (uint16_t addr = OAM_START; addr < OAM_END; addr += 4) {
+			uint8_t y = gbcc_memory_read(gbc, addr, true);
+			uint8_t x = gbcc_memory_read(gbc, addr + 1, true);
+			if (ppu->ly >= y || ppu->ly + 16 < y || (!double_size && ppu->ly + 8 >= y)) {
+				/* Sprite isn't on this line */
+				continue;
+			}
+			ppu->sprites[ppu->n_sprites].y = y;
+			ppu->sprites[ppu->n_sprites].x = x;
+			ppu->sprites[ppu->n_sprites].address = addr;
+			ppu->sprites[ppu->n_sprites].loaded = false;
+			ppu->n_sprites++;
+			/* GameBoy can only draw 10 sprites per line */
+			if (ppu->n_sprites == 10) {
+				break;
+			}
+		}
+	}
+	if (ppu->clock == 80 && get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
+		/* Final value of these variables for the rest of this line */
+		ppu->scy = gbcc_memory_read(gbc, SCY, true);
+		ppu->scx = gbcc_memory_read(gbc, SCX, true);
+		ppu->ly = gbcc_memory_read(gbc, LY, true);
+		ppu->lyc = gbcc_memory_read(gbc, LYC, true);
+		ppu->wy = gbcc_memory_read(gbc, WY, true);
+		ppu->wx = gbcc_memory_read(gbc, WX, true);
+
+		/* Start the actual rendering of this line */
+		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_VRAM_READ);
+		ppu->x = 0;
+		load_bg_tile(gbc);
+		/*
+		 * Rendering at the beginning of a scanline pauses if
+		 * SCX % 8 != 0, while the ppu discards offscreen pixels
+		 */
+		ppu->next_dot = 88 + ppu->scx % 8;
+		ppu->bg_tile.x = ppu->scx % 8;
+		ppu->window_tile.x = 0;
+	}
+	if (get_video_mode(stat) == GBC_LCD_MODE_OAM_VRAM_READ) {
+		if (ppu->clock == ppu->next_dot) {
+			draw_background_pixel(gbc);
+			draw_window_pixel(gbc);
+			draw_sprite_pixel(gbc);
+			ppu->x++;
+			ppu->next_dot++;
+		}
+		if (ppu->x == 160) {
+			stat = set_video_mode(stat, GBC_LCD_MODE_HBLANK);
+			composite_line(gbc);
+			if (gbc->hdma.hblank && gbc->hdma.length > 0) {
+				gbc->hdma.to_copy = 0x10u;
+			}
+		}
+	}
+	
+	/* LCDSTAT interrupt */
+	//printf("LYC: %u\n", gbcc_memory_read(gbc, LYC, true));
+	//printf("Clock = %u\tMode = %u\n", ppu->clock, get_video_mode(stat));
 	ppu->clock++;
 	ppu->clock %= 456;
-
-	/* Line-drawing timings */
-	if (mode != GBC_LCD_MODE_VBLANK) {
-		if (ppu->clock == 0) {
-			set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
-			if (check_bit(stat, 5)) {
-				gbcc_memory_set_bit(gbc, IF, 1, true);
-			}
-		} else if (ppu->clock == GBC_LCD_MODE_PERIOD) {
-			set_video_mode(gbc, GBC_LCD_MODE_OAM_VRAM_READ);
-		} else if (ppu->clock == (3 * GBC_LCD_MODE_PERIOD)) {
-			draw_line(gbc);
-			set_video_mode(gbc, GBC_LCD_MODE_HBLANK);
-			gbcc_hdma_copy_block(gbc);
-			if (check_bit(stat, 3)) {
-				gbcc_memory_set_bit(gbc, IF, 1, true);
-			}
-		}
-	}
-	/* LCD STAT Interrupt */
-	if (ly != 0 && ly == gbcc_memory_read(gbc, LYC, true)) {
-		if (ppu->clock == 4) {
-			gbcc_memory_set_bit(gbc, STAT, 2, true);
-			if (check_bit(stat, 6)) {
-				gbcc_memory_set_bit(gbc, IF, 1, true);
-			}
-		}
-	} else {
-		gbcc_memory_clear_bit(gbc, STAT, 2, true);
-	}
 	if (ppu->clock == 0) {
-		ly++;
+		ppu->ly++;
 	}
-	/* VBLANK interrupt flag */
-	if (ly == 144) {
-		if (ppu->clock == 4) {
-			gbcc_memory_set_bit(gbc, IF, 0, true);
-			set_video_mode(gbc, GBC_LCD_MODE_VBLANK);
-			if (check_bit(stat, 4)) {
-				gbcc_memory_set_bit(gbc, IF, 1, true);
-			}
-			
-			uint32_t *tmp = ppu->screen.gbc;
-			ppu->screen.gbc = ppu->screen.sdl;
-			ppu->screen.sdl = tmp;
-		}
-	} else if (ly == 154) {
+	if (ppu->ly == 154) {
 		ppu->frame++;
-		ly = 0;
-		set_video_mode(gbc, GBC_LCD_MODE_OAM_READ);
+		ppu->ly = 0;
+		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_READ);
 	}
-	gbcc_memory_write(gbc, LY, ly, true);
-}
 
-void draw_line(struct gbc *gbc)
-{
-	struct ppu *ppu = &gbc->ppu;
-	uint8_t ly = gbcc_memory_read(gbc, LY, true);
-	if (ly > GBC_SCREEN_HEIGHT) {
-		return;
-	}
-	memset(ppu->bg_line.attr, 0, sizeof(ppu->bg_line.attr));
-	memset(ppu->window_line.attr, 0, sizeof(ppu->window_line.attr));
-	memset(ppu->sprite_line.attr, 0, sizeof(ppu->sprite_line.attr));
-
-	if (!gbc->interlace || ((ppu->frame) % 2 == ly % 2)) {
-		draw_background_line(gbc);
-		draw_window_line(gbc);
-		draw_sprite_line(gbc);
-		composite_line(gbc);
+	if (ppu->ly == gbcc_memory_read(gbc, LYC, true)) {
+		stat = set_bit(stat, 2);
 	} else {
-		for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			uint32_t p = ppu->screen.sdl[ly * GBC_SCREEN_WIDTH + x]; 
-			uint8_t r = (p & 0xFF0000u) >> 17u;
-			uint8_t g = (p & 0x00FF00u) >> 9u;
-			uint8_t b = (p & 0x0000FFu) >> 1u;
-			p = (uint32_t)(r << 16u) | (uint32_t)(g << 8u) | b;
-			ppu->screen.gbc[ly * GBC_SCREEN_WIDTH + x] = p;
-		}
+		stat = clear_bit(stat, 2);
 	}
+	
+	/* VBLANK interrupt flag */
+	if (ppu->ly == 144 && ppu->clock == 0) {
+		gbcc_memory_set_bit(gbc, IF, 0, true);
+		stat = set_video_mode(stat, GBC_LCD_MODE_VBLANK);
+
+		uint32_t *tmp = ppu->screen.gbc;
+		ppu->screen.gbc = ppu->screen.sdl;
+		ppu->screen.sdl = tmp;
+	} 
+	/* Check STAT interrupt */
+	/* 
+	 * The last_stat flag is used as the STAT interrupt is only triggered
+	 * when this condition goes from 0->1, so switching between two
+	 * different conditions being satisfied in a single cycle will *NOT*
+	 * trigger the interrupt.
+	 */
+	if ((check_bit(stat, 2) && check_bit(stat, 6)) /* LY = LYC */
+			|| (check_bit(stat, 3) && get_video_mode(stat) == GBC_LCD_MODE_HBLANK)
+			|| (check_bit(stat, 4) && get_video_mode(stat) == GBC_LCD_MODE_VBLANK)
+			|| (check_bit(stat, 5) && get_video_mode(stat) == GBC_LCD_MODE_OAM_READ)) {
+		if (!ppu->last_stat) {
+			ppu->last_stat = true;
+			gbcc_memory_set_bit(gbc, IF, 1, true);
+		}
+	} else {
+		ppu->last_stat = false;
+	}
+	gbcc_memory_write(gbc, LY, ppu->ly, true);
+	gbcc_memory_write(gbc, STAT, stat, true);
 }
 
 /* TODO: GBC BG-to-OAM Priority */
-void draw_background_line(struct gbc *gbc)
+void draw_background_pixel(struct gbc *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
-	uint8_t scy = gbcc_memory_read(gbc, SCY, true);
-	uint8_t scx = gbcc_memory_read(gbc, SCX, true);
-	uint8_t ly = gbcc_memory_read(gbc, LY, true);
-	uint8_t palette = gbcc_memory_read(gbc, BGP, true);
-	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
-
-	uint8_t ty = ((scy + ly) / 8u) % 32u;
-	uint16_t line_offset = 2 * ((scy + ly) % 8u); /* 2 bytes per line */
-	uint16_t map;
-	if (check_bit(lcdc, 3)) {
-		map = BACKGROUND_MAP_BANK_2;
-	} else {
-		map = BACKGROUND_MAP_BANK_1;
+	struct tile *t = &ppu->bg_tile;
+	if (t->x == 0) {
+		load_bg_tile(gbc);
 	}
 
-	if (!check_bit(lcdc, 0)) {
-		uint32_t colour;
-		if (gbc->mode == DMG) {
-			colour = get_palette_colour(gbc, 0, 0, BACKGROUND);
-		} else {
-			colour = 0xFF;
-		}
-		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			ppu->bg_line.colour[x] = colour;
-		}
-		return;
-	}
-
+	uint8_t colour = get_tile_pixel(t->hi, t->lo, t->x, check_bit(t->attr, 5));
+	uint8_t palette;
 	if (gbc->mode == DMG) {
-		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			uint8_t tx = ((scx + x) / 8u) % 32u;
-			uint8_t xoff = (scx + x) % 8u;
-			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
-			uint16_t tile_addr;
-			if (check_bit(lcdc, 4)) {
-				tile_addr = VRAM_START + 16 * tile;
-			} else {
-				tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
-			}
-			uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
-			uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
-			uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			ppu->bg_line.colour[x] = get_palette_colour(gbc, palette, colour, BACKGROUND);
-			ppu->bg_line.attr[x] |= ATTR_DRAWN;
-			if (colour == 0) {
-				ppu->bg_line.attr[x] |= ATTR_COLOUR0;
-			}
-		}
+		palette = gbcc_memory_read(gbc, BGP, true);
 	} else {
-		for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			uint8_t tx = ((scx + x) / 8u) % 32u;
-			uint8_t xoff = (scx + x) % 8u;
-			uint8_t tile = gbc->memory.vram_bank[0][map + 32 * ty + tx - VRAM_START];
-			uint8_t attr = gbc->memory.vram_bank[1][map + 32 * ty + tx - VRAM_START];
-			uint8_t *vbk;
-			uint16_t tile_addr;
-			if (check_bit(attr, 3)) {
-				vbk = gbc->memory.vram_bank[1];
-			} else {
-				vbk = gbc->memory.vram_bank[0];
-			}
-			/* TODO: Put this somewhere better */
-			if (check_bit(lcdc, 4)) {
-				tile_addr = 16 * tile;
-			} else {
-				tile_addr = (uint16_t)(0x1000 + 16 * (int8_t)tile);
-			}
-			uint8_t lo;
-			uint8_t hi;
-			/* Check for Y-flip */
-			if (check_bit(attr, 6)) {
-				lo = vbk[tile_addr + (14 - line_offset)];
-				hi = vbk[tile_addr + (14 - line_offset) + 1];
-			} else {
-				lo = vbk[tile_addr + line_offset];
-				hi = vbk[tile_addr + line_offset + 1];
-			}
-			uint8_t colour;
-			/* Check for X-flip */
-			if (check_bit(attr, 5)) {
-				colour = (uint8_t)(check_bit(hi, xoff) << 1u) | check_bit(lo, xoff);
-			} else {
-				colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			}
-			ppu->bg_line.colour[x] = get_palette_colour(gbc, attr & 0x07u, colour, BACKGROUND);
-			ppu->bg_line.attr[x] |= ATTR_DRAWN;
-			if (colour == 0) {
-				ppu->bg_line.attr[x] |= ATTR_COLOUR0;
-			}
-			if (check_bit(attr, 7)) {
-				ppu->bg_line.attr[x] |= ATTR_PRIORITY;
-			}
-		}
+		palette = t->attr & 0x07u;
 	}
+	ppu->bg_line.colour[ppu->x] = get_palette_colour(gbc, palette, colour, BACKGROUND);
+	ppu->bg_line.attr[ppu->x] |= ATTR_DRAWN;
+	if (colour == 0) {
+		ppu->bg_line.attr[ppu->x] |= ATTR_COLOUR0;
+	}
+	if (check_bit(t->attr, 7)) {
+		ppu->bg_line.attr[ppu->x] |= ATTR_PRIORITY;
+	}
+	t->x++;
+	t->x %= 8;
 }
 
-void draw_window_line(struct gbc *gbc)
+void draw_window_pixel(struct gbc *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
-	uint8_t wy = gbcc_memory_read(gbc, WY, true);
-	uint8_t wx = gbcc_memory_read(gbc, WX, true);
-	uint8_t ly = gbcc_memory_read(gbc, LY, true);
-	uint8_t palette = gbcc_memory_read(gbc, BGP, true);
+	struct tile *t = &ppu->window_tile;
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 
-	if (ly < wy || !check_bit(lcdc, 5) || (gbc->mode == DMG && !check_bit(lcdc, 0))) {
+	if (ppu->ly < ppu->wy || !check_bit(lcdc, 5) || (gbc->mode == DMG && !check_bit(lcdc, 0))) {
 		return;
 	}
-
-	uint8_t ty = ((ly - wy) / 8u) % 32u;
-	uint16_t line_offset = 2 * ((ly - wy) % 8);
-	uint16_t map;
-	if (check_bit(lcdc, 6)) {
-		map = BACKGROUND_MAP_BANK_2;
-	} else {
-		map = BACKGROUND_MAP_BANK_1;
+	if (ppu->x + 7 < ppu->wx) {
+		return;
+	}
+	if (t->x == 0) {
+		load_window_tile(gbc);
 	}
 
+	uint8_t colour = get_tile_pixel(t->hi, t->lo, t->x, check_bit(t->attr, 5));
+	uint8_t palette;
 	if (gbc->mode == DMG) {
-		for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			if (x < wx - 7) {
-				continue;
-			}
-			uint8_t tx = ((x - wx + 7) / 8) % 32;
-			uint8_t xoff = (x - wx + 7) % 8;
-			uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
-			uint16_t tile_addr;
-			if (check_bit(lcdc, 4)) {
-				tile_addr = VRAM_START + 16 * tile;
-			} else {
-				tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
-			}
-			uint8_t lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
-			uint8_t hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
-			uint8_t colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			ppu->window_line.colour[x] = get_palette_colour(gbc, palette, colour, BACKGROUND);
-			ppu->window_line.attr[x] |= ATTR_DRAWN;
-			if (colour == 0) {
-				ppu->window_line.attr[x] |= ATTR_COLOUR0;
-			}
-		}
+		palette = gbcc_memory_read(gbc, BGP, true);
 	} else {
-		for (int x = 0; x < GBC_SCREEN_WIDTH; x++) {
-			if (x < wx - 7) {
-				continue;
-			}
-			uint8_t tx = ((x - wx + 7) / 8) % 32;
-			uint8_t xoff = (x - wx + 7) % 8;
-			uint8_t tile = gbc->memory.vram_bank[0][map + 32 * ty + tx - VRAM_START];
-			uint8_t attr = gbc->memory.vram_bank[1][map + 32 * ty + tx - VRAM_START];
-			uint8_t *vbk;
-			uint16_t tile_addr;
-			if (check_bit(attr, 3)) {
-				vbk = gbc->memory.vram_bank[1];
-			} else {
-				vbk = gbc->memory.vram_bank[0];
-			}
-			/* TODO: Put this somewhere better */
-			if (check_bit(lcdc, 4)) {
-				tile_addr = 16 * tile;
-			} else {
-				tile_addr = (uint16_t)(0x1000 + 16 * (int8_t)tile);
-			}
-			uint8_t lo;
-			uint8_t hi;
-			/* Check for Y-flip */
-			if (check_bit(attr, 6)) {
-				lo = vbk[tile_addr + (14 - line_offset)];
-				hi = vbk[tile_addr + (14 - line_offset) + 1];
-			} else {
-				lo = vbk[tile_addr + line_offset];
-				hi = vbk[tile_addr + line_offset + 1];
-			}
-			uint8_t colour;
-			/* Check for X-flip */
-			if (check_bit(attr, 5)) {
-				colour = (uint8_t)(check_bit(hi, xoff) << 1u) | check_bit(lo, xoff);
-			} else {
-				colour = (uint8_t)(check_bit(hi, 7 - xoff) << 1u) | check_bit(lo, 7 - xoff);
-			}
-			ppu->window_line.colour[x] = get_palette_colour(gbc, attr & 0x07u, colour, BACKGROUND);
-			ppu->window_line.attr[x] |= ATTR_DRAWN;
-			if (colour == 0) {
-			    ppu->window_line.attr[x] |= ATTR_COLOUR0;
-			}
-			if (check_bit(attr, 7)) {
-				ppu->window_line.attr[x] |= ATTR_PRIORITY;
-			}
-		}
+		palette = t->attr & 0x07u;
 	}
+	ppu->window_line.colour[ppu->x] = get_palette_colour(gbc, palette, colour, BACKGROUND);
+	ppu->window_line.attr[ppu->x] |= ATTR_DRAWN;
+	if (colour == 0) {
+		ppu->window_line.attr[ppu->x] |= ATTR_COLOUR0;
+	}
+	if (check_bit(t->attr, 7)) {
+		ppu->window_line.attr[ppu->x] |= ATTR_PRIORITY;
+	}
+	t->x++;
+	t->x %= 8;
 }
 
-void draw_sprite_line(struct gbc *gbc)
+void draw_sprite_pixel(struct gbc *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
-	uint8_t ly = gbcc_memory_read(gbc, LY, true);
-	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
-	enum palette_flag pf;
-	if (!check_bit(lcdc, 1)) {
+	if (!check_bit(gbcc_memory_read(gbc, LCDC, true), 1)) {
+		/* Sprites are disabled */
 		return;
 	}
-	bool double_size = check_bit(lcdc, 2); /* 1 or 2 8x8 tiles */
-	uint8_t n_drawn = 0;
-	for (size_t s = 0; s < NUM_SPRITES && n_drawn < 10; s++) {
-		/* 
-		 * Together SY & SX define the bottom right corner of the
-		 * sprite. X=1, Y=1 is the top left corner, so each of these
-		 * are offset by 1 for array values.
-		 * TODO: Is this off-by-one true?
-		 */
-		uint8_t sy = gbcc_memory_read(gbc, OAM_START + 4 * s, true);
-		uint8_t sx = gbcc_memory_read(gbc, OAM_START + 4 * s + 1, true);
-		uint8_t tile = gbcc_memory_read(gbc, OAM_START + 4 * s + 2, true);
-		uint8_t attr = gbcc_memory_read(gbc, OAM_START + 4 * s + 3, true);
-		bool priority = check_bit(attr, 7);
-		bool yflip = check_bit(attr, 6);
-		bool xflip = check_bit(attr, 5);
-		uint8_t sprite_line = sy - ly;
-		uint8_t *vram_bank;
-		if (gbc->mode == DMG) {
-			vram_bank = gbc->memory.vram_bank[0];
-		} else {
-			vram_bank = gbc->memory.vram_bank[check_bit(attr, 3)];
-		}
-		if (ly >= sy || ly + 16 < sy || (!double_size && ly + 8 >= sy)) {
-			/* Sprite isn't on this line */
+	for (int i = 0; i < ppu->n_sprites; i++) {
+		struct sprite *s = &ppu->sprites[i];
+		if (ppu->x + 8 < s->x || ppu->x >= s->x) {
 			continue;
 		}
-		if (double_size) {
+		if (ppu->sprite_line.attr[ppu->x] & ATTR_DRAWN) {
+			/* On the GBC, sprites earlier in OAM have priority */
 			/* 
-			 * In 8x16 mode, the lower bit of the tile number is
-			 * ignored, and the sprite is stored as upper tile then
-			 * lower tile.
+			 * TODO: On DMG, the sprite with the lowest x should
+			 * have priority
 			 */
-			if (ly + 8 < sy) {
-				/* We are drawing the top tile */
-				tile = cond_bit(tile, 0, yflip);
-			} else {
-				/* We are drawing the bottom tile */
-				tile = cond_bit(tile, 0, !yflip);
-				sprite_line += 8;
-			}
+			continue;
 		}
-		if (yflip) {
-			sprite_line -= 9;
-		} else {
-			sprite_line = 16 - sprite_line;
+		if (!s->loaded) {
+			load_sprite_tile(gbc, i);
+			/*
+			 * Each new sprite causes a delay in rendering
+			 * depending on its position over the background.
+			 */
+			//ppu->next_dot += 11 - MIN(5, (ppu->x + ppu->scx) % 8);
+		}
+		uint8_t x = ppu->x + 8 - s->x;
+		if (check_bit(s->tile.attr, 5)) {
+			/* x-flip */
+			x = 7 - x;
+		}
+		uint8_t colour = (uint8_t)(check_bit(s->tile.hi, 7 - x) << 1u) | check_bit(s->tile.lo, 7 - x);
+		/* Colour 0 is transparent */
+		if (!colour) {
+			continue;
 		}
 		uint8_t palette;
+		enum palette_flag pf;
 		if (gbc->mode == DMG) {
-			if (check_bit(attr, 4)) {
+			if (check_bit(s->tile.attr, 4)) {
 				palette = gbcc_memory_read(gbc, OBP1, true);
 				pf = SPRITE_1;
 			} else {
@@ -409,49 +341,46 @@ void draw_sprite_line(struct gbc *gbc)
 				pf = SPRITE_2;
 			}
 		} else {
-			palette = attr & 0x07u;
+			palette = s->tile.attr & 0x07u;
 			pf = SPRITE_1;
 		}
-		uint8_t	lo = vram_bank[16 * tile + 2 * sprite_line];
-		uint8_t	hi = vram_bank[16 * tile + 2 * sprite_line + 1];
-		for (uint8_t x = 0; x < 8; x++) {
-			uint8_t colour = (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
-			/* Colour 0 is transparent */
-			if (!colour) {
-				continue;
-			}
-			uint8_t screen_x;
-			if (xflip) {
-				screen_x = sx - x - 1;
-			} else {
-				screen_x = sx + x - 8;
-			}
-			if (screen_x < GBC_SCREEN_WIDTH) {
-				ppu->sprite_line.colour[screen_x] = get_palette_colour(gbc, palette, colour, pf);
-				ppu->sprite_line.attr[screen_x] |= ATTR_DRAWN;
-				if (priority) {
-					ppu->sprite_line.attr[screen_x] |= ATTR_PRIORITY;
-				}
-			}
+		ppu->sprite_line.colour[ppu->x] = get_palette_colour(gbc, palette, colour, pf);
+		ppu->sprite_line.attr[ppu->x] |= ATTR_DRAWN;
+		if (check_bit(s->tile.attr, 7)) {
+			ppu->sprite_line.attr[ppu->x] |= ATTR_PRIORITY;
 		}
-		n_drawn++;
 	}
 }
 
 void composite_line(struct gbc *gbc)
 {
+	/* 
+	 * Composite the line according to various attributes. In order of
+	 * increasing priority, these are:
+	 * ob_attr & ATTR_PRIORITY: if set, draw sprites below background
+	 * 			    colours 1-3
+	 * (win|bg)_attr & ATTR_PRIORITY: same as above
+	 * bit(lcdc, 0): TODO: different for DMG & GBC
+	 */
 	struct ppu *ppu = &gbc->ppu;
-	uint8_t ly = gbcc_memory_read(gbc, LY, true);
+	uint8_t ly = ppu->ly;
 	uint32_t *line = &ppu->screen.gbc[ly * GBC_SCREEN_WIDTH];
 
-	memcpy(line, ppu->bg_line.colour, GBC_SCREEN_WIDTH * sizeof(line[0]));
+	if (!gbc->hide_background) {
+		memcpy(line, ppu->bg_line.colour, GBC_SCREEN_WIDTH * sizeof(line[0]));
+	} else {
+		memset(line, 0xFFu, GBC_SCREEN_WIDTH * sizeof(line[0]));
+	}
 	for (uint8_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
 		uint8_t bg_attr = ppu->bg_line.attr[x];
 		uint8_t win_attr = ppu->window_line.attr[x];
 		uint8_t ob_attr = ppu->sprite_line.attr[x];
 
-		if (win_attr & ATTR_DRAWN) {
+		if (win_attr & ATTR_DRAWN && !gbc->hide_window) {
 			line[x] = ppu->window_line.colour[x];
+			if (win_attr & ATTR_PRIORITY && !(win_attr & ATTR_COLOUR0)) {
+				continue;
+			}
 		}
 
 		if (ob_attr & ATTR_DRAWN) {
@@ -471,22 +400,24 @@ void composite_line(struct gbc *gbc)
 					continue;
 				}
 			}
+			if (gbc->hide_sprites) {
+				continue;
+			}
 			line[x] = ppu->sprite_line.colour[x];
 		}
 	}
 }
 
-uint8_t get_video_mode(struct gbc *gbc)
+uint8_t get_video_mode(uint8_t stat)
 {
-	return gbcc_memory_read(gbc, STAT, true) & 0x03u;
+	return stat & 0x03u;
 }
 
-void set_video_mode(struct gbc *gbc, uint8_t mode)
+uint8_t set_video_mode(uint8_t stat, uint8_t mode)
 {
-	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
 	stat &= 0xFCu;
 	stat |= mode;
-	gbcc_memory_write(gbc, STAT, stat, true);
+	return stat;
 }
 
 uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum palette_flag pf)
@@ -530,3 +461,166 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 	return res;
 }
 
+void load_bg_tile(struct gbc *gbc)
+{
+	struct ppu *ppu = &gbc->ppu;
+	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
+
+	ppu->bg_tile.x = 0;
+	uint8_t tx = ((ppu->scx + ppu->x) / 8u) % 32u;
+	uint8_t ty = ((ppu->scy + ppu->ly) / 8u) % 32u;
+	uint16_t line_offset = 2 * ((ppu->scy + ppu->ly) % 8u); /* 2 bytes per line */
+	uint16_t map;
+	if (check_bit(lcdc, 3)) {
+		map = BACKGROUND_MAP_BANK_2;
+	} else {
+		map = BACKGROUND_MAP_BANK_1;
+	}
+
+	if (gbc->mode == DMG) {
+		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
+		uint16_t tile_addr;
+		if (check_bit(lcdc, 4)) {
+			tile_addr = VRAM_START + 16 * tile;
+		} else {
+			tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
+		}
+		ppu->bg_tile.lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
+		ppu->bg_tile.hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
+		ppu->bg_tile.attr = 0;
+	} else {
+		uint8_t tile = gbc->memory.vram_bank[0][map + 32 * ty + tx - VRAM_START];
+		ppu->bg_tile.attr = gbc->memory.vram_bank[1][map + 32 * ty + tx - VRAM_START];
+		uint8_t *vbk;
+		uint16_t tile_addr;
+		if (check_bit(ppu->bg_tile.attr, 3)) {
+			vbk = gbc->memory.vram_bank[1];
+		} else {
+			vbk = gbc->memory.vram_bank[0];
+		}
+		if (check_bit(lcdc, 4)) {
+			tile_addr = 16 * tile;
+		} else {
+			tile_addr = (uint16_t)(0x1000 + 16 * (int8_t)tile);
+		}
+		/* Check for Y-flip */
+		if (check_bit(ppu->bg_tile.attr, 6)) {
+			ppu->bg_tile.lo = vbk[tile_addr + (14 - line_offset)];
+			ppu->bg_tile.hi = vbk[tile_addr + (14 - line_offset) + 1];
+		} else {
+			ppu->bg_tile.lo = vbk[tile_addr + line_offset];
+			ppu->bg_tile.hi = vbk[tile_addr + line_offset + 1];
+		}
+	}
+}
+
+void load_window_tile(struct gbc *gbc)
+{
+	struct ppu *ppu = &gbc->ppu;
+	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
+
+	ppu->window_tile.x = 0;
+	uint8_t tx = ((ppu->x - ppu->wx + 7) / 8u) % 32u;
+	uint8_t ty = ((ppu->ly - ppu->wy) / 8u) % 32u;
+	uint16_t line_offset = 2 * ((ppu->ly - ppu->wy) % 8u); /* 2 bytes per line */
+	uint16_t map;
+	if (check_bit(lcdc, 6)) {
+		map = BACKGROUND_MAP_BANK_2;
+	} else {
+		map = BACKGROUND_MAP_BANK_1;
+	}
+
+	if (gbc->mode == DMG) {
+		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
+		uint16_t tile_addr;
+		if (check_bit(lcdc, 4)) {
+			tile_addr = VRAM_START + 16 * tile;
+		} else {
+			tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
+		}
+		ppu->window_tile.lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
+		ppu->window_tile.hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
+		ppu->window_tile.attr = 0;
+	} else {
+		uint8_t tile = gbc->memory.vram_bank[0][map + 32 * ty + tx - VRAM_START];
+		ppu->window_tile.attr = gbc->memory.vram_bank[1][map + 32 * ty + tx - VRAM_START];
+		uint8_t *vbk;
+		uint16_t tile_addr;
+		if (check_bit(ppu->window_tile.attr, 3)) {
+			vbk = gbc->memory.vram_bank[1];
+		} else {
+			vbk = gbc->memory.vram_bank[0];
+		}
+		if (check_bit(lcdc, 4)) {
+			tile_addr = 16 * tile;
+		} else {
+			tile_addr = (uint16_t)(0x1000 + 16 * (int8_t)tile);
+		}
+		/* Check for Y-flip */
+		if (check_bit(ppu->window_tile.attr, 6)) {
+			ppu->window_tile.lo = vbk[tile_addr + (14 - line_offset)];
+			ppu->window_tile.hi = vbk[tile_addr + (14 - line_offset) + 1];
+		} else {
+			ppu->window_tile.lo = vbk[tile_addr + line_offset];
+			ppu->window_tile.hi = vbk[tile_addr + line_offset + 1];
+		}
+	}
+}
+
+void load_sprite_tile(struct gbc *gbc, int n)
+{
+	struct ppu *ppu = &gbc->ppu;
+	uint8_t ly = gbcc_memory_read(gbc, LY, true);
+	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
+	bool double_size = check_bit(lcdc, 2); /* 1 or 2 8x8 tiles */
+	struct tile *t = &ppu->sprites[n].tile;
+	/* 
+	 * Together SY & SX define the bottom right corner of the
+	 * sprite. X=1, Y=1 is the top left corner, so each of these
+	 * are offset by 1 for array values.
+	 * TODO: Is this off-by-one true?
+	 */
+	uint8_t sy = ppu->sprites[n].y;
+	uint8_t tile = gbcc_memory_read(gbc, ppu->sprites[n].address + 2, true);
+	t->attr = gbcc_memory_read(gbc, ppu->sprites[n].address + 3, true);
+	bool yflip = check_bit(t->attr, 6);
+	uint8_t sprite_line = sy - ly;
+	uint8_t *vram_bank;
+	if (gbc->mode == DMG) {
+		vram_bank = gbc->memory.vram_bank[0];
+	} else {
+		vram_bank = gbc->memory.vram_bank[check_bit(t->attr, 3)];
+	}
+	if (double_size) {
+		/* 
+		 * In 8x16 mode, the lower bit of the tile number is
+		 * ignored, and the sprite is stored as upper tile then
+		 * lower tile.
+		 */
+		if (ly + 8 < sy) {
+			/* We are drawing the top tile */
+			tile = cond_bit(tile, 0, yflip);
+		} else {
+			/* We are drawing the bottom tile */
+			tile = cond_bit(tile, 0, !yflip);
+			sprite_line += 8;
+		}
+	}
+	if (yflip) {
+		sprite_line -= 9;
+	} else {
+		sprite_line = 16 - sprite_line;
+	}
+	t->lo = vram_bank[16 * tile + 2 * sprite_line];
+	t->hi = vram_bank[16 * tile + 2 * sprite_line + 1];
+	t->x = 0;
+	ppu->sprites[n].loaded = true;
+}
+
+uint8_t get_tile_pixel(uint8_t hi, uint8_t lo, uint8_t x, bool flip)
+{
+	if (flip) {
+		return (uint8_t)(check_bit(hi, x) << 1u) | check_bit(lo, x);
+	}
+	return (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
+}

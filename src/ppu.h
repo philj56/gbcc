@@ -13,6 +13,21 @@ struct line_buffer {
 	uint8_t attr[GBC_SCREEN_WIDTH];
 };
 
+struct tile {
+	uint8_t hi;
+	uint8_t lo;
+	uint8_t x;
+	uint8_t attr;
+};
+
+struct sprite {
+	uint8_t x;
+	uint8_t y;
+	uint16_t address;
+	struct tile tile;
+	bool loaded;
+};
+
 struct ppu {
 	uint64_t frame;
 	uint16_t clock;
@@ -29,6 +44,23 @@ struct ppu {
 		uint32_t *gbc;
 		uint32_t *sdl;
 	} screen;
+
+	/* Copies of IOREG data */
+	uint8_t scy;
+	uint8_t scx;
+	uint8_t ly;
+	uint8_t lyc;
+	uint8_t wy;
+	uint8_t wx;
+
+	/* Internal variables */
+	bool last_stat;
+	uint8_t x;
+	uint8_t next_dot;
+	uint8_t n_sprites;
+	struct sprite sprites[10];
+	struct tile bg_tile;
+	struct tile window_tile;
 };
 
 void gbcc_ppu_clock(struct gbc *gbc);

@@ -89,6 +89,7 @@ struct cpu {
 	struct {
 		uint16_t addr;
 		bool request;
+		bool running;
 	} interrupt;
 	struct {
 		uint16_t addr;
@@ -102,6 +103,7 @@ struct cpu {
 	bool tac_bit;
 	uint8_t tima_reload;
 	uint8_t clock;
+	uint64_t debug_clock;
 };
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc);

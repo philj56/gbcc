@@ -293,6 +293,11 @@ uint8_t ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 	}
 
 	switch (addr) {
+		case LY:
+			if (gbc->ppu.lcd_disable) {
+				return 0;
+			}
+			break;
 		case JOYP:
 			/* Only update the keys when we actually want to read from them */
 			if (check_bit(gbc->memory.ioreg[addr - IOREG_START], 5)) {
@@ -338,6 +343,23 @@ uint8_t ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 
 void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 {
+	if (addr == LCDC) {
+		printf("LCDC = 0b");
+		for (int i = 7; i >= 0; i--) {
+			printf("%u", check_bit(val, i));
+		}
+		printf("\n");
+	}
+	/*
+	if (addr == STAT) {
+		printf("STAT = 0b");
+		val |= ~ioreg_read_masks[addr - IOREG_START];
+		for (int i = 7; i >= 0; i--) {
+			printf("%u", check_bit(val, i));
+		}
+		printf(" (0x%02X)\n", val);
+	}
+	*/
 	/* Ignore GBC-specific registers when in DMG mode */
 	if (gbc->mode == DMG) {
 		switch (addr) {
@@ -380,6 +402,9 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 	}
 
 	switch (addr) {
+		case LY:
+			*dest = 0;
+			break;
 		case JOYP:
 			if (check_bit(val, 5)) {
 				*dest = set_bit(*dest, 4);
@@ -429,6 +454,7 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 				if (!check_bit(val, 7)) {
 					if (gbc->hdma.length > 0) {
 						gbc->hdma.length = 0;
+						gbc->hdma.to_copy = 0;
 						*dest |= 0x80u;
 						return;
 					}
@@ -437,13 +463,27 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 				uint8_t src_lo = gbc->memory.ioreg[HDMA2 - IOREG_START];
 				uint8_t dst_hi = gbc->memory.ioreg[HDMA3 - IOREG_START];
 				uint8_t dst_lo = gbc->memory.ioreg[HDMA4 - IOREG_START];
+				/* Lower 4 bits of source are ignored */
+				src_lo &= 0xF0u;
+				
+				/*
+				 * Upper 3 & lower 4 bits of destination are
+				 * ignored (destination is always VRAM) 
+				 */
+				dst_hi &= 0x1Fu;
 				dst_hi |= 0x80u;
 				gbc->hdma.source = cat_bytes(src_lo, src_hi);
 				gbc->hdma.dest = cat_bytes(dst_lo, dst_hi);
 				gbc->hdma.length = ((val & 0x7Fu) + 1u) * 0x10u;
 				*dest = val;
-				if (!check_bit(val, 7)) {
-					gbcc_hdma_copy(gbc);
+				if (check_bit(val, 7)) {
+					/* H-Blank DMA */
+					gbc->hdma.to_copy = 0x10u;
+					gbc->hdma.hblank = true;
+				} else {
+					/* General DMA */
+					gbc->hdma.to_copy = gbc->hdma.length;
+					gbc->hdma.hblank = false;
 				}
 			}
 			break;

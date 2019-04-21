@@ -26,6 +26,7 @@ struct gbc {
 		uint16_t source;
 		uint16_t dest;
 		uint16_t length;
+		uint16_t to_copy;
 		bool hblank;
 	} hdma;
 	bool stop;
@@ -40,6 +41,9 @@ struct gbc {
 	int8_t load_state;
 	bool double_speed;
 	float turbo_speed;
+	bool hide_background;
+	bool hide_window;
+	bool hide_sprites;
 
 	/* Memory map */
 	struct {

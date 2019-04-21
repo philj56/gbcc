@@ -33,6 +33,7 @@ void cpu_clock(struct gbc *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	/* CPU clocks every 4 cycles */
+	cpu->debug_clock++;
 	cpu->clock++;
 	cpu->clock &= 3u;
 	if (cpu->clock != 0) {
@@ -58,9 +59,13 @@ void cpu_clock(struct gbc *gbc)
 			cpu->dma.timer = DMA_TIMER;
 			cpu->dma.source = cpu->dma.new_source;
 		}
+		if (gbc->hdma.to_copy > 0) {
+			gbcc_hdma_copy_chunk(gbc);
+			return;
+		}
 	}
 	if (!cpu->instruction.running) {
-		if (cpu->ime && cpu->interrupt.request) {
+		if (cpu->interrupt.running || (cpu->ime && cpu->interrupt.request)) {
 			INTERRUPT(gbc);
 			return;
 		}
@@ -69,6 +74,7 @@ void cpu_clock(struct gbc *gbc)
 		}
 		//printf("%04X\n", cpu->reg.pc);
 		cpu->opcode = gbcc_fetch_instruction(gbc);
+		//printf("%lu\t", cpu->debug_clock);
 		//gbcc_print_op(gbc);
 		cpu->instruction.running = true;
 	}
@@ -82,7 +88,6 @@ void cpu_clock(struct gbc *gbc)
 void clock_div(struct gbc *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
-	//printf("Div clock = %04X\n", cpu->div_timer);
 	cpu->div_timer++;
 	uint8_t tac = gbcc_memory_read(gbc, TAC, false);
 	uint16_t mask;
@@ -172,6 +177,8 @@ void check_interrupts(struct gbc *gbc)
 		if (cpu->ime) {
 			cpu->interrupt.request = true;
 		}
+	} else {
+		cpu->interrupt.request = false;
 	}
 }
 

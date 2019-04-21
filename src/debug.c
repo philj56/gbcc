@@ -83,11 +83,11 @@ static const char* const op_dissassemblies[0x100] = {
 /* 0xD4 */	"CALL NC,a16",	"PUSH DE",	"SUB d8",	"RST 10H",
 /* 0xD8 */	"RET C",	"RETI",		"JP C,a16",	"",
 /* 0xDC */	"CALL C,a16",	"",		"SBC A,d8",	"RST 18H",
-/* 0xE0 */	"LDH (a8),A",	"POP HL",	"LD (C),A",	"",
+/* 0xE0 */	"LDH %s,A",	"POP HL",	"LD (C),A",	"",
 /* 0xE4 */	"",		"PUSH HL",	"AND d8",	"RST 20H",
 /* 0xE8 */	"ADD SP,r8",	"JP (HL)",	"LD (a16),A",	"",
 /* 0xEC */	"",		"",		"XOR d8",	"RST 28H",
-/* 0xF0 */	"LDH A,(a8)",	"POP AF",	"LD A,(C)",	"DI",
+/* 0xF0 */	"LDH A,%s",	"POP AF",	"LD A,(C)",	"DI",
 /* 0xF4 */	"",		"PUSH AF",	"OR d8",	"RST 30H",
 /* 0xF8 */	"LD HL,SP+r8",	"LD SP,HL",	"LD A,(a16)",	"EI",
 /* 0xFC */	"",		"",		"CP d8",	"RST 38H"
@@ -160,6 +160,41 @@ static const char* const cb_op_dissassemblies[0x100] = {
 /* 0xFC */	"SET 7,H", 	"SET 7,L", 	"SET 7,(HL)", 	"SET 7,A",
 };
 
+static const char* const ioreg_names[0x80] = {
+/* 0xFF00 */	"JOYP", 	"SB", 		"SC", 		NULL,
+/* 0xFF04 */	"DIV", 		"TIMA", 	"TMA", 		"TAC",
+/* 0xFF08 */	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF0C */	NULL, 		NULL, 		NULL, 		"IF",
+/* 0xFF10 */	"NR10", 	"NR11", 	"NR12", 	"NR13",
+/* 0xFF14 */	"NR14", 	"NR20", 	"NR21", 	"NR22",
+/* 0xFF18 */	"NR23", 	"NR24", 	"NR30", 	"NR31",
+/* 0xFF1C */	"NR32", 	"NR33", 	"NR34", 	"NR40",
+/* 0xFF20 */	"NR41", 	"NR42", 	"NR43", 	"NR44",
+/* 0xFF24 */	"NR50", 	"NR51", 	"NR52", 	NULL,
+/* 0xFF28 */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF2C */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF30 */	"WAVE_0", 	"WAVE_1", 	"WAVE_2", 	"WAVE_3",
+/* 0xFF34 */	"WAVE_4", 	"WAVE_5", 	"WAVE_6", 	"WAVE_7",
+/* 0xFF38 */	"WAVE_8", 	"WAVE_9", 	"WAVE_A", 	"WAVE_B",
+/* 0xFF3C */	"WAVE_C", 	"WAVE_D", 	"WAVE_E", 	"WAVE_F",
+/* 0xFF40 */	"LCDC", 	"STAT", 	"SCY", 		"SCX",
+/* 0xFF44 */	"LY", 		"LYC", 		"DMA", 		"BGP",
+/* 0xFF48 */ 	"OBP0",		"OBP1",		"WY", 		"WX",
+/* 0xFF4C */ 	NULL, 		"KEY1", 	NULL, 		"VBK",
+/* 0xFF50 */	NULL, 		"HDMA1", 	"HDMA2", 	"HDMA3",
+/* 0xFF54 */	"HDMA4", 	"HDMA5", 	"RP", 		NULL,
+/* 0xFF58 */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF5C */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF60 */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF64 */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF68 */	"BGPI", 	"BGPD", 	"OBPI", 	"OBPD",
+/* 0xFF6C */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF70 */ 	"SVBK",		NULL, 		NULL, 		NULL,
+/* 0xFF74 */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF78 */ 	NULL, 		NULL, 		NULL, 		NULL,
+/* 0xFF7C */ 	NULL, 		NULL, 		NULL, 		NULL,
+};
+
 void gbcc_print_registers(struct gbc *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
@@ -181,12 +216,28 @@ void gbcc_print_op(struct gbc *gbc)
 	uint8_t op = cpu->opcode;
 	gbcc_log_debug("%02X", op);
 	for (uint8_t i = 0; i < gbcc_op_sizes[op] - 1; i++) {
-		gbcc_log_append_debug("%02X", gbcc_memory_read(gbc, cpu->reg.pc + i, false));
+		gbcc_log_append_debug("%02X", gbcc_memory_read(gbc, cpu->reg.pc + i, true));
 	}
 	if (op == 0xCB) {
 		uint8_t cb_op = gbcc_memory_read(gbc, cpu->reg.pc, false);
 		gbcc_log_append_debug("%02X", cb_op);
 		gbcc_log_append_debug("\t%s\n", cb_op_dissassemblies[cb_op]);
+	} else if (op == 0xE0 || op == 0xF0) {
+		uint8_t arg = gbcc_memory_read(gbc, cpu->reg.pc, true);
+		const char *reg = NULL;
+		if (arg < 0x80) {
+			reg = ioreg_names[arg];
+		} else if (arg == 0xFF) {
+			reg = "IE";
+		} else {
+			reg = "(HRAM)";
+		}
+		if (!reg) {
+			reg = "(UNKNOWN)";
+		}
+		gbcc_log_append_debug("\t");
+		gbcc_log_append_debug(op_dissassemblies[op], reg);
+		gbcc_log_append_debug("\n");
 	} else {
 		gbcc_log_append_debug("\t%s\n", op_dissassemblies[op]);
 	}

@@ -6,7 +6,7 @@
 #include "window.h"
 #include <SDL2/SDL.h>
 
-static const SDL_Scancode keymap[22] = {
+static const SDL_Scancode keymap[25] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -20,6 +20,9 @@ static const SDL_Scancode keymap[22] = {
 	SDL_SCANCODE_P, 	/* Pause */
 	SDL_SCANCODE_F, 	/* FPS Counter */
 	SDL_SCANCODE_V, 	/* Switch shader */
+	SDL_SCANCODE_1, 	/* Toggle background */
+	SDL_SCANCODE_2, 	/* Toggle window */
+	SDL_SCANCODE_3, 	/* Toggle sprites */
 	SDL_SCANCODE_F1,	/* State n */
 	SDL_SCANCODE_F2,
 	SDL_SCANCODE_F3,
@@ -107,21 +110,54 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				gbcc_window_show_message(win, win->gl.shaders[win->gl.cur_shader].name, 1, true);
 				break;
 			case 13:
+				gbc->hide_background ^= val;
+				if (!val) {
+					break;
+				}
+				if (gbc->hide_background) {
+					gbcc_window_show_message(win, "Background disabled", 1, true);
+				} else {
+					gbcc_window_show_message(win, "Background enabled", 1, true);
+				}
+				break;
 			case 14:
+				gbc->hide_window ^= val;
+				if (!val) {
+					break;
+				}
+				if (gbc->hide_window) {
+					gbcc_window_show_message(win, "Window disabled", 1, true);
+				} else {
+					gbcc_window_show_message(win, "Window enabled", 1, true);
+				}
+				break;
 			case 15:
+				gbc->hide_sprites ^= val;
+				if (!val) {
+					break;
+				}
+				if (gbc->hide_sprites) {
+					gbcc_window_show_message(win, "Sprites disabled", 1, true);
+				} else {
+					gbcc_window_show_message(win, "Sprites enabled", 1, true);
+				}
+				break;
 			case 16:
 			case 17:
 			case 18:
 			case 19:
 			case 20:
 			case 21:
+			case 22:
+			case 23:
+			case 24:
 				if (!val) {
 					break;
 				}
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					gbc->save_state = (int8_t)(key - 12);
+					gbc->save_state = (int8_t)(key - 15);
 				} else {
-					gbc->load_state = (int8_t)(key - 12);
+					gbc->load_state = (int8_t)(key - 15);
 				}
 				break;
 			default:

@@ -1,30 +1,22 @@
+#include "debug.h"
 #include "gbcc.h"
 #include "hdma.h"
 #include "memory.h"
 
-void gbcc_hdma_copy(struct gbc *gbc)
+void gbcc_hdma_copy_chunk(struct gbc *gbc)
 {
-	uint16_t start = gbc->hdma.source;
-	uint16_t end = gbc->hdma.source + gbc->hdma.length;
-	uint16_t dest = gbc->hdma.dest;
-	for (uint16_t src = start; src < end; src++, dest++) {
-		gbcc_memory_copy(gbc, src, dest, true);
-	}
-	gbcc_memory_write(gbc, HDMA5, 0xFFu, true);
-	gbc->hdma.length = 0;
-}
-
-void gbcc_hdma_copy_block(struct gbc *gbc)
-{
-	if (gbc->hdma.length <= 0) {
+	if (gbc->hdma.to_copy <= 0) {
+		gbcc_log_error("HDMA already finished.\n");
 		return;
 	}
- 	for (uint8_t byte = 0; byte < 0x10u && gbc->hdma.length > 0; byte++) {
+	/* In single speed mode, hdma copies twice as much per clock */
+	for (int i = 0; i < 4 * (1 + !gbc->double_speed); i++) {
 		gbcc_memory_copy(gbc, gbc->hdma.source, gbc->hdma.dest, true);
 		gbc->hdma.source++;
 		gbc->hdma.dest++;
 		gbc->hdma.length--;
-	}	
+		gbc->hdma.to_copy--;
+	}
 	gbcc_memory_write(gbc, HDMA1, (gbc->hdma.source >> 8u), true);
 	gbcc_memory_write(gbc, HDMA2, (gbc->hdma.source & 0xFFu), true);
 	gbcc_memory_write(gbc, HDMA3, (gbc->hdma.dest >> 8u), true);
