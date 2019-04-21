@@ -343,6 +343,7 @@ uint8_t ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 
 void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 {
+	/*
 	if (addr == LCDC) {
 		printf("LCDC = 0b");
 		for (int i = 7; i >= 0; i--) {
@@ -350,7 +351,6 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 		}
 		printf("\n");
 	}
-	/*
 	if (addr == STAT) {
 		printf("STAT = 0b");
 		val |= ~ioreg_read_masks[addr - IOREG_START];
