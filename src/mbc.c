@@ -139,18 +139,59 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 
 uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr)
 {
-	(void)gbc;
-	(void)addr;
-	gbcc_log_debug("Stubbed function gbcc_mbc_mbc2_read() called");
+	if (addr < ROMX_START) {
+		return gbc->memory.rom0[addr];
+	}
+	if (addr >= ROMX_START && addr < ROMX_END) {
+		return gbc->memory.romx[addr - ROMX_START];
+	}
+	/* MBC2 only has 512 4-bit ram locations */
+	if (addr >= SRAM_START && addr < SRAM_START + 0x200u) {
+		if (gbc->cart.mbc.sram_enable) {
+			return gbc->memory.sram[addr - SRAM_START];
+		}
+		gbcc_log_debug("SRAM not enabled!\n");
+		return 0xFFu;
+	}
+	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
 	return 0xFFu;
 }
 
 void gbcc_mbc_mbc2_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	(void)gbc;
-	(void)addr;
-	(void)val;
-	gbcc_log_debug("Stubbed function gbcc_mbc_mbc2_write() called");
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
+	
+	/* MBC2 only has 512 4-bit ram locations */
+	if (addr >= SRAM_START && addr < SRAM_START + 0x200u) {
+		if (mbc->sram_enable) {
+			gbc->memory.sram[addr - SRAM_START] = val & 0x0Fu;
+		} else {
+			gbcc_log_debug("SRAM not enabled!\n");
+		}
+	} else if (addr < 0x2000u && !(addr & bit16(8))) {
+		/* bit 8 of address must be zero to enable/disable ram */
+		mbc->ramg = val;
+	} else if (addr < 0x4000u && (addr & bit16(8))) {
+		/* bit 8 of address must be one to change rom bank */
+		mbc->romb0 = val;
+	} else {
+		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
+		return;
+	}
+
+	/* RAMG switches on SRAM when it has 0x0A in the lower 4 bits. */
+	mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
+
+	/*
+	 * ROMB0 selects 4 bit ROMX bank number.
+	 * 0 maps to 1, so banks 0x00, 0x20, 0x40 & 0x60 can
+	 * never be mapped to ROMX.
+	 * TODO: is this 0->1 note true for MBC2?
+	 */
+	mbc->romx_bank = mbc->romb0 & 0x0Fu;
+	mbc->romx_bank += !mbc->romx_bank;
+
+	set_mbc_banks(gbc);
 }
 
 uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr)
@@ -341,7 +382,7 @@ uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr)
 {
 	(void)gbc;
 	(void)addr;
-	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_read() called");
+	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_read() called\n");
 	return 0xFFu;
 }
 
@@ -350,5 +391,5 @@ void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	(void)gbc;
 	(void)addr;
 	(void)val;
-	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_write() called");
+	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_write() called\n");
 }
