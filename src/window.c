@@ -33,7 +33,7 @@ static GLuint create_shader_program(const char *vert, const char *frag);
 void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 {
 	win->gbc = gbc;
-	clock_gettime(CLOCK_REALTIME, &win->fps_counter.last_time);
+	clock_gettime(CLOCK_REALTIME, &win->fps.last_time);
 	gbcc_fontmap_load(&win->font, TILESET_PATH);
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
@@ -228,9 +228,9 @@ void gbcc_window_update(struct gbcc_window *win)
 	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
 
 	update_text(win);
-	if (win->fps_counter.show && !screenshot) {
+	if (win->fps.show && !screenshot) {
 		char fps_text[16];
-		snprintf(fps_text, 16, " FPS: %.0f ", win->fps_counter.fps);
+		snprintf(fps_text, 16, " FPS: %.0f ", round(win->fps.fps));
 		render_text(win, fps_text, 0, 0);
 	}
 	if (win->msg.time_left > 0 && !screenshot) {
@@ -402,24 +402,32 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 
 void update_text(struct gbcc_window *win)
 {
+	struct fps_counter *fps = &win->fps;
 	struct timespec cur_time;
 	clock_gettime(CLOCK_REALTIME, &cur_time);
-	double dt = gbcc_time_diff(&cur_time, &win->fps_counter.last_time);
+	double dt = gbcc_time_diff(&cur_time, &fps->last_time);
 
 	/* Update FPS counter */
-	win->fps_counter.last_time = cur_time;
-	float df = win->gbc->ppu.frame - win->fps_counter.last_frame;
+	fps->last_time = cur_time;
+	float df = win->gbc->ppu.frame - fps->last_frame;
 	uint8_t ly = gbcc_memory_read(win->gbc, LY, false);
-	if (ly < win->fps_counter.last_ly) {
+	if (ly < fps->last_ly) {
 		df -= 1;
-		ly += (154 - win->fps_counter.last_ly);
+		ly += (154 - fps->last_ly);
 	} else {
-		ly -= win->fps_counter.last_ly;
+		ly -= fps->last_ly;
 	}
 	df += ly / 154.0;
-	win->fps_counter.last_frame = win->gbc->ppu.frame;
-	win->fps_counter.last_ly = gbcc_memory_read(win->gbc, LY, false);
-	win->fps_counter.fps = df / (dt / 1e9);
+	fps->last_frame = win->gbc->ppu.frame;
+	fps->last_ly = gbcc_memory_read(win->gbc, LY, false);
+	fps->previous[fps->idx] = df / (dt / 1e9);
+	fps->idx++;
+	fps->idx %= 4;
+	float avg = 0;
+	for (int i = 0; i < 4; i++) {
+		avg += fps->previous[i];
+	}
+	fps->fps = avg / 4;
 
 	/* Update message timer */
 	if (win->msg.time_left > 0) {

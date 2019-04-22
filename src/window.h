@@ -15,6 +15,16 @@ struct shader {
 	GLuint program;
 };
 
+struct fps_counter {
+	uint64_t last_frame;
+	struct timespec last_time;
+	uint8_t last_ly;
+	float fps;
+	float previous[4];
+	int idx;
+	bool show;
+};
+
 struct gbcc_window {
 	struct gbc *gbc;
 	struct gbcc_fontmap font;
@@ -36,13 +46,7 @@ struct gbcc_window {
 		int cur_shader;
 		struct shader shaders[3];
 	} gl;
-	struct {
-		uint64_t last_frame;
-		struct timespec last_time;
-		uint8_t last_ly;
-		float fps;
-		bool show;
-	} fps_counter;
+	struct fps_counter fps;
 	struct {
 		char text[MSG_BUF_SIZE];
 		int lines;

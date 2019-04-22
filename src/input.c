@@ -102,7 +102,7 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				gbc->pause ^= val;
 				break;
 			case 11:
-				win->fps_counter.show ^= val;
+				win->fps.show ^= val;
 				break;
 			case 12:
 				win->gl.cur_shader += val;
