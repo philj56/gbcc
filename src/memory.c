@@ -313,12 +313,6 @@ uint8_t ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.right << 0u);
 			}
 			break;
-		case SB:
-			/* TODO: implement properly */
-			return 0xFFu;
-		case SC:
-			/* TODO: implement properly */
-			return 0x01u;
 		case DIV:
 			return high_byte(gbc->cpu.div_timer);
 		case NR52:
@@ -415,8 +409,15 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 			}
 			break;
 		case SC:
-			if (check_bit(val, 7)) {
+			if (val & 0x81u) {
 				fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
+				/* 
+				 * For now, just immediately complete with a
+				 * disconnected cable.
+				 */
+				gbcc_memory_set_bit(gbc, IF, 3, true);
+				gbc->memory.ioreg[SB - IOREG_START] = 0xFFu;
+				gbc->memory.ioreg[SC - IOREG_START] = 0x01u;
 			}
 			break;
 		case DIV:
