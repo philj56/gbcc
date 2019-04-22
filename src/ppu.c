@@ -186,7 +186,15 @@ void gbcc_ppu_clock(struct gbc *gbc)
 	if (ppu->clock == 0) {
 		ppu->ly++;
 	}
-	if (ppu->ly == 154) {
+	if (ppu->ly == 153 && ppu->clock == 10) {
+		/*
+		 * Some strangeness here - after a few clocks on line 153, the
+		 * gameboy goes back to ly=0, and spends the rest of the
+		 * scanline there in VBLANK mode, before resetting.
+		 */
+		ppu->ly = 0;
+	}
+	if (ppu->ly == 1 && get_video_mode(stat) == GBC_LCD_MODE_VBLANK) {
 		ppu->frame++;
 		ppu->ly = 0;
 		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_READ);
