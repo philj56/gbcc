@@ -78,6 +78,11 @@ p
 f
 	Toggle FPS counter
 
+l
+	Connect the link cable port to itself. This makes the GameBoy act as if
+	it is talking to an exact copy of itself, and enables e.g. trading
+	(and battling!) with oneself in Pokémon.
+
 v
 	Cycle through available shaders
 

@@ -6,7 +6,7 @@
 #include "window.h"
 #include <SDL2/SDL.h>
 
-static const SDL_Scancode keymap[25] = {
+static const SDL_Scancode keymap[26] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -23,6 +23,7 @@ static const SDL_Scancode keymap[25] = {
 	SDL_SCANCODE_1, 	/* Toggle background */
 	SDL_SCANCODE_2, 	/* Toggle window */
 	SDL_SCANCODE_3, 	/* Toggle sprites */
+	SDL_SCANCODE_L, 	/* Toggle link cable loop */
 	SDL_SCANCODE_F1,	/* State n */
 	SDL_SCANCODE_F2,
 	SDL_SCANCODE_F3,
@@ -150,6 +151,13 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				}
 				break;
 			case 16:
+				gbc->link_cable_loop ^= val;
+				if (gbc->link_cable_loop) {
+					gbcc_window_show_message(win, "Link cable connected", 1, true);
+				} else {
+					gbcc_window_show_message(win, "Link cable disconnected", 1, true);
+				}
+				break;
 			case 17:
 			case 18:
 			case 19:
@@ -158,13 +166,14 @@ void gbcc_input_process_all(struct gbcc_window *win)
 			case 22:
 			case 23:
 			case 24:
+			case 25:
 				if (!val) {
 					break;
 				}
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					gbc->save_state = (int8_t)(key - 15);
+					gbc->save_state = (int8_t)(key - 16);
 				} else {
-					gbc->load_state = (int8_t)(key - 15);
+					gbc->load_state = (int8_t)(key - 16);
 				}
 				break;
 			default:
