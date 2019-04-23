@@ -113,6 +113,7 @@ struct gbc {
 				uint8_t cur_reg;
 				struct timespec base_time;
 				bool mapped;
+				bool halt;
 			} rtc;
 		} mbc;
 		char title[CART_TITLE_SIZE + 1];

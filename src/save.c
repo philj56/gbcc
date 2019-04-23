@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "save.h"
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -32,6 +33,19 @@ void gbcc_save(struct gbc *gbc)
 		return;
 	}
 	fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, sav);
+	if (gbc->cart.mbc.type == MBC3) {
+		fprintf(sav, "\n%u:%u:%u:%u:%u:%u:%u:%lu:%lu\n",
+				gbc->cart.mbc.rtc.seconds,
+				gbc->cart.mbc.rtc.minutes,
+				gbc->cart.mbc.rtc.hours,
+				gbc->cart.mbc.rtc.day_low,
+				gbc->cart.mbc.rtc.day_high,
+				gbc->cart.mbc.rtc.latch,
+				gbc->cart.mbc.rtc.cur_reg,
+				gbc->cart.mbc.rtc.base_time.tv_sec,
+				gbc->cart.mbc.rtc.base_time.tv_nsec
+				);
+	}
 	fclose(sav);
 	gbcc_log_info("Saved.\n");
 }
@@ -50,10 +64,33 @@ void gbcc_load(struct gbc *gbc)
 	}
 	sav = fopen(fname, "rbe");
 	if (sav == NULL) {
+		if (gbc->cart.mbc.type == MBC3) {
+			clock_gettime(CLOCK_REALTIME, &gbc->cart.mbc.rtc.base_time);
+		}
 		return;
 	}
 	gbcc_log_info("Loading %s...\n", fname);
 	fread(gbc->cart.ram, 1, gbc->cart.ram_size, sav);
+	if (gbc->cart.mbc.type == MBC3) {
+		int matched;
+		matched = fscanf(sav, "\n%" SCNu8 ":%" SCNu8 ":%" SCNu8 ":%"
+				SCNu8 ":%" SCNu8 ":%" SCNu8 ":%" SCNu8 ":%lu:%lu",
+				&gbc->cart.mbc.rtc.seconds,
+				&gbc->cart.mbc.rtc.minutes,
+				&gbc->cart.mbc.rtc.hours,
+				&gbc->cart.mbc.rtc.day_low,
+				&gbc->cart.mbc.rtc.day_high,
+				&gbc->cart.mbc.rtc.latch,
+				&gbc->cart.mbc.rtc.cur_reg,
+				&gbc->cart.mbc.rtc.base_time.tv_sec,
+				&gbc->cart.mbc.rtc.base_time.tv_nsec
+				);
+		if (matched < 9) {
+			gbcc_log_error("Couldn't read rtc data, "
+					"resetting base time to now.\n");
+			clock_gettime(CLOCK_REALTIME, &gbc->cart.mbc.rtc.base_time);
+		}
+	}
 	fclose(sav);
 }
 

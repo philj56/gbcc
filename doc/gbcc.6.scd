@@ -109,9 +109,15 @@ _SHADER_PATH_
 $XDG_CONFIG_HOME/gbcc/config.
 	Config file.
 
+# SAVE FILES
+
+Saves are created with the same name as the rom, ending in .sav. The save file
+format is a plain dump of SRAM. For MBC3 cartridges, RTC data is appended to
+this ram dump in plain text.
+
 # BUGS
 
-Too many to count.
+Surprisingly few.
 
 # AUTHORS
 
