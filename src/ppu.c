@@ -457,12 +457,12 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 	uint8_t index = palette * 8;
 	uint8_t lo;
 	uint8_t hi;
-	if (pf != BACKGROUND) {
-		lo = ppu->obp[index + 2 * n];
-		hi = ppu->obp[index + 2 * n + 1];
-	} else {
+	if (pf == BACKGROUND) {
 		lo = ppu->bgp[index + 2 * n];
 		hi = ppu->bgp[index + 2 * n + 1];
+	} else {
+		lo = ppu->obp[index + 2 * n];
+		hi = ppu->obp[index + 2 * n + 1];
 	} 
 	uint8_t r = lo & 0x1Fu;
 	uint8_t g = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);

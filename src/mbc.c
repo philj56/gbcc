@@ -40,6 +40,10 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
 		return gbc->memory.romx[addr - ROMX_START];
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
+		if (gbc->cart.ram_size == 0) {
+			gbcc_log_debug("Trying to read SRAM when there isn't any!\n");
+			return 0xFFu;
+		}
 		return gbc->memory.sram[addr - SRAM_START];
 	}
 	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
@@ -48,7 +52,10 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
 
 void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	if (addr >= SRAM_START && addr < SRAM_END && addr - SRAM_START < gbc->cart.ram_size) {
+	if (gbc->cart.ram_size == 0) {
+		gbcc_log_debug("Trying to write to SRAM when there isn't any!\n");
+	}
+	else if (addr >= SRAM_START && addr < SRAM_END && addr - SRAM_START < gbc->cart.ram_size) {
 		gbc->memory.sram[addr - SRAM_START] = val;
 	} else {
 		gbcc_log_error("Writing memory address 0x%04X out of bounds.\n", addr);
