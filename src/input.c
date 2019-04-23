@@ -35,23 +35,26 @@ static const SDL_Scancode keymap[25] = {
 };
 
 // Returns key that changed, or -1 for a non-emulated key
-static int process_input(struct gbc *gbc, const SDL_Event *e);
+static int process_input(struct gbcc_window *win, const SDL_Event *e);
 
 void gbcc_input_process_all(struct gbcc_window *win)
 {
 	struct gbc *gbc = win->gbc;
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0) {
-		int key = process_input(gbc, &e);
+		int key = process_input(win, &e);
 		const uint8_t *state = SDL_GetKeyboardState(NULL);
 		bool val;
 		if (e.type == SDL_KEYDOWN) {
 			val = true;
 		//	gbc->halt.set = false;
 		//	gbc->stop = false;
-		} else {
+		} else if (e.type == SDL_KEYUP) {
 			val = false;
+		} else {
+			continue;
 		}
+
 		switch(key) {
 			case 0:
 				gbc->keys.a = val;
@@ -105,9 +108,13 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				win->fps.show ^= val;
 				break;
 			case 12:
-				win->gl.cur_shader += val;
-				win->gl.cur_shader %= sizeof(win->gl.shaders) / sizeof(win->gl.shaders[0]);
-				gbcc_window_show_message(win, win->gl.shaders[win->gl.cur_shader].name, 1, true);
+				if (state[SDL_SCANCODE_LSHIFT]) {
+					win->vram_display ^= val;
+				} else {
+					win->gl.cur_shader += val;
+					win->gl.cur_shader %= sizeof(win->gl.shaders) / sizeof(win->gl.shaders[0]);
+					gbcc_window_show_message(win, win->gl.shaders[win->gl.cur_shader].name, 1, true);
+				}
 				break;
 			case 13:
 				gbc->hide_background ^= val;
@@ -166,18 +173,20 @@ void gbcc_input_process_all(struct gbcc_window *win)
 	}
 }
 
-int process_input(struct gbc *gbc, const SDL_Event *e)
+int process_input(struct gbcc_window *win, const SDL_Event *e)
 {
 	if (e->type == SDL_QUIT) {
-		gbc->quit = true;
+		win->gbc->quit = true;
 	} else if (e->type == SDL_WINDOWEVENT) {
 		if (e->window.event == SDL_WINDOWEVENT_CLOSE) {
-			SDL_Window *win = SDL_GetWindowFromID(e->window.windowID);
-			if (win) {
-				SDL_DestroyWindow(win);
-				/* TODO: Should quit if main window is closed */
+			uint32_t id = e->window.windowID;
+			if (id == SDL_GetWindowID(win->window)) {
+				win->gbc->quit = true;
+				gbcc_window_destroy(win);
+			} else if (id == SDL_GetWindowID(win->vram.window)) {
+				win->vram_display = false;
 			} else {
-				gbcc_log_error("Couldn't close window: %s\n", SDL_GetError());
+				gbcc_log_error("Unknown window ID %u\n", id);
 			}
 		}
 	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {

@@ -83,8 +83,6 @@ int main(int argc, char **argv)
 	struct gbc gbc;
 	struct gbcc_audio audio = {0};
 	struct gbcc_window win = {0};
-	struct gbcc_vram_window vwin = {0};
-	bool vram_window = false;
 	opterr = 0;
 
 	struct option long_options[] = {
@@ -154,7 +152,7 @@ int main(int argc, char **argv)
 				SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 				break;
 			case 'V':
-				vram_window = true;
+				win.vram_display = true;
 				break;
 			case '?':
 				if (optopt == 'p' || optopt == 't') {
@@ -172,10 +170,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (vram_window) {
-		gbcc_vram_window_initialise(&vwin, &gbc);
-	}
-
 	thrd_t emu_thread;
 	thrd_create(&emu_thread, emulation_loop, &audio);
 
@@ -186,9 +180,6 @@ int main(int argc, char **argv)
 		clock_gettime(CLOCK_REALTIME, &t2);
 		gbcc_input_process_all(&win);
 		gbcc_window_update(&win);
-		if (vram_window) {
-			gbcc_vram_window_update(&vwin);
-		}
 		clock_gettime(CLOCK_REALTIME, &t1);
 		time_to_sleep = 8 - (int)(gbcc_time_diff(&t1, &t2) / 1e6);
 		if (time_to_sleep > 0) {

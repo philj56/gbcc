@@ -81,6 +81,9 @@ f
 v
 	Cycle through available shaders
 
+V
+	Toggle VRAM window display.
+
 1
 	Toggle background display
 

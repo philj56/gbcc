@@ -27,11 +27,13 @@
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
 static void update_text(struct gbcc_window *win);
-static void load_shader(GLuint shader, const char *filename);
-static GLuint create_shader_program(const char *vert, const char *frag);
 
 void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 {
+	if (win->initialised) {
+		gbcc_log_error("Window already initialised!\n");
+		return;
+	}
 	win->gbc = gbc;
 	clock_gettime(CLOCK_REALTIME, &win->fps.last_time);
 	gbcc_fontmap_load(&win->font, TILESET_PATH);
@@ -62,30 +64,30 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 		exit(EXIT_FAILURE);
 	}
 
-	SDL_GL_CreateContext(win->window);
+	win->gl.context = SDL_GL_CreateContext(win->window);
 
 	glewInit();
 
 	/* Compile and link the shader programs */
-	win->gl.base_shader = create_shader_program(
+	win->gl.base_shader = gbcc_create_shader_program(
 			SHADER_PATH "flipped.vert",
 			SHADER_PATH "nothing.frag"
 			);
 
 	win->gl.shaders[0].name = "Colour Correct";
-	win->gl.shaders[0].program = create_shader_program(
+	win->gl.shaders[0].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "colour-correct.frag"
 			);
 
 	win->gl.shaders[1].name = "Subpixel";
-	win->gl.shaders[1].program = create_shader_program(
+	win->gl.shaders[1].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "subpixel.frag"
 			);
 
 	win->gl.shaders[2].name = "Nothing";
-	win->gl.shaders[2].program = create_shader_program(
+	win->gl.shaders[2].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "nothing.frag"
 			);
@@ -201,10 +203,20 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	/* Bind the actual bits we'll be using to render */
 	glBindVertexArray(win->gl.vao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
+	
+	win->initialised = true;
 }
 
 void gbcc_window_destroy(struct gbcc_window *win)
 {
+	if (!win->initialised) {
+		gbcc_log_error("Window not initialised!\n");
+		return;
+	}
+	if (win->vram.initialised) {
+		gbcc_vram_window_destroy(&win->vram);
+	}
+	SDL_GL_MakeCurrent(win->window, win->gl.context);
 	gbcc_fontmap_destroy(&win->font);
 	glDeleteBuffers(1, &win->gl.vbo);
 	glDeleteVertexArrays(1, &win->gl.vao);
@@ -217,11 +229,35 @@ void gbcc_window_destroy(struct gbcc_window *win)
 		glDeleteProgram(win->gl.shaders[i].program);
 	}
 	glDeleteProgram(win->gl.base_shader);
+	SDL_GL_DeleteContext(win->gl.context);
 	SDL_DestroyWindow(win->window);
+	win->initialised = false;
 }
 
 void gbcc_window_update(struct gbcc_window *win)
 {
+	if (win->vram_display) {
+		if (!win->vram.initialised) {
+			gbcc_vram_window_initialise(&win->vram, win->gbc);
+
+			/* 
+			 * Workaround to allow input on vram window.
+			 * The VRAM window immediately grabs input focus,
+			 * causing an SDL_KEYDOWN to fire, and closing the
+			 * window instantly :). To stop that, we make sure that
+			 * the main window has focus, and then discard any
+			 * SDL_KEYDOWN events.
+			 */
+			SDL_RaiseWindow(win->window);
+			SDL_PumpEvents();
+			SDL_FlushEvent(SDL_KEYDOWN);
+		}
+		gbcc_vram_window_update(&win->vram);
+	} else if (win->vram.initialised) {
+		gbcc_vram_window_destroy(&win->vram);
+	}
+
+	SDL_GL_MakeCurrent(win->window, win->gl.context);
 	uint32_t *screen = win->gbc->ppu.screen.sdl;
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
@@ -277,7 +313,7 @@ void gbcc_window_update(struct gbcc_window *win)
 	SDL_GL_SwapWindow(win->window);
 }
 
-void load_shader(GLuint shader, const char *filename)
+void gbcc_load_shader(GLuint shader, const char *filename)
 {
 	FILE *fp = fopen(filename, "rbe");
 	if (!fp) {
@@ -312,13 +348,13 @@ void load_shader(GLuint shader, const char *filename)
 	}
 }
 
-GLuint create_shader_program(const char *vert, const char *frag)
+GLuint gbcc_create_shader_program(const char *vert, const char *frag)
 {
 	GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-	load_shader(vertex_shader, vert);
+	gbcc_load_shader(vertex_shader, vert);
 
 	GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-	load_shader(fragment_shader, frag);
+	gbcc_load_shader(fragment_shader, frag);
 
 	GLuint shader = glCreateProgram();
 	glAttachShader(shader, vertex_shader);

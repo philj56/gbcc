@@ -4,6 +4,7 @@
 #include "gbcc.h"
 #include "constants.h"
 #include "fontmap.h"
+#include "vram_window.h"
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <stdint.h>
@@ -35,6 +36,7 @@ struct gbcc_window {
 	uint32_t y;
 	uint32_t buffer[GBC_SCREEN_SIZE];
 	struct {
+		SDL_GLContext context;
 		GLuint vbo;
 		GLuint vao;
 		GLuint ebo;
@@ -52,9 +54,12 @@ struct gbcc_window {
 		int lines;
 		int64_t time_left;
 	} msg;
+	struct gbcc_vram_window vram;
 	bool screenshot;
 	bool raw_screenshot;
 	bool fractional_scaling;
+	bool vram_display;
+	bool initialised;
 };
 
 void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc);
@@ -62,5 +67,7 @@ void gbcc_window_destroy(struct gbcc_window *win);
 void gbcc_window_update(struct gbcc_window *win);
 void gbcc_window_show_message(struct gbcc_window *win, const char *msg, int seconds, bool pad);
 void gbcc_window_use_shader(struct gbcc_window *win, const char *name);
+void gbcc_load_shader(GLuint shader, const char *filename);
+GLuint gbcc_create_shader_program(const char *vert, const char *frag);
 
 #endif /* GBCC_WINDOW_H */
