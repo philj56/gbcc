@@ -409,19 +409,28 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 			}
 			break;
 		case SC:
-			if (val & 0x81u) {
-				fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
-				/* 
-				 * For now, just immediately complete. If
+			*dest = tmp | (val & mask);
+			if (check_bit(val, 7)) {
+				/*
+				 * For now, just complete immediately. If
 				 * link_cable_loop is true, don't overwrite SB.
 				 * This means the gameboy acts like it's
 				 * talking to an exact clone of itself.
 				 */
+				if (!gbc->link_cable_loop && !check_bit(val, 0)) {
+					/*
+					 * Externally clocked transfer with no
+					 * cable connected, do nothing.
+					 */
+					return;
+				}
+				fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
 				gbcc_memory_set_bit(gbc, IF, 3, true);
 				if (!gbc->link_cable_loop) {
 					gbc->memory.ioreg[SB - IOREG_START] = 0xFFu;
 				}
 				gbc->memory.ioreg[SC - IOREG_START] = 0x01u;
+				return;
 			}
 			break;
 		case DIV:
