@@ -2,7 +2,6 @@
 #include "bit_utils.h"
 #include "colour.h"
 #include "debug.h"
-#include "hdma.h"
 #include "memory.h"
 #include "palettes.h"
 #include "ppu.h"

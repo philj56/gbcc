@@ -463,6 +463,21 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 				*dest = val;
 			}
 			break;
+		case HDMA2:
+			/* Lower 4 bits of source are ignored */
+			*dest = val & 0xF0u;
+			break;
+		case HDMA3:
+			/*
+			 * Upper 3 bits of destination are ignored 
+			 * (destination is always VRAM) 
+			 */
+			*dest = (val & 0x1Fu) | 0x80u;
+			break;
+		case HDMA4:
+			/* Lower 4 bits of destination are ignored */
+			*dest = val & 0xF0u;
+			break;
 		case HDMA5:
 			{
 				if (!check_bit(val, 7)) {
@@ -477,23 +492,26 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 				uint8_t src_lo = gbc->memory.ioreg[HDMA2 - IOREG_START];
 				uint8_t dst_hi = gbc->memory.ioreg[HDMA3 - IOREG_START];
 				uint8_t dst_lo = gbc->memory.ioreg[HDMA4 - IOREG_START];
-				/* Lower 4 bits of source are ignored */
-				src_lo &= 0xF0u;
-				
-				/*
-				 * Upper 3 & lower 4 bits of destination are
-				 * ignored (destination is always VRAM) 
-				 */
-				dst_hi &= 0x1Fu;
-				dst_hi |= 0x80u;
-				dst_lo &= 0xF0u;
 				gbc->hdma.source = cat_bytes(src_lo, src_hi);
 				gbc->hdma.dest = cat_bytes(dst_lo, dst_hi);
 				gbc->hdma.length = ((val & 0x7Fu) + 1u) * 0x10u;
-				*dest = val;
+				/* Top bit is is set to 0 to indicate running */
+				*dest = val & 0x7Fu;
 				if (check_bit(val, 7)) {
 					/* H-Blank DMA */
 					gbc->hdma.hblank = true;
+					/* 
+					 * When started in HBLANK or while the
+					 * screen is off, one block is copied
+					 * immediately 
+					 */
+					uint8_t stat = gbc->memory.ioreg[STAT - IOREG_START];
+					if ((stat & 0x03u) == GBC_LCD_MODE_HBLANK) {
+						gbc->hdma.to_copy = 0x40u;
+					}
+					if (gbc->ppu.lcd_disable) {
+						gbc->hdma.to_copy = 0x10u;
+					}
 				} else {
 					/* General DMA */
 					gbc->hdma.to_copy = gbc->hdma.length;
