@@ -16,6 +16,9 @@ slow).
 
 # OPTIONS
 
+*-b, --background*
+	Enable playback while unfocused.
+
 *-c, --config*
 	Specify path to custom config file.
 
@@ -82,6 +85,9 @@ l
 	Connect the link cable port to itself. This makes the GameBoy act as if
 	it is talking to an exact copy of itself, and enables e.g. trading
 	(and battling!) with oneself in Pokémon.
+
+b
+	Toggle background playback.
 
 v
 	Cycle through available shaders

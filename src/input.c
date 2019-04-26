@@ -6,7 +6,7 @@
 #include "window.h"
 #include <SDL2/SDL.h>
 
-static const SDL_Scancode keymap[26] = {
+static const SDL_Scancode keymap[27] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -24,6 +24,7 @@ static const SDL_Scancode keymap[26] = {
 	SDL_SCANCODE_2, 	/* Toggle window */
 	SDL_SCANCODE_3, 	/* Toggle sprites */
 	SDL_SCANCODE_L, 	/* Toggle link cable loop */
+	SDL_SCANCODE_B, 	/* Toggle background playback */
 	SDL_SCANCODE_F1,	/* State n */
 	SDL_SCANCODE_F2,
 	SDL_SCANCODE_F3,
@@ -159,6 +160,13 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				}
 				break;
 			case 17:
+				gbc->background_play ^= val;
+				if (gbc->background_play) {
+					gbcc_window_show_message(win, "Background playback enabled", 1, true);
+				} else {
+					gbcc_window_show_message(win, "Background playback disabled", 1, true);
+				}
+				break;
 			case 18:
 			case 19:
 			case 20:
@@ -167,13 +175,14 @@ void gbcc_input_process_all(struct gbcc_window *win)
 			case 23:
 			case 24:
 			case 25:
+			case 26:
 				if (!val) {
 					break;
 				}
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					gbc->save_state = (int8_t)(key - 16);
+					gbc->save_state = (int8_t)(key - 17);
 				} else {
-					gbc->load_state = (int8_t)(key - 16);
+					gbc->load_state = (int8_t)(key - 17);
 				}
 				break;
 			default:
@@ -197,6 +206,12 @@ int process_input(struct gbcc_window *win, const SDL_Event *e)
 			} else {
 				gbcc_log_error("Unknown window ID %u\n", id);
 			}
+		} else if (e->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+			win->gbc->has_focus = true;
+			SDL_PumpEvents();
+			SDL_FlushEvent(SDL_KEYDOWN);
+		} else if (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+			win->gbc->has_focus = false;
 		}
 	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
 		for (size_t i = 0; i < sizeof(keymap) / sizeof(keymap[0]); i++) {

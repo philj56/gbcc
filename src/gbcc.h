@@ -45,6 +45,8 @@ struct gbc {
 	bool hide_window;
 	bool hide_sprites;
 	bool link_cable_loop;
+	bool background_play;
+	bool has_focus;
 
 	/* Memory map */
 	struct {
