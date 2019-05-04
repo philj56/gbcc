@@ -34,8 +34,6 @@ static void ch4_trigger(struct gbc *gbc);
 void gbcc_apu_init(struct gbc *gbc)
 {
 	gbc->apu = (struct apu){0};
-	gbc->apu.noise.timer.period = 8;
-	timer_reset(&gbc->apu.noise.timer);
 	gbc->apu.wave.addr = WAVE_START;
 	clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 }
@@ -64,9 +62,11 @@ void gbcc_apu_clock(struct gbc *gbc)
 		uint8_t lfsr_low = gbc->apu.noise.lfsr & 0xFFu;
 		uint8_t tmp = check_bit(lfsr_low, 0) ^ check_bit(lfsr_low, 1);
 		gbc->apu.noise.lfsr >>= 1u;
-		gbc->apu.noise.lfsr |= tmp * (1u << 14u);
+		gbc->apu.noise.lfsr &= ~bit16(14);
+		gbc->apu.noise.lfsr |= tmp * bit16(14);
 		if (gbc->apu.noise.width_mode) {
-			gbc->apu.noise.lfsr |= tmp * (1u << 6u);
+			gbc->apu.noise.lfsr &= ~bit(6);
+			gbc->apu.noise.lfsr |= tmp * bit(6);
 		}
 		gbc->apu.ch4.state = !check_bit(gbc->apu.noise.lfsr, 0);
 	}
@@ -317,7 +317,7 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			break;
 		case NR30:
 			gbc->apu.ch3.dac = check_bit(val, 7);
-			if (!check_bit(val, 7)) {
+			if (gbc->apu.ch3.dac) {
 				gbc->apu.ch3.enabled = false;
 			}
 			break;
@@ -374,7 +374,6 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 				gbc->apu.noise.timer.period = 0x08u;
 			}
 			gbc->apu.noise.timer.period <<= gbc->apu.noise.shift;
-		//	timer_reset(&gbc->apu.noise.timer);
 			break;
 		case NR44:
 			tmp = gbc->apu.ch4.length_enable;

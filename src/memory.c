@@ -286,7 +286,10 @@ uint8_t ioreg_read(struct gbc *gbc, uint16_t addr, bool override)
 	uint8_t ret = gbc->memory.ioreg[addr - IOREG_START];
 
 	if (addr >= WAVE_START && addr < WAVE_END) {
-		//printf("Reading wave from %04X\n", gbc->apu.wave.addr);
+		/*
+		 * When the wave channel is enabled, accessing any wave RAM
+		 * accesses the current byte.
+		 */
 		if (gbc->apu.ch3.enabled) {
 			return gbc->memory.ioreg[gbc->apu.wave.addr - IOREG_START];
 		}
@@ -393,6 +396,16 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 		*dest = tmp | (uint8_t)(val & mask);
 		gbcc_apu_memory_write(gbc, addr, val);
 		return;
+	}
+
+	if (addr >= WAVE_START && addr < WAVE_END) {
+		/*
+		 * When the wave channel is enabled, accessing any wave RAM
+		 * accesses the current byte.
+		 */
+		if (gbc->apu.ch3.enabled) {
+			gbc->memory.ioreg[gbc->apu.wave.addr - IOREG_START] = val;
+		}
 	}
 
 	switch (addr) {
