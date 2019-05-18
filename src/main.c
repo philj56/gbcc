@@ -71,11 +71,6 @@ int emulation_loop(void *_audio)
 		}
 	}
 	gbcc_save(gbc);
-	gbc->save_state = 0;
-	gbc->quit = false;
-	gbc->has_focus = true;
-	gbcc_save_state(gbc);
-	gbc->quit = true;
 	return 0;
 }
 
@@ -202,6 +197,11 @@ int main(int argc, char **argv)
 		}
 	}
 	thrd_join(emu_thread, NULL);
+
+	gbc.save_state = 0;
+	gbc.quit = false;
+	gbc.has_focus = true;
+	gbcc_save_state(&gbc);
 
 	exit(EXIT_SUCCESS);
 }
