@@ -104,11 +104,11 @@ V
 3
 	Toggle sprites display
 
-<F0-9>
-	Load savestate 0-9
+<F1-9>
+	Load savestate 1-9
 
-<Left Shift + F0-9>
-	Save savestate 0-9
+<Left Shift + F1-9>
+	Save savestate 1-9
 
 # FILES
 
