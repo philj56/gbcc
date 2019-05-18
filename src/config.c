@@ -29,7 +29,7 @@ void gbcc_load_config(struct gbcc_window *win, char *filename)
 	}
 	fseek(fp, 0, SEEK_END);
 	size = ftell(fp);
-	config = malloc(size);
+	config = malloc(size + 1);
 	if (!config) {
 		gbcc_log_error("Failed to malloc buffer for %s\n", filename);
 		fclose(fp);
@@ -41,6 +41,7 @@ void gbcc_load_config(struct gbcc_window *win, char *filename)
 	rewind(fp);
 	fread(config, 1, size, fp);
 	fclose(fp);
+	config[size] = '\0';
 	
 	char *str1;
 	char *line;
