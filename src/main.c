@@ -33,7 +33,8 @@ void quit(int sig)
 
 void usage()
 {
-	printf("Usage: gbcc [-cfhisvV] [-p palette] [-t speed] rom_file\n"
+	printf("Usage: gbcc [-abfhivV] [-c config_file] [-p palette] [-s shader] [-t speed] rom\n"
+	       "  -a, --autoresume      Automatically resume gameplay if possible.\n"
 	       "  -b, --background      Enable playback while unfocused.\n"
 	       "  -c, --config=PATH     Path to custom config file.\n"
 	       "  -f, --fractional      Enable fractional scaling.\n"
@@ -92,6 +93,7 @@ int main(int argc, char **argv)
 	opterr = 0;
 
 	struct option long_options[] = {
+		{"autoresume", no_argument, NULL, 'a'},
 		{"background", no_argument, NULL, 'b'},
 		{"config", required_argument, NULL, 'c'},
 		{"fractional", no_argument, NULL, 'f'},
@@ -103,7 +105,7 @@ int main(int argc, char **argv)
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "bc:fhip:s:t:vV";
+	const char *short_options = "abc:fhip:s:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -133,6 +135,9 @@ int main(int argc, char **argv)
 	optind = 1;
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		switch (opt) {
+			case 'a':
+				gbcc_load_state(&gbc);
+				break;
 			case 'b':
 				gbc.background_play = true;
 				break;

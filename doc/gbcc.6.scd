@@ -6,7 +6,7 @@ gbcc - Game Boy Color emulator written in C
 
 # SYNOPSIS
 
-*gbcc* [-fhisvV] [-p _palette_] [-t _speed_] rom_file
+*gbcc* [-abfhivV] [-c _config_file_] [-p _palette_] [-s shader] [-t _speed_] rom
 
 # DESCRIPTION
 
@@ -15,6 +15,9 @@ development and writing a large project in C. Development is ongoing (though
 slow).
 
 # OPTIONS
+
+*-a, --autoresume*
+	Automatically resume from when gbcc was last closed for this game.
 
 *-b, --background*
 	Enable playback while unfocused.
@@ -120,20 +123,33 @@ _TILESET_PATH_
 _SHADER_PATH_
 	Folder containing all GLSL shaders used for rendering.
 
-$XDG_CONFIG_HOME/gbcc/config.
-	Config file. Options are the same as available command line options,
-	defined with syntax:
+_$XDG_CONFIG_HOME/gbcc/config_
+	Config file. Available options are the same as command line options
+	(where possible), defined with syntax:
 
 		option = value
 	
-	Lines starting with '#' are ignored. Command line options override
-	config file options.
+	For command line equivalents which take no arguments, value is taken to
+	be a boolean (i.e. value = 0 disables the option, any other number
+	enables it).
+.
+	Lines starting with '#' are ignored.
+
+	Command line options override config file options.
 
 # SAVE FILES
 
 Saves are created with the same name as the rom, ending in .sav. The save file
 format is a plain dump of SRAM. For MBC3 cartridges, RTC data is appended to
 this ram dump in plain text.
+
+# SAVE STATES
+
+Save states are created with the same name as the rom, ending in .s[0-9].
+Extensions s1-s9 are the save states associated with the corresponding function
+keys, while s0 is a backup created every time gbcc is closed. The save state
+format is a pure binary dump of the main gbcc struct, so will almost certainly
+not work if moved between different architectures / compilers etc.
 
 # BUGS
 

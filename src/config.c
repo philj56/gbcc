@@ -1,6 +1,7 @@
 #include "gbcc.h"
 #include "config.h"
 #include "debug.h"
+#include "save.h"
 #include "window.h"
 #include <stdlib.h>
 #include <string.h>
@@ -111,7 +112,11 @@ void parse_option(struct gbcc_window *win, const char *option, const char *value
 		return;
 	}
 
-	if (strcmp(opt, "background") == 0) {
+	if (strcmp(opt, "autoresume") == 0) {
+		if (strtol(val, NULL, 0)) {
+			gbcc_load_state(win->gbc);
+		}
+	} else if (strcmp(opt, "background") == 0) {
 		win->gbc->background_play = strtol(val, NULL, 0);
 	} else if (strcmp(opt, "fractional") == 0) {
 		win->fractional_scaling = strtol(val, NULL, 0);
