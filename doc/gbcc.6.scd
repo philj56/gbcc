@@ -34,8 +34,8 @@ slow).
 *-p, --palette*=_palette_
 	Select the color palette for use in DMG mode.
 
-*-s, --subpixel*
-	Enable 7x 'subpixel' scaling by default.
+*-s, --shader*
+	Select the shader to use on startup.
 
 *-t, --turbo*=_speed_
 	Set a fractional speed limit for turbo mode. Defaults to 0 (unlimited).
@@ -121,7 +121,13 @@ _SHADER_PATH_
 	Folder containing all GLSL shaders used for rendering.
 
 $XDG_CONFIG_HOME/gbcc/config.
-	Config file.
+	Config file. Options are the same as available command line options,
+	defined with syntax:
+
+		option = value
+	
+	Lines starting with '#' are ignored. Command line options override
+	config file options.
 
 # SAVE FILES
 

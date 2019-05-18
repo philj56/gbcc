@@ -13,13 +13,29 @@ _gbcc()
         COMPREPLY=()
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
-        opts="--background --config --fractional --help --interlace --palette --subpixel --turbo --vsync --vram-window"
+        opts="--background --config --fractional --help --interlace --palette --shader --turbo --vsync --vram-window"
         palettes="blue brown dark-blue dark-brown dark-green green grey invert orange pastel red yellow"
+        shaders="nothing colour\ correct subpixel"
 
 
         case "${prev}" in
                 --palette|-p)
                         COMPREPLY=( $(compgen -W "${palettes}" -- ${cur}) )
+                        return 0
+                        ;;
+                --shader|-s)
+                        tmp="${shaders//\\ /__}"
+                        reply=( $(compgen -W "${tmp}" -- ${cur}) )
+                        for r in "${reply[@]}"; do
+                                COMPREPLY+=( "${r//__/ }" )
+                        done
+                        if (( "${#COMPREPLY[@]}" == 1 )); then
+                                case "${COMPREPLY[0]}" in
+                                        *\ * )
+                                                COMPREPLY[0]="\"${COMPREPLY[0]}\""
+                                                ;;
+                                esac
+                        fi
                         return 0
                         ;;
                 --turbo|-t)

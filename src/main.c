@@ -40,7 +40,7 @@ void usage()
 	       "  -h, --help            Print this message and exit.\n"
 	       "  -i, --interlace       Enable interlacing (experimental).\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
-	       "  -s, --subpixel        Enable subpixel scaling.\n"
+	       "  -s, --shader=NAME     Select the initial shader to use.\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
 	       "                        (0 = unlimited).\n"
 	       "  -v, --vsync           Enable VSync (currently ineffective).\n"
@@ -98,12 +98,12 @@ int main(int argc, char **argv)
 		{"help", no_argument, NULL, 'h'},
 		{"interlace", no_argument, NULL, 'i'},
 		{"palette", required_argument, NULL, 'p'},
-		{"subpixel", no_argument, NULL, 's'},
+		{"shader", required_argument, NULL, 's'},
 		{"turbo", required_argument, NULL, 't'},
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "bc:fhip:st:vV";
+	const char *short_options = "bc:fhip:s:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
 				gbcc_log_debug("%s palette selected\n", gbc.ppu.palette.name);
 				break;
 			case 's':
-				gbcc_window_use_shader(&win, "Subpixel");
+				gbcc_window_use_shader(&win, optarg);
 				break;
 			case 't':
 				/* TODO: error check */
