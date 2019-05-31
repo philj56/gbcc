@@ -588,7 +588,7 @@ void gbcc_link_cable_clock(struct gbc *gbc)
 	uint8_t sb = gbcc_memory_read(gbc, SB, true);
 	uint8_t sc = gbcc_memory_read(gbc, SC, true);
 
-	if (!check_bit(sc, 7)) {
+	if (!check_bit(sc, 7) || !check_bit(sc, 0)) {
 		return;
 	}
 
