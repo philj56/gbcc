@@ -5,6 +5,7 @@
 #include "constants.h"
 #include "cpu.h"
 #include "ppu.h"
+#include "printer.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -20,6 +21,8 @@ struct gbc {
 	/* PPU */
 	struct ppu ppu;
 
+	struct printer printer;
+
 	/* Non-Register state data */
 	enum CART_MODE mode;
 	struct {
@@ -34,6 +37,13 @@ struct gbc {
 		struct timespec current;
 		struct timespec old;
 	} real_time;
+	struct {
+		uint8_t received;
+		uint8_t current_bit;
+		uint16_t divider;
+		uint16_t clock;
+	} link_cable;
+
 	bool quit;
 	bool pause;
 	bool interlace;

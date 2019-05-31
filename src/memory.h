@@ -13,4 +13,6 @@ void gbcc_memory_clear_bit(struct gbc *gbc, uint16_t addr, uint8_t b, bool overr
 uint8_t gbcc_memory_read(struct gbc *gbc, uint16_t addr, bool override);
 void gbcc_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override);
 
+void gbcc_link_cable_clock(struct gbc *gbc);
+
 #endif /* GBCC_MEMORY_H */

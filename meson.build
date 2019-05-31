@@ -69,6 +69,7 @@ sources = files(
   'src/ops.c',
   'src/palettes.c',
   'src/ppu.c',
+  'src/printer.c',
   'src/save.c',
   'src/screenshot.c',
   'src/time.c',

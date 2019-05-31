@@ -23,9 +23,11 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 	gbcc_ppu_clock(gbc);
 	cpu_clock(gbc);
 	clock_div(gbc);
+	gbcc_link_cable_clock(gbc);
 	if (gbc->double_speed) {
 		cpu_clock(gbc);
 		clock_div(gbc);
+		gbcc_link_cable_clock(gbc);
 	}
 }
 
@@ -72,7 +74,7 @@ void cpu_clock(struct gbc *gbc)
 		if (cpu->halt.set || gbc->stop) {
 			return;
 		}
-		//printf("%04X\n", cpu->reg.pc);
+		//printf("%d::%04X\n", gbc->cart.mbc.romx_bank, cpu->reg.pc);
 		cpu->opcode = gbcc_fetch_instruction(gbc);
 		//printf("%lu\t", cpu->debug_clock);
 		//gbcc_print_op(gbc);

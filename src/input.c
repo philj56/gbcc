@@ -104,7 +104,16 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				}
 				break;
 			case 10:
-				gbc->pause ^= val;
+				if (state[SDL_SCANCODE_LSHIFT]) {
+					gbc->printer.connected ^= val;
+					if (gbc->printer.connected) {
+						gbcc_window_show_message(win, "Printer connected", 1, true);
+					} else {
+						gbcc_window_show_message(win, "Printer disconnected", 1, true);
+					}
+				} else {
+					gbc->pause ^= val;
+				}
 				break;
 			case 11:
 				win->fps.show ^= val;

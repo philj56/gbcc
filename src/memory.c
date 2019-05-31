@@ -6,6 +6,7 @@
 #include "mbc.h"
 #include "memory.h"
 #include "ppu.h"
+#include "printer.h"
 #include <stdio.h>
 
 static const uint8_t ioreg_read_masks[0x80] = {
@@ -413,13 +414,12 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 			break;
 		case SC:
 			*dest = tmp | (val & mask);
+			if (check_bit(val, 1)) {
+				gbc->link_cable.divider = 16;
+			} else {
+				gbc->link_cable.divider = 512;
+			}
 			if (check_bit(val, 7)) {
-				/*
-				 * For now, just complete immediately. If
-				 * link_cable_loop is true, don't overwrite SB.
-				 * This means the gameboy acts like it's
-				 * talking to an exact clone of itself.
-				 */
 				if (!gbc->link_cable_loop && !check_bit(val, 0)) {
 					/*
 					 * Externally clocked transfer with no
@@ -427,12 +427,20 @@ void ioreg_write(struct gbc *gbc, uint16_t addr, uint8_t val, bool override)
 					 */
 					return;
 				}
-				fprintf(stderr, "%c", gbc->memory.ioreg[SB - IOREG_START]);
-				gbcc_memory_set_bit(gbc, IF, 3, true);
-				if (!gbc->link_cable_loop) {
-					gbc->memory.ioreg[SB - IOREG_START] = 0xFFu;
+				//fprintf(stderr, "%c\n", gbc->memory.ioreg[SB - IOREG_START]);
+				//fprintf(stdout, "0x%02X\n", gbc->memory.ioreg[SB - IOREG_START]);
+				/*
+				 * If link_cable_loop is true, just receive SB.
+				 * This means the gameboy acts like it's
+				 * talking to an exact clone of itself.
+				 */
+				if (gbc->link_cable_loop) {
+					gbc->link_cable.received = gbc->memory.ioreg[SB - IOREG_START];
+				} else if (gbc->printer.connected) {
+					gbc->link_cable.received = gbcc_printer_parse_byte(&gbc->printer, gbc->memory.ioreg[SB - IOREG_START]);
+				} else {
+					gbc->link_cable.received = 0xFFu;
 				}
-				gbc->memory.ioreg[SC - IOREG_START] = 0x01u;
 				return;
 			}
 			break;
@@ -573,4 +581,31 @@ uint8_t hram_read(struct gbc *gbc, uint16_t addr)
 void hram_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	gbc->memory.hram[addr - HRAM_START] = val;
+}
+
+void gbcc_link_cable_clock(struct gbc *gbc)
+{
+	uint8_t sb = gbcc_memory_read(gbc, SB, true);
+	uint8_t sc = gbcc_memory_read(gbc, SC, true);
+
+	if (!check_bit(sc, 7)) {
+		return;
+	}
+
+	gbc->link_cable.clock++;
+	if (gbc->link_cable.clock < gbc->link_cable.divider) {
+		return;
+	}
+
+	gbc->link_cable.clock = 0;
+	sb <<= 1;
+	sb |= check_bit(gbc->link_cable.received, 7 - gbc->link_cable.current_bit);
+	gbcc_memory_write(gbc, SB, sb, true);
+	gbc->link_cable.current_bit++;
+
+	if (gbc->link_cable.current_bit == 8) {
+		gbc->link_cable.current_bit = 0;
+		gbcc_memory_clear_bit(gbc, SC, 7, true);
+		gbcc_memory_set_bit(gbc, IF, 3, true);
+	}
 }

@@ -81,6 +81,9 @@ S
 p
 	Pause emulation
 
+P
+	Connect the Gameboy Printer, printing to stdout.
+
 f
 	Toggle FPS counter
 
@@ -90,13 +93,13 @@ l
 	(and battling!) with oneself in Pokémon.
 
 b
-	Toggle background playback.
+	Toggle background playback
 
 v
 	Cycle through available shaders
 
 V
-	Toggle VRAM window display.
+	Toggle VRAM window display
 
 1
 	Toggle background display
