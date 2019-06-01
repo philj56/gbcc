@@ -16,13 +16,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <threads.h>
+#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 
 static void quit(int sig);
 static void usage(void);
-static int emulation_loop(void *_audio);
+static void *emulation_loop(void *_audio);
 
 __attribute__((noreturn))
 void quit(int sig) 
@@ -49,7 +49,7 @@ void usage()
 	      );
 }
 
-int emulation_loop(void *_audio)
+void *emulation_loop(void *_audio)
 {
 	struct gbcc_audio *audio = (struct gbcc_audio *)_audio;
 	struct gbc *gbc = audio->gbc;
@@ -180,8 +180,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	thrd_t emu_thread;
-	thrd_create(&emu_thread, emulation_loop, &audio);
+	pthread_t emu_thread;
+	pthread_create(&emu_thread, NULL, emulation_loop, &audio);
 
 	struct timespec t1;
 	struct timespec t2;
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
 			SDL_Delay(time_to_sleep);
 		}
 	}
-	thrd_join(emu_thread, NULL);
+	pthread_join(emu_thread, NULL);
 
 	gbc.save_state = 0;
 	gbc.quit = false;
