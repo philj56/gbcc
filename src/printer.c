@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "bit_utils.h"
 #include "debug.h"
 #include "printer.h"
@@ -174,6 +175,7 @@ void start_printing(struct printer *p)
 {
 	p->status = set_bit(p->status, 1);
 	pthread_create(&p->print_thread, NULL, print, p);
+	pthread_setname_np(p->print_thread, "PrinterThread");
 	return;
 }
 

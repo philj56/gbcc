@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include "gbcc.h"
 #include "apu.h"
 #include "audio.h"
@@ -182,6 +184,7 @@ int main(int argc, char **argv)
 
 	pthread_t emu_thread;
 	pthread_create(&emu_thread, NULL, emulation_loop, &audio);
+	pthread_setname_np(emu_thread, "EmulationThread");
 
 	struct timespec t1;
 	struct timespec t2;
