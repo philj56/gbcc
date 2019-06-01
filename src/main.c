@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 		gbcc_window_update(&win);
 		clock_gettime(CLOCK_REALTIME, &t1);
 		time_to_sleep = 8 - (int)(gbcc_time_diff(&t1, &t2) / 1e6);
-		if (time_to_sleep > 0) {
+		if (time_to_sleep > 0 && time_to_sleep < 16) {
 			SDL_Delay(time_to_sleep);
 		}
 	}
