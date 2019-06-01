@@ -4,9 +4,10 @@
 #include "wav.h"
 #include <AL/al.h>
 #include <AL/alc.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
+#include <time.h>
 
 #ifndef PRINTER_SOUND_PATH
 #define PRINTER_SOUND_PATH "print.wav"
@@ -357,10 +358,12 @@ void *print(void *printer)
 
 
 	while (1) {
+		const struct timespec to_sleep = {.tv_sec = 1, .tv_nsec = 0};
 		alSourcePlay(source);
 		if (check_openal_error("Failed to play sound.\n")) {
 			goto CLEANUP_ALL;
 		}
+		nanosleep(&to_sleep, NULL);
 		ALint source_state;
 		alGetSourcei(source, AL_SOURCE_STATE, &source_state);
 		while (source_state == AL_PLAYING) {
