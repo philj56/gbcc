@@ -24,6 +24,11 @@ tileset_location = join_paths(
   'tileset.png'
 )
 
+printer_sound_location = join_paths(
+  data_location,
+  'print.wav'
+)
+
 shader_location = join_paths(
   data_location,
   'shaders',
@@ -44,6 +49,7 @@ add_project_arguments(
     '-Wno-unused-parameter',
     '-Wno-missing-field-initializers',
     '-DTILESET_PATH="@0@"'.format(tileset_location),
+    '-DPRINTER_SOUND_PATH="@0@"'.format(printer_sound_location),
     '-DSHADER_PATH="@0@"'.format(shader_location),
     '-g',
     #'-fprofile-instr-use'
@@ -74,6 +80,7 @@ sources = files(
   'src/screenshot.c',
   'src/time.c',
   'src/vram_window.c',
+  'src/wav.c',
   'src/window.c',
 )
 
@@ -83,18 +90,24 @@ sdl = dependency('sdl2')
 png = dependency('libpng')
 gl = dependency('gl')
 glew = dependency('glew')
+openal = dependency('openal')
+thread = dependency('threads')
 
 
 executable(
   'gbcc',
   sources,
-  dependencies: [m, sdl, png, gl, glew],
+  dependencies: [m, sdl, png, gl, glew, openal, thread],
   install: true,
   link_args: ['-g']
 )
 
 install_data(
   'tileset.png'
+)
+
+install_data(
+  'print.wav'
 )
 
 install_subdir(
@@ -130,7 +143,7 @@ if scdoc.found()
     input: manpage,
     output: output,
     command: [
-      sh, '-c', '@0@ < @INPUT@ | sed "s|TILESET_PATH|@1@|g; s|SHADER_PATH|@2@|g" > @3@'.format(scdoc.path(), tileset_location, shader_location, output)
+      sh, '-c', '@0@ < @INPUT@ | sed "s|TILESET_PATH|@1@|g; s|SHADER_PATH|@2@|g; s|PRINTER_SOUND_PATH|@3@|g;" > @4@'.format(scdoc.path(), tileset_location, shader_location, printer_sound_location, output)
     ],
     install: true,
     install_dir: '@0@/man6'.format(mandir)

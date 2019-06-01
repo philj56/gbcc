@@ -419,6 +419,7 @@ void init_ioreg(struct gbc *gbc)
 {
 	/* Values taken from the pandocs and mooneye tests*/
 	gbc->memory.ioreg[JOYP - IOREG_START] = 0xCFu;
+	gbc->memory.ioreg[SB - IOREG_START] = 0xFFu;
 	gbc->memory.ioreg[SC - IOREG_START] = 0x7Eu;
 	gbc->memory.ioreg[DIV - IOREG_START] = 0xACu;
 	gbc->memory.ioreg[TIMA - IOREG_START] = 0x00u;

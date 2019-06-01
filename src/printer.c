@@ -1,8 +1,16 @@
 #include "bit_utils.h"
 #include "debug.h"
 #include "printer.h"
+#include "wav.h"
+#include <AL/al.h>
+#include <AL/alc.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
+
+#ifndef PRINTER_SOUND_PATH
+#define PRINTER_SOUND_PATH "print.wav"
+#endif
 
 /* Magic bytes that mark the start of a command packet */
 #define MAGIC_BYTE_1 0x88u
@@ -32,9 +40,13 @@ static void execute(struct printer *p);
 static void initialise(struct printer *p);
 static void start_printing(struct printer *p);
 static void fill_buffer(struct printer *p, uint8_t byte);
-static void read_status(struct printer *p);
 static void parse_print_args(struct printer *p, uint8_t byte);
+static void *print(void *printer);
+static bool print_margin(struct printer *p, bool top);
+static bool print_strip(struct printer *p);
 static uint8_t get_palette_colour(struct printer *p, uint8_t colour);
+
+static int check_openal_error(const char *msg);
 
 uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 {
@@ -73,6 +85,7 @@ uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 				}
 				p->packet.data_byte++;
 				p->packet.printer_checksum += byte;
+				p->status = set_bit(p->status, 3);
 				break;
 			}
 			p->packet.current_byte++;
@@ -92,12 +105,19 @@ uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 			p->magic = 0;
 			p->in_packet = 0;
 			if (p->packet.gb_checksum != p->packet.printer_checksum) {
-				gbcc_log_error("Printer checksum incorrect: 0x%04X vs 0x%04X.\n", p->packet.printer_checksum, p->packet.gb_checksum);
+				gbcc_log_error("Printer checksum incorrect "
+						"(Expected 0x%04X, "
+						"Calculated 0x%04X).\n",
+						p->packet.printer_checksum,
+						p->packet.gb_checksum);
 				p->status = set_bit(p->status, 0);
 			}
-			execute(p);
-			p->packet = (struct packet){0};
-			return p->status;
+			{
+				uint8_t tmp = p->status;
+				execute(p);
+				p->packet = (struct packet){0};
+				return tmp;
+			}
 	}
 	return 0;
 }
@@ -122,15 +142,20 @@ void execute(struct printer *p)
 {
 	switch (p->packet.command) {
 		case 0x1u:
+			if (check_bit(p->status, 1)) {
+				return;
+			}
 			initialise(p);
 			break;
 		case 0x2u:
+			if (check_bit(p->status, 1)) {
+				return;
+			}
 			start_printing(p);
 			break;
 		case 0x4u:
 			break;
 		case 0xFu:
-			read_status(p);
 			break;
 		default:
 			gbcc_log_error("Invalid printer command %02X.\n", p->packet.command);
@@ -140,18 +165,47 @@ void execute(struct printer *p)
 
 void initialise(struct printer *p)
 {
-	memset(p->image_buffer.data, 0, sizeof(p->image_buffer.data));
-	p->image_buffer.length = 0;
-	p->status = 0;
+	*p = (struct printer){{{0}}};
+	p->connected = true;
 }
 
 void start_printing(struct printer *p)
 {
-	uint16_t byte = 0;
-	for (int line = 0; byte < p->image_buffer.length; line++) {
-		uint8_t ty = line / 8;
+	p->status = set_bit(p->status, 1);
+	pthread_create(&p->print_thread, NULL, print, p);
+	return;
+}
+
+bool print_margin(struct printer *p, bool top) {
+	if (top && p->margin.top_line >= p->margin.top_width * 4) {
+		return 1;
+	} else if (!top && p->margin.bottom_line >= p->margin.bottom_width * 4) {
+		return 1;
+	}
+	int line;
+	for (line = 0; line < 4; line++) {
 		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {
-			uint16_t idx = ty * PRINTER_WIDTH_TILES * 16 + tx * 16 + (line - ty * 8) * 2;
+			for (uint8_t x = 0; x < 8; x++) {
+				printf("█");
+			}
+		}
+		printf("\n");
+	}
+	if (top) {
+		p->margin.top_line += line;
+	} else {
+		p->margin.bottom_line += line;
+	}
+	return 0;
+}
+
+bool print_strip(struct printer *p)
+{
+	int line;
+	for (line = 0; (line < 4) && (p->print_byte < p->image_buffer.length); line++) {
+		uint8_t ty = (line + p->print_line) / 8;
+		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {
+			uint16_t idx = ty * PRINTER_WIDTH_TILES * 16 + tx * 16 + (line + p->print_line - ty * 8) * 2;
 			uint8_t lo = p->image_buffer.data[idx];
 			uint8_t hi = p->image_buffer.data[idx + 1];
 			for (uint8_t x = 0; x < 8; x++) {
@@ -170,11 +224,15 @@ void start_printing(struct printer *p)
 						break;
 				}
 			}
-			byte += 2;
+			p->print_byte += 2;
 		}
 		printf("\n");
 	}
-	p->image_buffer.length = 0;
+	p->print_line += line;
+	if (p->print_byte == p->image_buffer.length) {
+		return 1;
+	}
+	return 0;
 }
 
 uint8_t get_palette_colour(struct printer *p, uint8_t colour) {
@@ -197,10 +255,6 @@ void fill_buffer(struct printer *p, uint8_t byte)
 	}
 }
 
-void read_status(struct printer *p)
-{
-}
-
 void parse_print_args(struct printer *p, uint8_t byte)
 {
 	switch (p->packet.data_byte) {
@@ -208,7 +262,8 @@ void parse_print_args(struct printer *p, uint8_t byte)
 			/* TODO */
 			break;
 		case 1:
-			p->margins = byte;
+			p->margin.top_width = byte >> 4u;
+			p->margin.bottom_width = byte & 0x0Fu;
 			break;
 		case 2:
 			p->palette = byte;
@@ -217,4 +272,149 @@ void parse_print_args(struct printer *p, uint8_t byte)
 			p->exposure = byte;
 			break;
 	}
+}
+
+void *print(void *printer)
+{
+	struct printer *p = (struct printer *)printer;
+	ALCdevice *device;
+	device = alcOpenDevice(NULL);
+	if (!device) {
+		gbcc_log_error("Failed to open audio device.\n");
+	}
+	ALCcontext *context;
+	context = alcCreateContext(device, NULL);
+	if (!context) {
+		gbcc_log_error("Failed to create context.\n");
+		goto CLEANUP_DEVICE;
+	}
+	if (!alcMakeContextCurrent(context)) {
+		gbcc_log_error("Failed to set context.\n");
+		goto CLEANUP_DEVICE;
+	}
+
+	ALuint source;
+	alGenSources(1, &source);
+	if (check_openal_error("Failed to create source.\n")) {
+		goto CLEANUP_CONTEXT;
+	}
+
+	alSourcef(source, AL_PITCH, 1);
+	if (check_openal_error("Failed to set pitch.\n")) {
+		goto CLEANUP_SOURCES;
+	}
+	alSourcef(source, AL_GAIN, 1);
+	if (check_openal_error("Failed to set gain.\n")) {
+		goto CLEANUP_SOURCES;
+	}
+	alSource3f(source, AL_POSITION, 0, 0, 0);
+	if (check_openal_error("Failed to set position.\n")) {
+		goto CLEANUP_SOURCES;
+	}
+	alSource3f(source, AL_VELOCITY, 0, 0, 0);
+	if (check_openal_error("Failed to set velocity.\n")) {
+		goto CLEANUP_SOURCES;
+	}
+	alSourcei(source, AL_LOOPING, AL_FALSE);
+	if (check_openal_error("Failed to set loop.\n")) {
+		goto CLEANUP_SOURCES;
+	}
+
+	ALuint buffer;
+	alGenBuffers(1, &buffer);
+	if (check_openal_error("Failed to create buffer.\n")) {
+		goto CLEANUP_ALL;
+	}
+
+	FILE *wav = fopen(PRINTER_SOUND_PATH, "rbe");
+	if (!wav) {
+		gbcc_log_error("Failed to open print sound file.\n");
+		goto CLEANUP_ALL;
+	}
+	struct wav_header header;
+	wav_parse_header(&header, wav);
+	//wav_print_header(&header);
+	if (header.AudioFormat != 1) {
+		gbcc_log_error("Only PCM files supported.\n");
+		goto CLEANUP_ALL;
+	}
+	uint8_t *data = malloc(header.Subchunk2Size);
+	if (!data) {
+		gbcc_log_error("Failed to allocate audio data buffer.\n");
+		goto CLEANUP_ALL;
+	}
+	fread(data, 1, header.Subchunk2Size, wav);
+	fclose(wav);
+
+	alBufferData(buffer, AL_FORMAT_STEREO16, data, header.Subchunk2Size, header.SampleRate);
+	if (check_openal_error("Failed to set buffer data.\n")) {
+		goto CLEANUP_ALL;
+	}
+	alSourcei(source, AL_BUFFER, buffer);
+	if (check_openal_error("Failed to set source buffer.\n")) {
+		goto CLEANUP_ALL;
+	}
+
+
+	while (1) {
+		alSourcePlay(source);
+		if (check_openal_error("Failed to play sound.\n")) {
+			goto CLEANUP_ALL;
+		}
+		ALint source_state;
+		alGetSourcei(source, AL_SOURCE_STATE, &source_state);
+		while (source_state == AL_PLAYING) {
+			alGetSourcei(source, AL_SOURCE_STATE, &source_state);
+		}
+		if (p->print_line == 0) {
+			if (print_margin(p, true)) {
+				print_strip(p);
+			}
+		} else {
+			if (print_strip(p)) {
+				if (print_margin(p, false)) {
+					break;
+				}
+			}
+		}
+	}
+
+	/* Cleanup context */
+CLEANUP_ALL:
+	alDeleteBuffers(1, &buffer);
+CLEANUP_SOURCES:
+	alDeleteSources(1, &source);
+CLEANUP_CONTEXT:
+	alcMakeContextCurrent(NULL);
+	alcDestroyContext(context);
+CLEANUP_DEVICE:
+	alcCloseDevice(device);
+	initialise(p);
+	return 0;
+}
+
+int check_openal_error(const char *msg)
+{
+	ALenum error = alGetError();
+	switch (error) {
+		case AL_NO_ERROR:
+			return 0;
+		case AL_INVALID_NAME:
+			gbcc_log_error("Invalid name: %s", msg);
+			break;
+		case AL_INVALID_ENUM:
+			gbcc_log_error("Invalid enum: %s", msg);
+			break;
+		case AL_INVALID_VALUE:
+			gbcc_log_error("Invalid value: %s", msg);
+			break;
+		case AL_INVALID_OPERATION:
+			gbcc_log_error("Invalid operation: %s", msg);
+			break;
+		case AL_OUT_OF_MEMORY:
+			gbcc_log_error("Out of memory: %s", msg);
+			break;
+	}
+	gbcc_log_error("%s", msg);
+	return 1;
 }

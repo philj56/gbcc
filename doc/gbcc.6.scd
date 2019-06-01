@@ -123,6 +123,9 @@ Note: these are the defaults as defined at compile time.
 _TILESET_PATH_
 	Tileset used for the on-screen display.
 
+_PRINTER_SOUND_PATH_
+	Sound played while printing.
+
 _SHADER_PATH_
 	Folder containing all GLSL shaders used for rendering.
 

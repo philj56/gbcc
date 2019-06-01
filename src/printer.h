@@ -1,6 +1,7 @@
 #ifndef GBCC_PRINTER_H
 #define GBCC_PRINTER_H
 
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -20,13 +21,21 @@ struct printer {
 		uint16_t current_byte; 	/* Which byte are we about to read? */
 		uint16_t data_byte;
 	} packet;
-	uint8_t margins;
+	struct {
+		uint8_t top_width;
+		uint8_t top_line;
+		uint8_t bottom_width;
+		uint8_t bottom_line;
+	} margin;
 	uint8_t palette;
 	uint8_t exposure;
 	uint8_t status;
 	bool magic; 	/* Flag for detecting magic bytes that start a packet */
 	bool in_packet;
 	bool connected;
+	uint16_t print_byte;
+	uint8_t print_line;
+	pthread_t print_thread;
 };
 
 uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte);
