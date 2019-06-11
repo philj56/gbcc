@@ -19,6 +19,7 @@
 #define MAGIC_BYTE_2 0x33u
 
 #define PRINTER_WIDTH_TILES 20
+#define PRINTER_STRIP_HEIGHT 16
 
 /* Meaning of command bytes */
 #define INITALISE 0x01u
@@ -180,32 +181,36 @@ void start_printing(struct printer *p)
 }
 
 bool print_margin(struct printer *p, bool top) {
-	if (top && p->margin.top_line >= p->margin.top_width * 4) {
+	if (top && p->margin.top_line >= p->margin.top_width) {
 		return 1;
-	} else if (!top && p->margin.bottom_line >= p->margin.bottom_width * 4) {
+	} else if (!top && p->margin.bottom_line >= p->margin.bottom_width) {
 		return 1;
 	}
-	int line;
-	for (line = 0; line < 4; line++) {
+	for (int line = 0; line < PRINTER_STRIP_HEIGHT; line++) {
 		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {
 			for (uint8_t x = 0; x < 8; x++) {
 				printf("█");
 			}
 		}
+		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 3000000};
+		nanosleep(&to_sleep, NULL);
 		printf("\n");
 	}
 	if (top) {
-		p->margin.top_line += line;
+		p->margin.top_line++;
 	} else {
-		p->margin.bottom_line += line;
+		p->margin.bottom_line++;
 	}
 	return 0;
 }
 
 bool print_strip(struct printer *p)
 {
+	if (p->print_byte == p->image_buffer.length) {
+		return 1;
+	}
 	int line;
-	for (line = 0; (line < 4) && (p->print_byte < p->image_buffer.length); line++) {
+	for (line = 0; (line < PRINTER_STRIP_HEIGHT) && (p->print_byte < p->image_buffer.length); line++) {
 		uint8_t ty = (line + p->print_line) / 8;
 		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {
 			uint16_t idx = ty * PRINTER_WIDTH_TILES * 16 + tx * 16 + (line + p->print_line - ty * 8) * 2;
@@ -230,11 +235,10 @@ bool print_strip(struct printer *p)
 			p->print_byte += 2;
 		}
 		printf("\n");
+		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 3000000};
+		nanosleep(&to_sleep, NULL);
 	}
 	p->print_line += line;
-	if (p->print_byte == p->image_buffer.length) {
-		return 1;
-	}
 	return 0;
 }
 
@@ -359,8 +363,9 @@ void *print(void *printer)
 	}
 
 
-	while (1) {
-		const struct timespec to_sleep = {.tv_sec = 1, .tv_nsec = 0};
+	int stage = 0;
+	while (stage < 3) {
+		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 900000000};
 		alSourcePlay(source);
 		if (check_openal_error("Failed to play sound.\n")) {
 			goto CLEANUP_ALL;
@@ -371,15 +376,19 @@ void *print(void *printer)
 		while (source_state == AL_PLAYING) {
 			alGetSourcei(source, AL_SOURCE_STATE, &source_state);
 		}
-		if (p->print_line == 0) {
-			if (print_margin(p, true)) {
-				print_strip(p);
+		if (stage == 0) {
+			stage += print_margin(p, true);
+		}
+		if (stage == 1) {
+			stage += print_strip(p);
+			if (p->print_byte == p->image_buffer.length && p->margin.bottom_width == 0) {
+				break;
 			}
-		} else {
-			if (print_strip(p)) {
-				if (print_margin(p, false)) {
-					break;
-				}
+		}
+		if (stage == 2) {
+			stage += print_margin(p, false);
+			if (p->margin.bottom_line >= p->margin.bottom_width) {
+				break;
 			}
 		}
 	}
