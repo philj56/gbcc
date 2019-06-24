@@ -353,7 +353,7 @@ void *print(void *printer)
 	fread(data, 1, header.Subchunk2Size, wav);
 	fclose(wav);
 
-	alBufferData(buffer, AL_FORMAT_STEREO16, data, header.Subchunk2Size, header.SampleRate);
+	alBufferData(buffer, AL_FORMAT_MONO8, data, header.Subchunk2Size, header.SampleRate);
 	if (check_openal_error("Failed to set buffer data.\n")) {
 		goto CLEANUP_ALL;
 	}
@@ -363,19 +363,23 @@ void *print(void *printer)
 	}
 
 
+	alSourcei(source, AL_LOOPING, AL_TRUE);
+	ALint last_pos = 0;
 	int stage = 0;
+	alSourcePlay(source);
 	while (stage < 3) {
-		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 900000000};
-		alSourcePlay(source);
+		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 850000000};
 		if (check_openal_error("Failed to play sound.\n")) {
 			goto CLEANUP_ALL;
 		}
 		nanosleep(&to_sleep, NULL);
-		ALint source_state;
-		alGetSourcei(source, AL_SOURCE_STATE, &source_state);
-		while (source_state == AL_PLAYING) {
-			alGetSourcei(source, AL_SOURCE_STATE, &source_state);
+		ALint pos;
+		alGetSourcei(source, AL_SAMPLE_OFFSET, &pos);
+		while (pos >= last_pos) {
+			last_pos = pos;
+			alGetSourcei(source, AL_SAMPLE_OFFSET, &pos);
 		}
+		last_pos = pos;
 		if (stage == 0) {
 			stage += print_margin(p, true);
 		}
@@ -392,6 +396,7 @@ void *print(void *printer)
 			}
 		}
 	}
+	alSourcei(source, AL_LOOPING, AL_FALSE);
 
 	/* Cleanup context */
 CLEANUP_ALL:
