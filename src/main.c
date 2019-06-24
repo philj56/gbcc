@@ -191,8 +191,8 @@ int main(int argc, char **argv)
 	int time_to_sleep;
 	while (!gbc.quit) {
 		clock_gettime(CLOCK_REALTIME, &t2);
-		gbcc_input_process_all(&win);
 		gbcc_window_update(&win);
+		gbcc_input_process_all(&win);
 		clock_gettime(CLOCK_REALTIME, &t1);
 		time_to_sleep = 8 - (int)(gbcc_time_diff(&t1, &t2) / 1e6);
 		if (time_to_sleep > 0 && time_to_sleep < 16) {
