@@ -2,7 +2,7 @@
 #define GBCC_VRAM_WINDOW_H
 
 #include "gbcc.h"
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 #include <SDL2/SDL.h>
 #include <stdint.h>
 

@@ -8,7 +8,7 @@
 #include "screenshot.h"
 #include "time.h"
 #include "window.h"
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,8 +65,6 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	}
 
 	win->gl.context = SDL_GL_CreateContext(win->window);
-
-	glewInit();
 
 	/* Compile and link the shader programs */
 	win->gl.base_shader = gbcc_create_shader_program(

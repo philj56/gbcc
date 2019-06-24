@@ -89,7 +89,7 @@ m = cc.find_library('m', required: false)
 sdl = dependency('sdl2')
 png = dependency('libpng')
 gl = dependency('gl')
-glew = dependency('glew')
+epoxy = dependency('epoxy')
 openal = dependency('openal')
 thread = dependency('threads')
 
@@ -97,7 +97,7 @@ thread = dependency('threads')
 executable(
   'gbcc',
   sources,
-  dependencies: [m, sdl, png, gl, glew, openal, thread],
+  dependencies: [m, sdl, png, gl, epoxy, openal, thread],
   install: true,
   link_args: ['-g']
 )

@@ -4,7 +4,7 @@
 #include "debug.h"
 #include "vram_window.h"
 #include "window.h"
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 #include <SDL2/SDL.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -46,8 +46,6 @@ void gbcc_vram_window_initialise(struct gbcc_vram_window *win, struct gbc *gbc)
 	}
 
 	win->gl.context = SDL_GL_CreateContext(win->window);
-
-	glewInit();
 
 	/* Compile and link the shader programs */
 	win->gl.shader = gbcc_create_shader_program(

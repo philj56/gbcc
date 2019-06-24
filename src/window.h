@@ -5,7 +5,7 @@
 #include "constants.h"
 #include "fontmap.h"
 #include "vram_window.h"
-#include <GL/glew.h>
+#include <epoxy/gl.h>
 #include <SDL2/SDL.h>
 #include <stdint.h>
 
