@@ -88,7 +88,7 @@ void load_rom(struct gbc *gbc, const char *filename)
 		exit(EXIT_FAILURE);
 	}
 
-	if (rom_size_flag < 0x08u) {
+	if (rom_size_flag <= 0x08u) {
 		gbc->cart.rom_size = 0x8000u << rom_size_flag; /* 32KB shl N */
 	} else if (rom_size_flag == 0x52u) {
 		gbc->cart.rom_size = 0x120000u;
