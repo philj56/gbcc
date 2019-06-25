@@ -317,7 +317,7 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			break;
 		case NR30:
 			gbc->apu.ch3.dac = check_bit(val, 7);
-			if (gbc->apu.ch3.dac) {
+			if (!gbc->apu.ch3.dac) {
 				gbc->apu.ch3.enabled = false;
 			}
 			break;
