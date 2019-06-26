@@ -253,6 +253,7 @@ void gbcc_print_op(struct gbc *gbc)
 //#define WHT   "\x1B[37m"
 #define RESET "\x1B[0m"
 
+
 void gbcc_log_error(const char *const fmt, ...)
 {
 	va_list args;

@@ -128,6 +128,9 @@ struct gbc {
 				bool mapped;
 				bool halt;
 			} rtc;
+			struct {
+				uint16_t command;
+			};
 		} mbc;
 		char title[CART_TITLE_SIZE + 1];
 	} cart;

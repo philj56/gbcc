@@ -167,7 +167,7 @@
 #define DMA_TIMER 160 /* How long DMG DMA takes in m-cycles */
 
 
-enum MBC { NONE, MBC1, MBC2, MBC3, MBC5, MMM01 };
+enum MBC { NONE, MBC1, MBC2, MBC3, MBC5, MBC6, MBC7, HUC1, HUC3, MMM01 };
 enum CART_MODE { GBC, DMG };
 
 #endif /* GBC_CONSTANTS_H */

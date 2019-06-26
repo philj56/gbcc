@@ -317,9 +317,35 @@ void get_cartridge_hardware(struct gbc *gbc)
 			gbc->cart.battery = true;
 			gbcc_log_info("\tHardware: MBC5 + Rumble + RAM + Battery\n");
 			break;
+		case 0x20u: 	/* MBC6 */
+			gbcc_log_error("MBC6 not yet supported.\n");
+			exit(EXIT_FAILURE);
+		case 0x22u: 	/* MBC7 + SENSOR + RUMBLE + RAM + BATTERY */
+			gbc->cart.mbc.type = MBC7;
+			gbc->cart.rumble = true;
+			gbc->cart.battery = true;
+			gbcc_log_info("\tHardware: MBC7 + Tilt Sensor + Rumble + RAM + Battery\n");
+			break;
+		case 0xFCu: 	/* Pocket Camera */
+			gbcc_log_error("Pocket Camera not yet supported.\n");
+			exit(EXIT_FAILURE);
+			break;
+		case 0xFDu: 	/* Bandai TAMA5 */
+			gbcc_log_error("Bandai TAMA5 not yet supported.\n");
+			exit(EXIT_FAILURE);
+			break;
+		case 0xFEu: 	/* HuC3 */
+			gbc->cart.mbc.type = HUC3;
+			gbcc_log_info("\tHardware: HuC3\n");
+			gbcc_log_warning("HuC3 support is experimental, saves etc. are unlikely to work.\n");
+			break;
+		case 0xFFu: 	/* HuC1 + RAM + BATTERY */
+			gbc->cart.mbc.type = HUC1;
+			gbc->cart.battery = true;
+			gbcc_log_info("\tHardware: HuC1 + RAM + Battery\n");
+			break;
 		default:
 			gbcc_log_error("Unrecognised hardware %02X\n", gbc->cart.rom[CART_TYPE]);
-			/* TODO: Handle Pocket Camera, TAMA5, HuC3 & HuC1 */
 			break;
 	}
 }
