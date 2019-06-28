@@ -98,7 +98,7 @@ void load_rom(struct gbc *gbc, const char *filename)
 	} else if (rom_size_flag == 0x54u) {
 		gbc->cart.rom_size = 0x180000u;
 	} else {
-		gbcc_log_error("Unknown ROM size flag: %u\n", rom_size_flag);
+		gbcc_log_error("Unknown ROM size flag: 0x%02X\n", rom_size_flag);
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
@@ -149,7 +149,7 @@ void verify_cartridge(struct gbc *gbc)
 	for (uint16_t i = CART_LOGO_START; i < CART_LOGO_GBC_CHECK_END; i++) {
 		if (gbc->cart.rom[i] != nintendo_logo[i - CART_LOGO_START]) {
 			gbcc_log_error("Cartridge logo check failed on byte %04X\n", i);
-			exit(EXIT_FAILURE);
+			break;
 		}
 	}
 	gbcc_log_info("\tCartridge logo check passed.\n");
@@ -160,7 +160,6 @@ void verify_cartridge(struct gbc *gbc)
 	sum = low_byte(sum + 25u);
 	if (sum) {
 		gbcc_log_error("Cartridge checksum failed with value %04X.\n", sum);
-		exit(EXIT_FAILURE);
 	}
 	gbcc_log_info("\tCartridge checksum passed.\n");
 }
@@ -345,7 +344,8 @@ void get_cartridge_hardware(struct gbc *gbc)
 			gbcc_log_info("\tHardware: HuC1 + RAM + Battery\n");
 			break;
 		default:
-			gbcc_log_error("Unrecognised hardware %02X\n", gbc->cart.rom[CART_TYPE]);
+			gbcc_log_error("Unrecognised hardware %02X, falling back to MBC3.\n", gbc->cart.rom[CART_TYPE]);
+			gbc->cart.mbc.type = MBC3;
 			break;
 	}
 }
