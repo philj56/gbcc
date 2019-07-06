@@ -12,6 +12,7 @@ uint8_t set_bit(uint8_t byte, uint8_t bit);
 uint8_t clear_bit(uint8_t byte, uint8_t bit);
 uint8_t toggle_bit(uint8_t byte, uint8_t bit);
 uint8_t check_bit(uint8_t byte, uint8_t bit);
+uint16_t check_bit16(uint16_t value, uint8_t b);
 uint8_t cond_bit(uint8_t byte, uint8_t b, bool cond);
 
 

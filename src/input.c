@@ -6,7 +6,7 @@
 #include "window.h"
 #include <SDL2/SDL.h>
 
-static const SDL_Scancode keymap[27] = {
+static const SDL_Scancode keymap[31] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -25,6 +25,10 @@ static const SDL_Scancode keymap[27] = {
 	SDL_SCANCODE_3, 	/* Toggle sprites */
 	SDL_SCANCODE_L, 	/* Toggle link cable loop */
 	SDL_SCANCODE_B, 	/* Toggle background playback */
+	SDL_SCANCODE_KP_2, 	/* MBC7 accelerometer down */
+	SDL_SCANCODE_KP_4, 	/* MBC7 accelerometer left */
+	SDL_SCANCODE_KP_6, 	/* MBC7 accelerometer right */
+	SDL_SCANCODE_KP_8, 	/* MBC7 accelerometer up */
 	SDL_SCANCODE_F1,	/* State n */
 	SDL_SCANCODE_F2,
 	SDL_SCANCODE_F3,
@@ -43,9 +47,9 @@ void gbcc_input_process_all(struct gbcc_window *win)
 {
 	struct gbc *gbc = win->gbc;
 	SDL_Event e;
+	const uint8_t *state = SDL_GetKeyboardState(NULL);
 	while (SDL_PollEvent(&e) != 0) {
 		int key = process_input(win, &e);
-		const uint8_t *state = SDL_GetKeyboardState(NULL);
 		bool val;
 		if (e.type == SDL_KEYDOWN) {
 			val = true;
@@ -177,26 +181,89 @@ void gbcc_input_process_all(struct gbcc_window *win)
 				}
 				break;
 			case 18:
+				if (state[SDL_SCANCODE_LSHIFT] && val) {
+					gbc->cart.mbc.accelerometer.real_y = 0x81D0u - 0x70u;
+				}
+				break;
 			case 19:
+				if (state[SDL_SCANCODE_LSHIFT] && val) {
+					gbc->cart.mbc.accelerometer.real_x = 0x81D0u + 0x70u;
+				}
+				break;
 			case 20:
+				if (state[SDL_SCANCODE_LSHIFT] && val) {
+					gbc->cart.mbc.accelerometer.real_x = 0x81D0u - 0x70u;
+				}
+				break;
 			case 21:
+				if (state[SDL_SCANCODE_LSHIFT] && val) {
+					gbc->cart.mbc.accelerometer.real_y = 0x81D0u + 0x70u;
+				}
+				break;
 			case 22:
 			case 23:
 			case 24:
 			case 25:
 			case 26:
+			case 27:
+			case 28:
+			case 29:
+			case 30:
 				if (!val) {
 					break;
 				}
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					gbc->save_state = (int8_t)(key - 17);
+					gbc->save_state = (int8_t)(key - 21);
 				} else {
-					gbc->load_state = (int8_t)(key - 17);
+					gbc->load_state = (int8_t)(key - 21);
 				}
 				break;
 			default:
 				break;
 		}
+	}
+	if (state[SDL_SCANCODE_KP_6]) {
+		gbc->cart.mbc.accelerometer.dx = -8;
+	} else if (state[SDL_SCANCODE_KP_4]) {
+		gbc->cart.mbc.accelerometer.dx = 8;
+	} else {
+		gbc->cart.mbc.accelerometer.dx = 0;
+	}
+	if (state[SDL_SCANCODE_KP_2]) {
+		gbc->cart.mbc.accelerometer.dy = -8;
+	} else if (state[SDL_SCANCODE_KP_8]) {
+		gbc->cart.mbc.accelerometer.dy = 8;
+	} else {
+		gbc->cart.mbc.accelerometer.dy = 0;
+	}
+	if (gbc->cart.mbc.accelerometer.dx == 0) {
+		if (gbc->cart.mbc.accelerometer.real_x > 0x81D0u) {
+			gbc->cart.mbc.accelerometer.dx = -8;
+		}
+		if (gbc->cart.mbc.accelerometer.real_x < 0x81D0u) {
+			gbc->cart.mbc.accelerometer.dx = 8;
+		}
+	}
+	if (gbc->cart.mbc.accelerometer.dy == 0) {
+		if (gbc->cart.mbc.accelerometer.real_y > 0x81D0u) {
+			gbc->cart.mbc.accelerometer.dy = -8;
+		}
+		if (gbc->cart.mbc.accelerometer.real_y < 0x81D0u) {
+			gbc->cart.mbc.accelerometer.dy = 8;
+		}
+	}
+	gbc->cart.mbc.accelerometer.real_x += gbc->cart.mbc.accelerometer.dx;
+	gbc->cart.mbc.accelerometer.real_y += gbc->cart.mbc.accelerometer.dy;
+
+	if (gbc->cart.mbc.accelerometer.real_x > 0x81D0u + 0x70u) {
+		gbc->cart.mbc.accelerometer.real_x = 0x81D0u + 0x70u;
+	} else if (gbc->cart.mbc.accelerometer.real_x < 0x81D0u - 0x70u) {
+		gbc->cart.mbc.accelerometer.real_x = 0x81D0u - 0x70u;
+	}
+	if (gbc->cart.mbc.accelerometer.real_y > 0x81D0u + 0x70u) {
+		gbc->cart.mbc.accelerometer.real_y = 0x81D0u + 0x70u;
+	} else if (gbc->cart.mbc.accelerometer.real_y < 0x81D0u - 0x70u) {
+		gbc->cart.mbc.accelerometer.real_y = 0x81D0u - 0x70u;
 	}
 }
 

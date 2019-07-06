@@ -4,9 +4,12 @@
 #include "mbc.h"
 #include "time.h"
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 static void set_mbc_banks(struct gbc *gbc);
+static void eeprom_write(struct gbc *gbc, uint8_t val);
+static void eeprom_reset(struct gbcc_eeprom *eeprom);
 
 void set_mbc_banks(struct gbc *gbc)
 {
@@ -409,21 +412,43 @@ void gbcc_mbc_mbc6_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 
 uint8_t gbcc_mbc_mbc7_read(struct gbc *gbc, uint16_t addr)
 {
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 	if (addr < ROM0_END) {
 		return gbc->memory.rom0[addr];
 	}
 	if (addr >= ROMX_START && addr < ROMX_END) {
 		return gbc->memory.romx[addr - ROMX_START];
 	}
-	if (addr >= SRAM_START && addr < SRAM_END) {
-		if (gbc->cart.ram_size == 0) {
-			gbcc_log_debug("Trying to read SRAM when there isn't any!\n");
-			return 0xFFu;
+	if (addr >= 0xA000u && addr < 0xB000u) {
+		switch ((addr & 0x00F0u) >> 4u) {
+			case 0:
+				return 0xFFu;
+			case 1:
+				return 0xFFu;
+			case 2:
+				return mbc->accelerometer.x & 0xFFu;
+			case 3:
+				return mbc->accelerometer.x >> 8u;
+			case 4:
+				return mbc->accelerometer.y & 0xFFu;
+			case 5:
+				return mbc->accelerometer.y >> 8u;
+			case 6:
+				return 0x00u;
+			case 7:
+				return 0xFFu;
+			case 8:
+				{
+					uint8_t ret = 0;
+					ret = cond_bit(ret, 0, mbc->eeprom.DO);
+					ret = cond_bit(ret, 1, mbc->eeprom.DI);
+					ret = cond_bit(ret, 6, mbc->eeprom.CLK);
+					ret = cond_bit(ret, 7, mbc->eeprom.CS);
+					return ret;
+				}
+			default:
+				return 0xFFu;
 		}
-		if (gbc->cart.mbc.sram_enable) {
-			return gbc->memory.sram[addr - SRAM_START];
-		}
-		gbcc_log_debug("SRAM not enabled!\n");
 	}
 	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
 	return 0xFFu;
@@ -433,20 +458,28 @@ void gbcc_mbc_mbc7_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
-	if (addr >= SRAM_START && addr < SRAM_END) {
-		if (gbc->cart.ram_size == 0) {
-			gbcc_log_debug("Trying to write to SRAM when there isn't any!\n");
-		} else if (mbc->sram_enable) {
-			gbc->memory.sram[addr - SRAM_START] = val;
-		} else {
-			gbcc_log_debug("SRAM not enabled!\n");
+	if (addr >= 0xA000u && addr < 0xB000u) {
+		switch ((addr & 0x00F0u) >> 4u) {
+			case 0:
+				if (val == 0x55u) {
+					mbc->accelerometer.x = 0x8000u;
+					mbc->accelerometer.y = 0x8000u;
+					mbc->accelerometer.latch = false;
+				}
+			case 1:
+				if (val == 0xAAu && !mbc->accelerometer.latch) {
+					mbc->accelerometer.x = mbc->accelerometer.real_x;
+					mbc->accelerometer.y = mbc->accelerometer.real_y;
+					mbc->accelerometer.latch = true;
+				}
+			case 8:
+				eeprom_write(gbc, val);
+				break;
 		}
 	} else if (addr < 0x2000u) {
 		mbc->ramg = val;
-	} else if (addr < 0x3000u) {
-		mbc->romb0 = val;
 	} else if (addr < 0x4000u) {
-		mbc->romb1 = val;
+		mbc->romb0 = val;
 	} else if (addr < 0x6000u) {
 		mbc->ramb = val;
 	} else {
@@ -668,4 +701,132 @@ void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	(void)addr;
 	(void)val;
 	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_write() called\n");
+}
+
+void eeprom_write(struct gbc *gbc, uint8_t val)
+{
+	struct gbcc_eeprom *eeprom = &gbc->cart.mbc.eeprom;
+	eeprom->last_DI = eeprom->DI;
+	eeprom->last_CLK = eeprom->CLK;
+	eeprom->last_CS = eeprom->CS;
+	eeprom->DI = check_bit(val, 1);
+	eeprom->CLK = check_bit(val, 6);
+	eeprom->CS = check_bit(val, 7);
+	if (eeprom->current_command == GBCC_EEPROM_NONE) {
+		eeprom->DO = true;
+	}
+
+	if (!eeprom->CS) {
+		eeprom_reset(eeprom);
+		return;
+	}
+
+	/* 
+	 * Start bit is detected when both CS & DI are held high, and CLK has a
+	 * rising edge.
+	 */
+	if (!eeprom->start
+			&& (eeprom->CS && eeprom->last_CS)
+			&& (eeprom->DI && eeprom->last_DI)
+			&& (eeprom->CLK && !eeprom->last_CLK)) {
+		eeprom->start = true;
+		return;
+	}
+
+	if (!eeprom->start) {
+		return;
+	}
+	if (!(eeprom->CLK && !eeprom->last_CLK)) {
+		return;
+	}
+
+	/* First check if we're currently running a command */
+	switch (eeprom->current_command) {
+		case GBCC_EEPROM_NONE:
+			break;
+		case GBCC_EEPROM_READ:
+			eeprom->DO = check_bit16(eeprom->data[eeprom->address], 15 - eeprom->value_bit);
+			eeprom->value <<= 1;
+			eeprom->value |= eeprom->DO;
+			eeprom->value_bit++;
+			if (eeprom->value_bit == 16) {
+				eeprom->value_bit = 0;
+				eeprom->address++;
+			}
+			return;
+		case GBCC_EEPROM_WRITE:
+			eeprom->value <<= 1;
+			eeprom->value |= eeprom->DI;
+			eeprom->value_bit++;
+			if (eeprom->value_bit == 16) {
+				eeprom->data[eeprom->address] = eeprom->value;
+				eeprom_reset(eeprom);
+			}
+			return;
+		case GBCC_EEPROM_WRAL:
+			eeprom->value <<= 1;
+			eeprom->value |= eeprom->DI;
+			eeprom->value_bit++;
+			if (eeprom->value_bit == 16) {
+				for (int i = 0; i < 128; i++) {
+					eeprom->data[i] = eeprom->value;
+				}
+				eeprom_reset(eeprom);
+			}
+			return;
+		default:
+			gbcc_log_error("Impossible eeprom command.\n");
+			return;
+	}
+
+	/* Actual reading of command */
+	eeprom->command <<= 1;
+	eeprom->command |= eeprom->DI;
+	eeprom->command_bit++;
+
+	if (eeprom->command_bit == 10) {
+		if ((eeprom->command & 0x300u) == 0x200u) {
+			/* READ */
+			eeprom->address = eeprom->command & 0x7Fu;
+			eeprom->current_command = GBCC_EEPROM_READ;
+		} else if ((eeprom->command & 0x3C0u) == 0x0C0u) {
+			/* EWEN */
+			eeprom->write_enable = true;
+			eeprom_reset(eeprom);
+		} else if ((eeprom->command & 0x3C0u) == 0x000u) {
+			/* EWDS */
+			eeprom->write_enable = false;
+			eeprom_reset(eeprom);
+		} else if ((eeprom->command & 0x300u) == 0x100u) {
+			/* WRITE */
+			eeprom->address = eeprom->command & 0x7Fu;
+			eeprom->current_command = GBCC_EEPROM_WRITE;;
+		} else if ((eeprom->command & 0x300u) == 0x300u) {
+			/* ERASE */
+			eeprom->data[eeprom->command & 0x7Fu] = 0xFFFFu;
+			eeprom_reset(eeprom);
+		} else if ((eeprom->command & 0x3C0u) == 0x080u) {
+			/* ERAL */
+			memset(eeprom->data, 0xFFu, 256);
+			eeprom_reset(eeprom);
+		} else if ((eeprom->command & 0x3C0u) == 0x040u) {
+			/* WRAL */
+			eeprom->current_command = GBCC_EEPROM_WRAL;
+		} else {
+			gbcc_log_error("Unknown EEPROM command\n");
+			eeprom_reset(eeprom);
+		}
+	}
+}
+
+void eeprom_reset(struct gbcc_eeprom *eeprom)
+{
+	eeprom->start = false;
+	eeprom->command = 0;
+	eeprom->command_bit = 0;
+	eeprom->current_command = GBCC_EEPROM_NONE;
+	eeprom->value = 0;
+	eeprom->value_bit = 0;
+	eeprom->address = 0;
+	eeprom->DO = true;
 }

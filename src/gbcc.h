@@ -129,8 +129,32 @@ struct gbc {
 				bool halt;
 			} rtc;
 			struct {
+				uint16_t x;
+				uint16_t y;
+				int dx;
+				int dy;
+				uint16_t real_x;
+				uint16_t real_y;
+				bool latch;
+			} accelerometer;
+			struct gbcc_eeprom {
+				bool DO;
+				bool DI;
+				bool CLK;
+				bool CS;
+				bool last_DI;
+				bool last_CLK;
+				bool last_CS;
 				uint16_t command;
-			};
+				uint8_t command_bit;
+				bool start;
+				bool write_enable;
+				enum EEPROM_COMMAND current_command;
+				uint8_t value_bit;
+				uint8_t address;
+				uint16_t value;
+				uint16_t data[128];
+			} eeprom;
 		} mbc;
 		char title[CART_TITLE_SIZE + 1];
 	} cart;

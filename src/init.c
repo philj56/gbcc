@@ -41,6 +41,8 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->cart.mbc.romx_bank = 0x01u;
 	gbc->cart.mbc.sram_bank = 0x00u;
 	gbc->cart.mbc.romb0 = 0x01u;
+	gbc->cart.mbc.accelerometer.real_x = 0x81D0u;
+	gbc->cart.mbc.accelerometer.real_y = 0x81D0u;
 	gbc->cpu.ime = false;
 	gbc->ppu.clock = 0;
 	gbc->ppu.palette = gbcc_get_palette("default");

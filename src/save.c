@@ -13,7 +13,7 @@ static void strip_ext(char *fname);
 
 void gbcc_save(struct gbc *gbc)
 {
-	if (gbc->cart.ram_size == 0) {
+	if (gbc->cart.ram_size == 0 && gbc->cart.mbc.type != MBC7) {
 		return;
 	}
 	char fname[MAX_NAME_LEN];
@@ -33,6 +33,9 @@ void gbcc_save(struct gbc *gbc)
 		return;
 	}
 	fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, sav);
+	if (gbc->cart.mbc.type == MBC7) {
+		fwrite(gbc->cart.mbc.eeprom.data, 2, 128, sav);
+	}
 	if (gbc->cart.mbc.type == MBC3) {
 		fprintf(sav, "\n%u:%u:%u:%u:%u:%u:%u:%lu:%lu\n",
 				gbc->cart.mbc.rtc.seconds,
@@ -71,6 +74,9 @@ void gbcc_load(struct gbc *gbc)
 	}
 	gbcc_log_info("Loading %s...\n", fname);
 	fread(gbc->cart.ram, 1, gbc->cart.ram_size, sav);
+	if (gbc->cart.mbc.type == MBC7) {
+		fread(gbc->cart.mbc.eeprom.data, 2, 128, sav);
+	}
 	if (gbc->cart.mbc.type == MBC3) {
 		int matched;
 		matched = fscanf(sav, "\n%" SCNu8 ":%" SCNu8 ":%" SCNu8 ":%"

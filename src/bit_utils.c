@@ -39,6 +39,11 @@ uint8_t check_bit(uint8_t byte, uint8_t b)
 	return (uint8_t)(byte & bit(b)) >> b;
 }
 
+uint16_t check_bit16(uint16_t value, uint8_t b)
+{
+	return (uint16_t)(value & bit16(b)) >> b;
+}
+
 uint8_t cond_bit(uint8_t byte, uint8_t b, bool cond)
 {
 	if (cond) {

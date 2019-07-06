@@ -116,6 +116,12 @@ V
 <Left Shift + F1-9>
 	Save savestate 1-9
 
+<Numpad 2,4,6,8>
+	Accelerometer control (MBC7 games only)
+
+<Left Shift + Numpad 2,4,6,8>
+	Strong accelerometer control (MBC7 games only)
+
 # FILES
 
 Note: these are the defaults as defined at compile time.
