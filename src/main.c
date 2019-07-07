@@ -57,13 +57,17 @@ void *emulation_loop(void *_audio)
 	struct gbc *gbc = audio->gbc;
 	gbcc_load(gbc);
 	while (!gbc->quit) {
-		gbcc_emulate_cycle(gbc);
+		for (int i = 1000; i > 0; i--) {
+			/* Only check for savestates, pause etc.
+			 * every 1000 cycles */
+			gbcc_emulate_cycle(gbc);
+			gbcc_audio_update(audio);
+		}
 		if (gbc->load_state > 0) {
 			gbcc_load_state(gbc);
 		} else if (gbc->save_state > 0) {
 			gbcc_save_state(gbc);
 		}
-		gbcc_audio_update(audio);
 		while (gbc->pause || !(gbc->has_focus || gbc->background_play)) {
 			const struct timespec time = {.tv_sec = 0, .tv_nsec = 10000000};
 			nanosleep(&time, NULL);
