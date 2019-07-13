@@ -228,7 +228,7 @@ void STOP(struct gbc *gbc)
 		key1 = gbc->double_speed * bit(7);//toggle_bit(key1, 7);
 		gbcc_memory_write(gbc, KEY1, key1, true);
 	} else {
-		gbc->stop = true;
+		gbc->cpu.stop = true;
 	}
 	gbcc_fetch_instruction(gbc); /* Discard next byte */
 	done(&gbc->cpu);
@@ -371,6 +371,7 @@ void LD_d8(struct gbc *gbc)
 			if (div_is_hl(cpu, 0x00u)) {
 				YIELD;
 			}
+			/* Fall through */
 		case 2:
 			WRITE_OPERAND_DIV(gbc, 0x00u, cpu->instruction.op1);
 	}
@@ -1256,6 +1257,7 @@ void PREFIX_CB(struct gbc *gbc)
 			YIELD;
 		case 1:
 			cpu->opcode = gbcc_fetch_instruction(gbc);
+			break;
 	}
 	switch (cpu->opcode / 0x40u) {
 		case 0:

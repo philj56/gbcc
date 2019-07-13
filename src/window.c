@@ -94,7 +94,7 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	GLuint tbo;
 	glGenBuffers(1, &tbo);
 	glBindBuffer(GL_TEXTURE_BUFFER, tbo);
-	uint8_t *lut_data = malloc(32 * 32 * 32 * sizeof(GLuint));
+	uint32_t *lut_data = malloc(32 * 32 * 32 * sizeof(GLuint));
 	gbcc_fill_lut(lut_data);
 	glBufferData(GL_TEXTURE_BUFFER, 32 * 32 * 32 * sizeof(GLuint), lut_data, GL_STATIC_DRAW);
 	free(lut_data);

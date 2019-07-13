@@ -268,17 +268,18 @@ static float lerp1d(float a, float b, float t)
 	return a * (1 - t) + b * t;
 }
 
-void gbcc_fill_lut(uint8_t *lut)
+void gbcc_fill_lut(uint32_t *lut)
 {
+	uint8_t *bytes = (uint8_t *)lut;
 	for (uint8_t x = 0; x < 32; x++) {
 		for (uint8_t y = 0; y < 32; y++) {
 			for (uint8_t z = 0; z < 32; z++) {
 				uint32_t idx = 4 * (x * 32 * 32 + y * 32 + z); 
 				uint32_t col = lerp_colour(x, y, z);
-				lut[idx + 0] = (col & 0xFF000000u) >> 24u;
-				lut[idx + 1] = (col & 0x00FF0000u) >> 16u;
-				lut[idx + 2] = (col & 0x0000FF00u) >> 8u;
-				lut[idx + 3] = (col & 0x000000FFu) >> 0u;
+				bytes[idx + 0] = (col & 0xFF000000u) >> 24u;
+				bytes[idx + 1] = (col & 0x00FF0000u) >> 16u;
+				bytes[idx + 2] = (col & 0x0000FF00u) >> 8u;
+				bytes[idx + 3] = (col & 0x000000FFu) >> 0u;
 			}
 		}
 	}

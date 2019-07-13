@@ -37,7 +37,7 @@ void gbcc_save(struct gbc *gbc)
 		fwrite(gbc->cart.mbc.eeprom.data, 2, 128, sav);
 	}
 	if (gbc->cart.mbc.type == MBC3) {
-		fprintf(sav, "\n%u:%u:%u:%u:%u:%u:%u:%lu:%lu\n",
+		fprintf(sav, "\n%u:%u:%u:%u:%u:%u:%u:%ld:%ld\n",
 				gbc->cart.mbc.rtc.seconds,
 				gbc->cart.mbc.rtc.minutes,
 				gbc->cart.mbc.rtc.hours,
@@ -80,7 +80,7 @@ void gbcc_load(struct gbc *gbc)
 	if (gbc->cart.mbc.type == MBC3) {
 		int matched;
 		matched = fscanf(sav, "\n%" SCNu8 ":%" SCNu8 ":%" SCNu8 ":%"
-				SCNu8 ":%" SCNu8 ":%" SCNu8 ":%" SCNu8 ":%lu:%lu",
+				SCNu8 ":%" SCNu8 ":%" SCNu8 ":%" SCNu8 ":%ld:%ld",
 				&gbc->cart.mbc.rtc.seconds,
 				&gbc->cart.mbc.rtc.minutes,
 				&gbc->cart.mbc.rtc.hours,

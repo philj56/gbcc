@@ -4,6 +4,7 @@
 #include "apu.h"
 #include "constants.h"
 #include "cpu.h"
+#include "mbc.h"
 #include "ppu.h"
 #include "printer.h"
 #include <stdbool.h>
@@ -12,18 +13,11 @@
 #include <time.h>
 
 struct gbc {
-	/* CPU */
+	/* Core emulator areas */
 	struct cpu cpu;
-	
-	/* APU */
 	struct apu apu;
-
-	/* PPU */
 	struct ppu ppu;
 
-	struct printer printer;
-
-	/* Non-Register state data */
 	enum CART_MODE mode;
 	struct {
 		uint16_t source;
@@ -32,31 +26,6 @@ struct gbc {
 		uint16_t to_copy;
 		bool hblank;
 	} hdma;
-	bool stop;
-	struct {
-		struct timespec current;
-		struct timespec old;
-	} real_time;
-	struct {
-		uint8_t received;
-		uint8_t current_bit;
-		uint16_t divider;
-		uint16_t clock;
-	} link_cable;
-
-	bool quit;
-	bool pause;
-	bool interlace;
-	int8_t save_state;
-	int8_t load_state;
-	bool double_speed;
-	float turbo_speed;
-	bool hide_background;
-	bool hide_window;
-	bool hide_sprites;
-	bool link_cable_loop;
-	bool background_play;
-	bool has_focus;
 
 	/* Memory map */
 	struct {
@@ -78,7 +47,23 @@ struct gbc {
 		uint8_t vram_bank[2][VRAM_SIZE]; 	/* Actual location of VRAM */
 	} memory;
 
-	/* Current key states */
+	/* Cartridge data & flags */
+	struct {
+		const char *filename;
+		uint8_t *rom;
+		size_t rom_size;
+		size_t rom_banks;
+		uint8_t *ram;
+		size_t ram_size;
+		size_t ram_banks;
+		bool battery;
+		bool timer;
+		bool rumble;
+		char title[CART_TITLE_SIZE + 1];
+		struct gbcc_mbc mbc;
+	} cart;
+
+	/* IO & peripherals */
 	struct {
 		bool a;
 		bool b;
@@ -93,71 +78,29 @@ struct gbc {
 		bool turbo;
 	} keys;
 
-	/* Cartridge data & flags */
+	struct printer printer;
+
 	struct {
-		const char *filename;
-		uint8_t *rom;
-		size_t rom_size;
-		size_t rom_banks;
-		uint8_t *ram;
-		size_t ram_size;
-		size_t ram_banks;
-		bool battery;
-		bool timer;
-		bool rumble;
-		struct gbcc_mbc {
-			enum MBC type;
-			bool sram_enable;
-			uint8_t rom0_bank;
-			uint16_t romx_bank;
-			uint8_t sram_bank;
-			uint8_t ramg;
-			uint8_t romb0;
-			uint8_t romb1;
-			uint8_t ramb;
-			bool mode;
-			struct gbcc_rtc {
-				uint8_t seconds;
-				uint8_t minutes;
-				uint8_t hours;
-				uint8_t day_low;
-				uint8_t day_high;
-				uint8_t latch;
-				uint8_t cur_reg;
-				struct timespec base_time;
-				bool mapped;
-				bool halt;
-			} rtc;
-			struct {
-				uint16_t x;
-				uint16_t y;
-				int dx;
-				int dy;
-				uint16_t real_x;
-				uint16_t real_y;
-				bool latch;
-			} accelerometer;
-			struct gbcc_eeprom {
-				bool DO;
-				bool DI;
-				bool CLK;
-				bool CS;
-				bool last_DI;
-				bool last_CLK;
-				bool last_CS;
-				uint16_t command;
-				uint8_t command_bit;
-				bool start;
-				bool write_enable;
-				enum EEPROM_COMMAND current_command;
-				uint8_t value_bit;
-				uint8_t address;
-				uint16_t value;
-				uint16_t data[128];
-			} eeprom;
-		} mbc;
-		char title[CART_TITLE_SIZE + 1];
-	} cart;
+		uint8_t received;
+		uint8_t current_bit;
+		uint16_t divider;
+		uint16_t clock;
+	} link_cable;
+
+	/* Settings */
+	bool quit;
+	bool pause;
+	bool interlace;
+	int8_t save_state;
+	int8_t load_state;
+	bool double_speed;
+	float turbo_speed;
+	bool hide_background;
+	bool hide_window;
+	bool hide_sprites;
+	bool link_cable_loop;
+	bool background_play;
+	bool has_focus;
 };
 
 void gbcc_initialise(struct gbc *gbc, const char *filename);

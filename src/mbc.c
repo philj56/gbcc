@@ -466,12 +466,14 @@ void gbcc_mbc_mbc7_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 					mbc->accelerometer.y = 0x8000u;
 					mbc->accelerometer.latch = false;
 				}
+				break;
 			case 1:
 				if (val == 0xAAu && !mbc->accelerometer.latch) {
 					mbc->accelerometer.x = mbc->accelerometer.real_x;
 					mbc->accelerometer.y = mbc->accelerometer.real_y;
 					mbc->accelerometer.latch = true;
 				}
+				break;
 			case 8:
 				eeprom_write(gbc, val);
 				break;

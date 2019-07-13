@@ -54,7 +54,7 @@ void gbcc_input_process_all(struct gbcc_window *win)
 		if (e.type == SDL_KEYDOWN) {
 			val = true;
 		//	gbc->halt.set = false;
-		//	gbc->stop = false;
+		//	gbc->cpu.stop = false;
 		} else if (e.type == SDL_KEYUP) {
 			val = false;
 		} else {

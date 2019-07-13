@@ -70,6 +70,11 @@ struct cpu {
 	/* Non-Register state data */
 	uint8_t opcode;
 	bool ime;
+	bool stop;
+	bool tac_bit;
+	uint16_t div_timer;
+	uint8_t tima_reload;
+	uint8_t clock;
 	struct {
 		uint8_t timer;
 		bool target_state;
@@ -99,11 +104,6 @@ struct cpu {
 		bool running;
 		bool prefix_cb;
 	} instruction;
-	uint16_t div_timer;
-	bool tac_bit;
-	uint8_t tima_reload;
-	uint8_t clock;
-	uint64_t debug_clock;
 };
 
 uint8_t gbcc_fetch_instruction(struct gbc *gbc);

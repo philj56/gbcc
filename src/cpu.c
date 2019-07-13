@@ -22,11 +22,9 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 	gbcc_apu_clock(gbc);
 	gbcc_ppu_clock(gbc);
 	cpu_clock(gbc);
-	clock_div(gbc);
 	gbcc_link_cable_clock(gbc);
 	if (gbc->double_speed) {
 		cpu_clock(gbc);
-		clock_div(gbc);
 		gbcc_link_cable_clock(gbc);
 	}
 }
@@ -34,8 +32,11 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 void cpu_clock(struct gbc *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
+	clock_div(gbc);
+	if (!(cpu->instruction.running) && (cpu->halt.set || cpu->stop)) {
+		return;
+	}
 	/* CPU clocks every 4 cycles */
-	cpu->debug_clock++;
 	cpu->clock++;
 	cpu->clock &= 3u;
 	if (cpu->clock != 0) {
@@ -47,36 +48,30 @@ void cpu_clock(struct gbc *gbc)
 			cpu->ime = cpu->ime_timer.target_state;
 		}
 	}
-	if (!cpu->halt.set && !gbc->stop) {
-		if (cpu->dma.timer > 0) {
-			cpu->dma.running = true;
-			gbc->memory.oam[low_byte(cpu->dma.source)] = gbcc_memory_read(gbc, cpu->dma.source, false);
-			cpu->dma.timer--;
-			cpu->dma.source++;
-		} else {
-			cpu->dma.running = false;
-		}
-		if (cpu->dma.requested) {
-			cpu->dma.requested = false;
-			cpu->dma.timer = DMA_TIMER;
-			cpu->dma.source = cpu->dma.new_source;
-		}
-		if (gbc->hdma.to_copy > 0) {
-			gbcc_hdma_copy_chunk(gbc);
-			return;
-		}
+	if (cpu->dma.timer > 0) {
+		cpu->dma.running = true;
+		gbc->memory.oam[low_byte(cpu->dma.source)] = gbcc_memory_read(gbc, cpu->dma.source, false);
+		cpu->dma.timer--;
+		cpu->dma.source++;
+	} else {
+		cpu->dma.running = false;
+	}
+	if (cpu->dma.requested) {
+		cpu->dma.requested = false;
+		cpu->dma.timer = DMA_TIMER;
+		cpu->dma.source = cpu->dma.new_source;
+	}
+	if (gbc->hdma.to_copy > 0) {
+		gbcc_hdma_copy_chunk(gbc);
+		return;
 	}
 	if (!cpu->instruction.running) {
 		if (cpu->interrupt.running || (cpu->ime && cpu->interrupt.request)) {
 			INTERRUPT(gbc);
 			return;
 		}
-		if (cpu->halt.set || gbc->stop) {
-			return;
-		}
 		//printf("%d::%04X\n", gbc->cart.mbc.romx_bank, cpu->reg.pc);
 		cpu->opcode = gbcc_fetch_instruction(gbc);
-		//printf("%lu\t", cpu->debug_clock);
 		//gbcc_print_op(gbc);
 		cpu->instruction.running = true;
 	}
@@ -175,7 +170,7 @@ void check_interrupts(struct gbc *gbc)
 	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
 	if (interrupt) {
 		cpu->halt.set = false;
-		gbc->stop = false;
+		gbc->cpu.stop = false;
 		if (cpu->ime) {
 			cpu->interrupt.request = true;
 		}

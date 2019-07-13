@@ -48,7 +48,6 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	gbc->ppu.palette = gbcc_get_palette("default");
 	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
 	gbc->ppu.screen.sdl = gbc->ppu.screen.buffer_1;
-	timespec_get(&gbc->real_time.current, TIME_UTC);
 	load_rom(gbc, filename);
 	parse_header(gbc);
 	init_mmap(gbc);
@@ -202,8 +201,8 @@ void init_mode(struct gbc *gbc)
 	} else {
 		gbc->mode = DMG;
 	}
-	if ((mode_flag & (1u << 6u)) && (mode_flag & (3u << 2u))) {
-		/* TODO: Handle this */
+	if (check_bit(mode_flag, 7) && (mode_flag & 0x0Cu)) {
+		gbcc_log_debug("Colorised DMG mode unsupported\n");
 	}
 	switch (gbc->mode) {
 		case DMG:
