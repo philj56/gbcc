@@ -204,6 +204,7 @@ int main(int argc, char **argv)
 		}
 	}
 	pthread_join(emu_thread, NULL);
+	gbcc_audio_destroy(&audio);
 
 	gbc.save_state = 0;
 	gbc.quit = false;

@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <time.h>
 
-#define SYNC_FREQ 48000
+#define SYNC_FREQ 512
 #define CLOCKS_PER_SYNC (GBC_CLOCK_FREQ / SYNC_FREQ)
 #define SLEEP_TIME (SECOND / SYNC_FREQ)
 #define SLEEP_DETECT (SECOND / 10)

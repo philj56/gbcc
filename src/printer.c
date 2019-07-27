@@ -284,26 +284,12 @@ void parse_print_args(struct printer *p, uint8_t byte)
 void *print(void *printer)
 {
 	struct printer *p = (struct printer *)printer;
-	ALCdevice *device;
-	device = alcOpenDevice(NULL);
-	if (!device) {
-		gbcc_log_error("Failed to open audio device.\n");
-	}
-	ALCcontext *context;
-	context = alcCreateContext(device, NULL);
-	if (!context) {
-		gbcc_log_error("Failed to create context.\n");
-		goto CLEANUP_DEVICE;
-	}
-	if (!alcMakeContextCurrent(context)) {
-		gbcc_log_error("Failed to set context.\n");
-		goto CLEANUP_DEVICE;
-	}
 
 	ALuint source;
 	alGenSources(1, &source);
 	if (check_openal_error("Failed to create source.\n")) {
-		goto CLEANUP_CONTEXT;
+		initialise(p);
+		return 0;
 	}
 
 	alSourcef(source, AL_PITCH, 1);
@@ -398,16 +384,10 @@ void *print(void *printer)
 	}
 	alSourcei(source, AL_LOOPING, AL_FALSE);
 
-	/* Cleanup context */
 CLEANUP_ALL:
 	alDeleteBuffers(1, &buffer);
 CLEANUP_SOURCES:
 	alDeleteSources(1, &source);
-CLEANUP_CONTEXT:
-	alcMakeContextCurrent(NULL);
-	alcDestroyContext(context);
-CLEANUP_DEVICE:
-	alcCloseDevice(device);
 	initialise(p);
 	return 0;
 }
