@@ -294,77 +294,75 @@ void *print(void *printer)
 
 	alSourcef(source, AL_PITCH, 1);
 	if (check_openal_error("Failed to set pitch.\n")) {
-		goto CLEANUP_SOURCES;
+		goto CLEANUP;
 	}
 	alSourcef(source, AL_GAIN, 1);
 	if (check_openal_error("Failed to set gain.\n")) {
-		goto CLEANUP_SOURCES;
+		goto CLEANUP;
 	}
 	alSource3f(source, AL_POSITION, 0, 0, 0);
 	if (check_openal_error("Failed to set position.\n")) {
-		goto CLEANUP_SOURCES;
+		goto CLEANUP;
 	}
 	alSource3f(source, AL_VELOCITY, 0, 0, 0);
 	if (check_openal_error("Failed to set velocity.\n")) {
-		goto CLEANUP_SOURCES;
+		goto CLEANUP;
 	}
-	alSourcei(source, AL_LOOPING, AL_FALSE);
+	alSourcei(source, AL_LOOPING, AL_TRUE);
 	if (check_openal_error("Failed to set loop.\n")) {
-		goto CLEANUP_SOURCES;
+		goto CLEANUP;
 	}
 
 	ALuint buffer;
 	alGenBuffers(1, &buffer);
 	if (check_openal_error("Failed to create buffer.\n")) {
-		goto CLEANUP_ALL;
+		goto CLEANUP;
 	}
 
 	FILE *wav = fopen(PRINTER_SOUND_PATH, "rbe");
 	if (!wav) {
 		gbcc_log_error("Failed to open print sound file.\n");
-		goto CLEANUP_ALL;
+		goto CLEANUP;
 	}
 	struct wav_header header;
 	wav_parse_header(&header, wav);
-	//wav_print_header(&header);
 	if (header.AudioFormat != 1) {
 		gbcc_log_error("Only PCM files supported.\n");
-		goto CLEANUP_ALL;
+		goto CLEANUP;
 	}
 	uint8_t *data = malloc(header.Subchunk2Size);
 	if (!data) {
 		gbcc_log_error("Failed to allocate audio data buffer.\n");
-		goto CLEANUP_ALL;
+		goto CLEANUP;
 	}
 	fread(data, 1, header.Subchunk2Size, wav);
 	fclose(wav);
 
 	alBufferData(buffer, AL_FORMAT_MONO8, data, header.Subchunk2Size, header.SampleRate);
 	if (check_openal_error("Failed to set buffer data.\n")) {
-		goto CLEANUP_ALL;
+		goto CLEANUP;
 	}
 	alSourcei(source, AL_BUFFER, buffer);
 	if (check_openal_error("Failed to set source buffer.\n")) {
-		goto CLEANUP_ALL;
+		goto CLEANUP;
 	}
 
 
-	alSourcei(source, AL_LOOPING, AL_TRUE);
 	ALint last_pos = 0;
 	int stage = 0;
 	alSourcePlay(source);
 	while (stage < 3) {
 		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 850000000};
-		if (check_openal_error("Failed to play sound.\n")) {
-			goto CLEANUP_ALL;
+		if (check_openal_error("Failed to play printer sound.\n")) {
+			goto CLEANUP;
 		}
 		nanosleep(&to_sleep, NULL);
-		ALint pos;
-		alGetSourcei(source, AL_SAMPLE_OFFSET, &pos);
-		while (pos >= last_pos) {
+		ALint pos = last_pos;
+		do {
 			last_pos = pos;
 			alGetSourcei(source, AL_SAMPLE_OFFSET, &pos);
-		}
+			check_openal_error("Failed to get sample offset.\n");
+		} while (pos >= last_pos);
 		last_pos = pos;
 		if (stage == 0) {
 			stage += print_margin(p, true);
@@ -383,11 +381,11 @@ void *print(void *printer)
 		}
 	}
 	alSourcei(source, AL_LOOPING, AL_FALSE);
+	check_openal_error("Failed to unset loop.\n");
 
-CLEANUP_ALL:
-	alDeleteBuffers(1, &buffer);
-CLEANUP_SOURCES:
+CLEANUP:
 	alDeleteSources(1, &source);
+	check_openal_error("Failed to delete source.\n");
 	initialise(p);
 	return 0;
 }
