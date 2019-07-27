@@ -21,7 +21,7 @@ struct fps_counter {
 	struct timespec last_time;
 	uint8_t last_ly;
 	float fps;
-	float previous[4];
+	float previous[5];
 	int idx;
 	bool show;
 };

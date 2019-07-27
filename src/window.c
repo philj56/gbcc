@@ -445,6 +445,7 @@ void update_text(struct gbcc_window *win)
 	fps->last_time = cur_time;
 	float df = win->gbc->ppu.frame - fps->last_frame;
 	uint8_t ly = gbcc_memory_read(win->gbc, LY, false);
+	uint8_t tmp = ly;
 	if (ly < fps->last_ly) {
 		df -= 1;
 		ly += (154 - fps->last_ly);
@@ -453,15 +454,15 @@ void update_text(struct gbcc_window *win)
 	}
 	df += ly / 154.0;
 	fps->last_frame = win->gbc->ppu.frame;
-	fps->last_ly = gbcc_memory_read(win->gbc, LY, false);
+	fps->last_ly = tmp;
 	fps->previous[fps->idx] = df / (dt / 1e9);
 	fps->idx++;
-	fps->idx %= 4;
+	fps->idx %= 5;
 	float avg = 0;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 5; i++) {
 		avg += fps->previous[i];
 	}
-	fps->fps = avg / 4;
+	fps->fps = avg / 5;
 
 	/* Update message timer */
 	if (win->msg.time_left > 0) {
