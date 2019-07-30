@@ -7,7 +7,8 @@
 #include <stdint.h>
 #include <time.h>
 
-#define SYNC_FREQ 512
+#define SYNC_FREQ 1024
+#define SYNC_RESET_CLOCKS 512
 #define CLOCKS_PER_SYNC (GBC_CLOCK_FREQ / SYNC_FREQ)
 #define SLEEP_TIME (SECOND / SYNC_FREQ)
 #define SLEEP_DETECT (SECOND / 10)
@@ -221,6 +222,10 @@ void time_sync(struct gbc *gbc)
 		nanosleep(&time, NULL);
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
 		diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
+	}
+	if (gbc->apu.sample > SYNC_RESET_CLOCKS) {
+		gbc->apu.sample = 0;
+		gbc->apu.start_time = gbc->apu.cur_time;
 	}
 }
 
