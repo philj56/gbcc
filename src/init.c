@@ -452,10 +452,6 @@ void init_registers(struct gbc *gbc) {
 
 void init_mmap(struct gbc *gbc)
 {
-	gbc->memory.rom0 = gbc->cart.rom;
-	if (gbc->cart.mbc.type == MMM01) {
-		gbc->memory.rom0 += (0x1FEu * 0x4000) % gbc->cart.rom_size;
-	}
 	gbc->memory.romx = gbc->memory.rom0 + ROM0_SIZE;
 	gbc->memory.vram = gbc->memory.vram_bank[0];
 	gbc->memory.sram = gbc->cart.ram;

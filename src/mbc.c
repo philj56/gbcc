@@ -697,7 +697,6 @@ uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr)
 void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
-	printf("Writing 0x%02X to 0x%04X\n", val, addr);
 
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.ram_size == 0) {
