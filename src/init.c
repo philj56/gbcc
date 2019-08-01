@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "palettes.h"
 #include "save.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,7 @@ static const uint8_t nintendo_logo[CART_LOGO_SIZE] = {
 
 static void load_rom(struct gbc *gbc, const char *filename);
 static void parse_header(struct gbc *gbc);
-static void verify_cartridge(struct gbc *gbc);
+static bool verify_cartridge(struct gbc *gbc, bool print);
 static void load_title(struct gbc *gbc);
 static void init_mode(struct gbc *gbc);
 static void print_licensee_code(struct gbc *gbc);
@@ -67,7 +68,6 @@ void load_rom(struct gbc *gbc, const char *filename)
 {
 	gbcc_log_info("Loading %s...\n", filename);
 	size_t read;
-	uint8_t rom_size_flag;
 
 	FILE *rom = fopen(filename, "rbe");
 	if (rom == NULL)
@@ -76,33 +76,15 @@ void load_rom(struct gbc *gbc, const char *filename)
 		exit(EXIT_FAILURE);
 	}
 
-	fseek(rom, CART_ROM_SIZE_FLAG, SEEK_SET);
+	fseek(rom, 0, SEEK_END);
 	if (ferror(rom)) {
 		gbcc_log_error("Error seeking in file: %s\n", filename);
 		fclose(rom);
 		exit(EXIT_FAILURE);
 	}
 
-	read = fread(&rom_size_flag, 1, 1, rom);
-	if (read == 0) {
-		gbcc_log_error("Error reading ROM size from: %s\n", filename);
-		fclose(rom);
-		exit(EXIT_FAILURE);
-	}
+	gbc->cart.rom_size = ftell(rom);
 
-	if (rom_size_flag <= 0x08u) {
-		gbc->cart.rom_size = 0x8000u << rom_size_flag; /* 32KB shl N */
-	} else if (rom_size_flag == 0x52u) {
-		gbc->cart.rom_size = 0x120000u;
-	} else if (rom_size_flag == 0x53u) {
-		gbc->cart.rom_size = 0x140000u;
-	} else if (rom_size_flag == 0x54u) {
-		gbc->cart.rom_size = 0x180000u;
-	} else {
-		gbcc_log_error("Unknown ROM size flag: 0x%02X\n", rom_size_flag);
-		fclose(rom);
-		exit(EXIT_FAILURE);
-	}
 	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
 	gbcc_log_info("\tCartridge size: 0x%zX bytes (%zu banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
 
@@ -134,7 +116,30 @@ void load_rom(struct gbc *gbc, const char *filename)
 void parse_header(struct gbc *gbc)
 {
 	gbcc_log_info("Parsing header...\n");
-	verify_cartridge(gbc);
+	/* Check for MMM01, which has its header at the end of the file */
+	gbc->memory.rom0 = gbc->cart.rom + (0x1FEu * 0x4000) % gbc->cart.rom_size;
+	gbc->cart.mbc.rom0_bank = gbc->cart.rom_banks - 1;
+	if (!verify_cartridge(gbc, false)) {
+		gbc->memory.rom0 = gbc->cart.rom;
+		gbc->cart.mbc.rom0_bank = 0;
+	}
+	verify_cartridge(gbc, true);
+	uint8_t rom_size_flag = gbc->memory.rom0[CART_ROM_SIZE_FLAG];
+	size_t rom_size = 0;
+	if (rom_size_flag <= 0x08u) {
+		rom_size = 0x8000u << rom_size_flag; /* 32KB shl N */
+	} else if (rom_size_flag == 0x52u) {
+		rom_size = 0x120000u;
+	} else if (rom_size_flag == 0x53u) {
+		rom_size = 0x140000u;
+	} else if (rom_size_flag == 0x54u) {
+		rom_size = 0x180000u;
+	} else {
+		gbcc_log_error("Unknown ROM size flag: 0x%02X\n", rom_size_flag);
+	}
+	if (rom_size && rom_size != gbc->cart.rom_size) {
+		gbcc_log_warning("ROM size flag does not match file size\n");
+	}
 	load_title(gbc);
 	print_licensee_code(gbc);
 	init_mode(gbc);
@@ -145,29 +150,39 @@ void parse_header(struct gbc *gbc)
 	gbcc_log_info("\tHeader parsed.\n");
 }
 
-void verify_cartridge(struct gbc *gbc)
+bool verify_cartridge(struct gbc *gbc, bool print)
 {
 	for (uint16_t i = CART_LOGO_START; i < CART_LOGO_GBC_CHECK_END; i++) {
-		if (gbc->cart.rom[i] != nintendo_logo[i - CART_LOGO_START]) {
-			gbcc_log_error("Cartridge logo check failed on byte %04X\n", i);
-			break;
+		if (gbc->memory.rom0[i] != nintendo_logo[i - CART_LOGO_START]) {
+			if (print) {
+				gbcc_log_error("Cartridge logo check failed on byte %04X\n", i);
+			}
+			return false;
 		}
 	}
-	gbcc_log_info("\tCartridge logo check passed.\n");
+	if (print) {
+		gbcc_log_info("\tCartridge logo check passed.\n");
+	}
 	uint16_t sum = 0;
 	for (size_t i = CART_HEADER_CHECKSUM_START; i < CART_HEADER_CHECKSUM_START + CART_HEADER_CHECKSUM_SIZE + 1; i++) {
-		sum += gbc->cart.rom[i];
+		sum += gbc->memory.rom0[i];
 	}
 	sum = low_byte(sum + 25u);
 	if (sum) {
-		gbcc_log_error("Cartridge checksum failed with value %04X.\n", sum);
+		if (print) {
+			gbcc_log_error("Cartridge checksum failed with value %04X.\n", sum);
+		}
+		return false;
 	}
-	gbcc_log_info("\tCartridge checksum passed.\n");
+	if (print) {
+		gbcc_log_info("\tCartridge checksum passed.\n");
+	}
+	return true;
 }
 
 void load_title(struct gbc *gbc)
 {
-	uint8_t *title = gbc->cart.rom + CART_TITLE_START;
+	uint8_t *title = gbc->memory.rom0 + CART_TITLE_START;
 	memcpy(gbc->cart.title, title, CART_TITLE_SIZE);
 	gbc->cart.title[CART_TITLE_SIZE] = '\0';
 	gbcc_log_info("\tTitle: %s\n", gbc->cart.title);
@@ -175,7 +190,7 @@ void load_title(struct gbc *gbc)
 
 void print_licensee_code(struct gbc *gbc)
 {
-	uint8_t old_code = gbc->cart.rom[CART_OLD_LICENSEE_CODE];
+	uint8_t old_code = gbc->memory.rom0[CART_OLD_LICENSEE_CODE];
 	char buffer[CART_NEW_LICENSEE_CODE_SIZE + 21];
 	size_t len = sizeof(buffer) / sizeof(buffer[0]);
 	if (old_code != 0x33u) {
@@ -183,7 +198,7 @@ void print_licensee_code(struct gbc *gbc)
 	} else {
 		unsigned char new_code[CART_NEW_LICENSEE_CODE_SIZE + 1];
 		for (size_t i = CART_NEW_LICENSEE_CODE_START; i < CART_NEW_LICENSEE_CODE_END; i++) {
-			new_code[i - CART_NEW_LICENSEE_CODE_START] = gbc->cart.rom[i];
+			new_code[i - CART_NEW_LICENSEE_CODE_START] = gbc->memory.rom0[i];
 		}
 		new_code[CART_NEW_LICENSEE_CODE_SIZE] = '\0';
 		snprintf(buffer, len, "\tLicensee code: %s\n", new_code);
@@ -195,7 +210,7 @@ void init_mode(struct gbc *gbc)
 {
 	uint8_t mode_flag;
 
-	mode_flag = gbc->cart.rom[CART_GBC_FLAG];
+	mode_flag = gbc->memory.rom0[CART_GBC_FLAG];
 	if (mode_flag == 0x80u || mode_flag == 0xC0u) {
 		gbc->mode = GBC;
 	} else {
@@ -216,7 +231,7 @@ void init_mode(struct gbc *gbc)
 
 void get_cartridge_hardware(struct gbc *gbc)
 {
-	switch (gbc->cart.rom[CART_TYPE]) {
+	switch (gbc->memory.rom0[CART_TYPE]) {
 		case 0x00u:	/* ROM ONLY */
 			gbc->cart.mbc.type = NONE;
 			gbcc_log_info("\tHardware: ROM only\n");
@@ -252,16 +267,16 @@ void get_cartridge_hardware(struct gbc *gbc)
 			break;
 		case 0x0Bu:	/* MMM01 */
 			gbc->cart.mbc.type = MMM01;
-			gbcc_log_info("\tHardware: ROM + RAM + Battery\n");
+			gbcc_log_info("\tHardware: MMM01\n");
 			break;
 		case 0x0Cu:	/* MMM01 + RAM */
 			gbc->cart.mbc.type = MMM01;
-			gbcc_log_info("\tHardware: MMM01\n");
+			gbcc_log_info("\tHardware: MMM01 + RAM\n");
 			break;
 		case 0x0Du:	/* MMM01 + RAM + BATTERY */
 			gbc->cart.mbc.type = MMM01;
 			gbc->cart.battery = true;
-			gbcc_log_info("\tHardware: MMM01 + Battery\n");
+			gbcc_log_info("\tHardware: MMM01 + RAM + Battery\n");
 			break;
 		case 0x0Fu:	/* MBC3 + TIMER + BATTERY */
 			gbc->cart.mbc.type = MBC3;
@@ -345,9 +360,12 @@ void get_cartridge_hardware(struct gbc *gbc)
 			gbcc_log_info("\tHardware: HuC1 + RAM + Battery\n");
 			break;
 		default:
-			gbcc_log_error("Unrecognised hardware %02X, falling back to MBC3.\n", gbc->cart.rom[CART_TYPE]);
+			gbcc_log_error("Unrecognised hardware %02X, falling back to MBC3.\n", gbc->memory.rom0[CART_TYPE]);
 			gbc->cart.mbc.type = MBC3;
 			break;
+	}
+	if (gbc->cart.mbc.type == MMM01) {
+		gbcc_log_warning("MMM01 support is experimental.\n");
 	}
 }
 
@@ -355,7 +373,7 @@ void init_ram(struct gbc *gbc)
 {
 	uint8_t ram_size_flag;
 
-	ram_size_flag = gbc->cart.rom[CART_RAM_SIZE_FLAG];
+	ram_size_flag = gbc->memory.rom0[CART_RAM_SIZE_FLAG];
 
 	switch (ram_size_flag) {
 		case 0x00u:
@@ -396,7 +414,7 @@ void init_ram(struct gbc *gbc)
 
 void print_destination_code(struct gbc *gbc)
 {
-	uint8_t dest_code = gbc->cart.rom[CART_DESTINATION_CODE];
+	uint8_t dest_code = gbc->memory.rom0[CART_DESTINATION_CODE];
 	switch (dest_code) {
 		case 0x00u:
 			gbcc_log_info("\tRegion: Japan\n");
@@ -435,7 +453,10 @@ void init_registers(struct gbc *gbc) {
 void init_mmap(struct gbc *gbc)
 {
 	gbc->memory.rom0 = gbc->cart.rom;
-	gbc->memory.romx = gbc->cart.rom + ROM0_SIZE;
+	if (gbc->cart.mbc.type == MMM01) {
+		gbc->memory.rom0 += (0x1FEu * 0x4000) % gbc->cart.rom_size;
+	}
+	gbc->memory.romx = gbc->memory.rom0 + ROM0_SIZE;
 	gbc->memory.vram = gbc->memory.vram_bank[0];
 	gbc->memory.sram = gbc->cart.ram;
 	gbc->memory.wram0 = gbc->memory.wram_bank[0];

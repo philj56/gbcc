@@ -101,47 +101,47 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 			gbcc_log_debug("SRAM not enabled!\n");
 		}
 	} else if (addr < 0x2000u) {
-		mbc->ramg = val;
+		mbc->ramg = val & 0x0Fu;
 	} else if (addr < 0x4000u) {
-		mbc->romb0 = val;
+		mbc->romb0 = val & 0x1Fu;
 	} else if (addr < 0x6000u) {
-		mbc->romb1 = val;
+		mbc->romb1 = val & 0x03u;
 	} else if (addr < 0x8000u) {
-		mbc->ramb = val;
+		mbc->ramb = val & 0x01u;
 	} else {
 		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
 		return;
 	}
 
 	/* RAMG switches on SRAM when it has 0x0A in the lower 4 bits. */
-	mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
+	mbc->sram_enable = (mbc->ramg == 0x0Au);
 
 	/*
 	 * ROMB0 selects lower 5 bits of ROMX bank number.
 	 * 0 maps to 1, so banks 0x00, 0x20, 0x40 & 0x60 can
 	 * never be mapped to ROMX.
 	 */
-	mbc->romx_bank = mbc->romb0 & 0x1Fu;
+	mbc->romx_bank = mbc->romb0;
 	mbc->romx_bank += !mbc->romx_bank;
 
 	/*
 	 * ROMB1 selects either upper 2 bits of ROMX bank number
 	 * or RAM bank number, depending on bit 0 of RAMB.
 	 */
-	if (!check_bit(mbc->ramb, 0)) {
+	if (mbc->ramb) {
 		/* Mode 0 (ROM banking mode) */
-		mbc->romx_bank |= (mbc->romb1 & 0x03u) << 5u;
+		mbc->romx_bank |= mbc->romb1 << 5u;
 		mbc->sram_bank = 0;
 		mbc->rom0_bank = 0;
 	} else {
 		/* Mode 1 (RAM banking mode) */
-		mbc->sram_bank = mbc->romb1 & 0x03u;
+		mbc->sram_bank = mbc->romb1;
 		/*
 		 * Some weirdness here; in RAM banking mode, as well as
 		 * controlling the RAM bank, ROMB1 moves ROM0 around!
 		 */
-		mbc->rom0_bank = (mbc->romb1 & 0x03u) << 5u;
-		mbc->romx_bank |= (mbc->romb1 & 0x03u) << 5u;
+		mbc->rom0_bank = mbc->romb1 << 5u;
+		mbc->romx_bank |= mbc->romb1 << 5u;
 	}
 
 	set_mbc_banks(gbc);
@@ -170,7 +170,7 @@ uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr)
 void gbcc_mbc_mbc2_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
-	
+
 	/* MBC2 only has 512 4-bit ram locations */
 	if (addr >= SRAM_START && addr < SRAM_START + 0x200u) {
 		if (mbc->sram_enable) {
@@ -691,18 +691,114 @@ void gbcc_mbc_huc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 
 uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr)
 {
-	(void)gbc;
-	(void)addr;
-	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_read() called\n");
-	return 0xFFu;
+	return gbcc_mbc_mbc1_read(gbc, addr);
 }
 
 void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 {
-	(void)gbc;
-	(void)addr;
-	(void)val;
-	gbcc_log_debug("Stubbed function gbcc_mbc_mmm01_write() called\n");
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
+	printf("Writing 0x%02X to 0x%04X\n", val, addr);
+
+	if (addr >= SRAM_START && addr < SRAM_END) {
+		if (gbc->cart.ram_size == 0) {
+			gbcc_log_debug("Trying to write to SRAM when there isn't any!\n");
+		} else if (mbc->sram_enable) {
+			gbc->memory.sram[addr - SRAM_START] = val;
+		} else {
+			gbcc_log_debug("SRAM not enabled!\n");
+		}
+	} else if (addr < 0x2000u) {
+		/*
+		 * Bits 0-3: RAM enable
+		 * Bits 4-5: Write mask for bits 0-1 in 0x4000 - 0x5FFF block
+		 * Bit 6: Map enable
+		 */
+		uint8_t mask = 0x00u;
+		if (mbc->unlocked) {
+			mask |= 0xF0u;
+		}
+		mbc->ramg = (mbc->ramg & mask) | (val & ~mask);
+
+		mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
+		/* Map enable cannot be unset without a reboot */
+		mbc->unlocked |= check_bit(mbc->ramg, 6);
+		if (check_bit(val, 6)) {
+			mbc->romb0 = 0;
+			mbc->romb1 = 0;
+			mbc->ramb = 0;
+		}
+	} else if (addr < 0x4000u) {
+		/*
+		 * Bits 0-4: ROM bank bits 0-4
+		 * Bits 5-6: ROM bank bits 5-6 OR RAM bank bits 0-1
+		 */
+		uint8_t mask = (mbc->ramb & 0x3Cu) >> 1u;;
+		if (mbc->unlocked) {
+			mask |= 0xE0u;
+		}
+		mbc->romb0 = (mbc->romb0 & mask) | (val & ~mask);
+
+		/* Bits 0-4 are zero-adjusted based on unmasked bits */
+		//mbc->romb0 += !(val & 0x1Fu & ~mask);
+	} else if (addr < 0x6000u) {
+		/*
+		 * Bits 0-1: RAM bank bits 0-1 OR ROM bank bits 5-6
+		 * Bits 2-3: RAM bank bits 2-3
+		 * Bits 4-5: ROM bank bits 7-8
+		 * Bit 6: Write mask for bit 0 in 0x6000-0x7FFF block
+		 */
+		uint8_t mask = (mbc->ramg & 0x30u) >> 4u;
+		if (mbc->unlocked) {
+			mask |= 0xFCu;
+		}
+		mbc->romb1 = (mbc->romb1 & mask) | (val & ~mask);
+	} else if (addr < 0x8000u) {
+		/*
+		 * Bit 0: MBC1 banking mode
+		 * Bit 1: Unknown
+		 * Bits 2-5: Write mask for bits 1-4 in 0x2000 - 0x3FFF block
+		 * Bit 6: Multiplexer, switches 0x2000 bits 5-6 with 0x6000 bits 0-1
+		 */
+		uint8_t mask = (mbc->romb1 & 0x40u) >> 6u;;
+		if (mbc->unlocked) {
+			mask |= 0xFEu;
+		}
+		mbc->ramb = (mbc->ramb & mask) | (val & ~mask);
+		mbc->ramb = val;
+	}
+
+
+	if (mbc->unlocked) {
+		if (check_bit(mbc->ramb, 6)) {
+			mbc->romx_bank = mbc->romb0 & 0x1Fu;
+			mbc->romx_bank |= (mbc->romb1 & 0x03u) << 5u;
+			mbc->romx_bank += mbc->rom0_bank;
+
+			mbc->sram_bank = (mbc->romb0 >> 5u) & 0x03u;
+			mbc->sram_bank |= mbc->romb1 & 0x0Cu;
+		} else {
+			mbc->romx_bank = mbc->romb0 & 0x7Fu;
+			mbc->romx_bank += mbc->rom0_bank;
+			mbc->sram_bank = mbc->romb1 & 0x0Fu;
+		}
+		mbc->rom0_bank |= (mbc->romb1 & 0x30u) << 3u;
+	} else {
+		if (check_bit(mbc->ramb, 6)) {
+			mbc->rom0_bank = mbc->romb0 & 0x1Fu;
+			mbc->rom0_bank |= (mbc->romb1 & 0x03u) << 5u;
+
+			mbc->sram_bank = (mbc->romb0 >> 5u) & 0x03u;
+			mbc->sram_bank |= mbc->romb1 & 0x0Cu;
+		} else {
+			mbc->rom0_bank = mbc->romb0 & 0x7Fu;
+			mbc->sram_bank = mbc->romb1 & 0x0Fu;
+		}
+		mbc->rom0_bank |= (mbc->romb1 & 0x30u) << 3u;
+	}
+
+	if (mbc->unlocked) {
+		set_mbc_banks(gbc);
+	}
 }
 
 void eeprom_write(struct gbc *gbc, uint8_t val)

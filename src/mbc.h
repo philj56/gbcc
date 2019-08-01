@@ -11,14 +11,14 @@ struct gbc;
 struct gbcc_mbc {
 	enum MBC type;
 	bool sram_enable;
-	uint8_t rom0_bank;
+	uint16_t rom0_bank;
 	uint16_t romx_bank;
 	uint8_t sram_bank;
 	uint8_t ramg;
 	uint8_t romb0;
 	uint8_t romb1;
 	uint8_t ramb;
-	bool mode;
+	bool unlocked;
 	struct gbcc_rtc {
 		uint8_t seconds;
 		uint8_t minutes;
