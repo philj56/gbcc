@@ -18,9 +18,12 @@ void set_mbc_banks(struct gbc *gbc)
 	 * Perform some sanity checks on selected values,
 	 * discarding bits that don't make sense.
 	 */
-	if (mbc->romx_bank >= gbc->cart.rom_banks) {
-		gbcc_log_debug("Invalid rom bank %u.\n", mbc->romx_bank);
+	if (mbc->rom0_bank >= gbc->cart.rom_banks) {
+		gbcc_log_debug("Invalid rom0 bank %u.\n", mbc->rom0_bank);
 		mbc->rom0_bank &= (gbc->cart.rom_banks - 1);
+	}
+	if (mbc->romx_bank >= gbc->cart.rom_banks) {
+		gbcc_log_debug("Invalid romx bank %u.\n", mbc->romx_bank);
 		mbc->romx_bank &= (gbc->cart.rom_banks - 1);
 	}
 	if (mbc->sram_bank >= gbc->cart.ram_banks && gbc->cart.ram_banks > 0) {
@@ -719,26 +722,20 @@ void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		mbc->ramg = (mbc->ramg & mask) | (val & ~mask);
 
 		mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
-		/* Map enable cannot be unset without a reboot */
-		mbc->unlocked |= check_bit(mbc->ramg, 6);
-		if (check_bit(val, 6)) {
-			mbc->romb0 = 0;
-			mbc->romb1 = 0;
-			mbc->ramb = 0;
+		if (!mbc->unlocked && check_bit(mbc->ramg, 6)) {
+			/* Map enable cannot be unset without a reboot */
+			mbc->unlocked = true;
 		}
 	} else if (addr < 0x4000u) {
 		/*
 		 * Bits 0-4: ROM bank bits 0-4
 		 * Bits 5-6: ROM bank bits 5-6 OR RAM bank bits 0-1
 		 */
-		uint8_t mask = (mbc->ramb & 0x3Cu) >> 1u;;
+		uint8_t mask = (mbc->ramb & 0x3Cu) >> 1u;
 		if (mbc->unlocked) {
 			mask |= 0xE0u;
 		}
 		mbc->romb0 = (mbc->romb0 & mask) | (val & ~mask);
-
-		/* Bits 0-4 are zero-adjusted based on unmasked bits */
-		//mbc->romb0 += !(val & 0x1Fu & ~mask);
 	} else if (addr < 0x6000u) {
 		/*
 		 * Bits 0-1: RAM bank bits 0-1 OR ROM bank bits 5-6
@@ -766,21 +763,22 @@ void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		mbc->ramb = val;
 	}
 
-
 	if (mbc->unlocked) {
-		if (check_bit(mbc->ramb, 6)) {
+		if (check_bit(mbc->ramb, 6) == check_bit(mbc->ramb, 0)) {
 			mbc->romx_bank = mbc->romb0 & 0x1Fu;
+
 			mbc->romx_bank |= (mbc->romb1 & 0x03u) << 5u;
-			mbc->romx_bank += mbc->rom0_bank;
 
 			mbc->sram_bank = (mbc->romb0 >> 5u) & 0x03u;
 			mbc->sram_bank |= mbc->romb1 & 0x0Cu;
 		} else {
 			mbc->romx_bank = mbc->romb0 & 0x7Fu;
-			mbc->romx_bank += mbc->rom0_bank;
 			mbc->sram_bank = mbc->romb1 & 0x0Fu;
 		}
-		mbc->rom0_bank |= (mbc->romb1 & 0x30u) << 3u;
+		mbc->romx_bank |= (mbc->romb1 & 0x30u) << 3u;
+
+		/* Bits 0-4 are zero-adjusted based on unmasked bits */
+		mbc->romx_bank += !((mbc->romb0 & 0x1Fu) & ~((mbc->ramb & 0x3Cu) >> 1u));
 	} else {
 		if (check_bit(mbc->ramb, 6)) {
 			mbc->rom0_bank = mbc->romb0 & 0x1Fu;

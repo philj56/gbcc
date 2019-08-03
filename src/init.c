@@ -364,9 +364,6 @@ void get_cartridge_hardware(struct gbc *gbc)
 			gbc->cart.mbc.type = MBC3;
 			break;
 	}
-	if (gbc->cart.mbc.type == MMM01) {
-		gbcc_log_warning("MMM01 support is experimental.\n");
-	}
 }
 
 void init_ram(struct gbc *gbc)
