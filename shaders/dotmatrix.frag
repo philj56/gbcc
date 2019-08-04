@@ -21,6 +21,6 @@ void main()
 	float x = mod(Texcoord.x * 160 * 7, 7) - 3;
 	float y = mod(Texcoord.y * 144 * 7, 7) - 3;
 	float weight = sqrt(x * x + y * y) - 3;
-	float alpha = pow(1.0 - weight / maxr, 1.0 / 1.6);
+	float alpha = clamp(pow(1.0 - weight / maxr, 1.0 / 1.6), 0, 1);
 	out_colour = vec4(mix(background, foreground, (1.0 - src) * alpha), 1.0);
 }

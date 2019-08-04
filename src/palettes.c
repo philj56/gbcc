@@ -14,9 +14,9 @@ static const struct palette palettes[NUM_PALETTES] = {
 	},
 	{ /* Monochrome */
 		.name = "Monochrome",
-		.background = {0xffffff00u, 0xAAAAAA00u, 0x55555500u, 0x00000000u},
-		.sprite1    = {0xffffff00u, 0xAAAAAA00u, 0x55555500u, 0x00000000u},
-		.sprite2    = {0xffffff00u, 0xAAAAAA00u, 0x55555500u, 0x00000000u}
+		.background = {0xffffff00u, 0xaaaaaa00u, 0x55555500u, 0x00000000u},
+		.sprite1    = {0xffffff00u, 0xaaaaaa00u, 0x55555500u, 0x00000000u},
+		.sprite2    = {0xffffff00u, 0xaaaaaa00u, 0x55555500u, 0x00000000u}
 	},
 	{ /* brown: up */
 		.name = "Brown",
