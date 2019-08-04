@@ -18,9 +18,25 @@ float luma(vec3 col)
 void main()
 {
 	float src = luma(texture(tex, Texcoord).rgb);
-	float x = mod(Texcoord.x * 160 * 7, 7) - 3;
-	float y = mod(Texcoord.y * 144 * 7, 7) - 3;
-	float weight = sqrt(x * x + y * y) - 3;
-	float alpha = clamp(pow(1.0 - weight / maxr, 1.0 / 1.6), 0, 1);
+	int tmp = int(abs(mod(Texcoord.x * 160 * 7, 7) - 3));
+	int y = int(abs(mod(Texcoord.y * 144 * 7, 7) - 3));
+	int x = max(tmp, y);
+	y = min(tmp, y);
+	float alpha = 1;
+	if (x == 2 && y == 2) {
+		alpha = 0.959;
+	} else if (x == 3) {
+		switch (y) {
+			case 1:
+				alpha = 0.893;
+				break;
+			case 2:
+				alpha = 0.793;
+				break;
+			case 3:
+				alpha = 0.529;
+				break;
+		}
+	}
 	out_colour = vec4(mix(background, foreground, (1.0 - src) * alpha), 1.0);
 }
