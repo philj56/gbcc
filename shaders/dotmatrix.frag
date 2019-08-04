@@ -7,7 +7,7 @@ out vec4 out_colour;
 uniform sampler2D tex;
 
 const vec3 background = vec3(99.0 / 255.0, 149.0 / 255.0, 50.0 / 255.0);
-const vec3 foreground = vec3(53.0 / 255.0, 99.0 / 255.0, 22.0 / 255.0);
+const vec3 foreground = vec3(28.0 / 255.0, 66.0 / 255.0, 13.0 / 255.0);
 const float maxr = sqrt(18) - 3;
 
 float luma(vec3 col)
