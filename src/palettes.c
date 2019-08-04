@@ -3,7 +3,7 @@
 #include "palettes.h"
 #include <strings.h>
 
-#define NUM_PALETTES 13
+#define NUM_PALETTES 14
 
 static const struct palette palettes[NUM_PALETTES] = {
 	{ /* Default */
@@ -11,6 +11,12 @@ static const struct palette palettes[NUM_PALETTES] = {
 		.background = {0xc4cfa100u, 0x8b956d00u, 0x6b735300u, 0x00000000u},
 		.sprite1    = {0xc4cfa100u, 0x8b956d00u, 0x6b735300u, 0x00000000u},
 		.sprite2    = {0xc4cfa100u, 0x8b956d00u, 0x6b735300u, 0x00000000u}
+	},
+	{ /* Monochrome */
+		.name = "Monochrome",
+		.background = {0xffffff00u, 0xAAAAAA00u, 0x55555500u, 0x00000000u},
+		.sprite1    = {0xffffff00u, 0xAAAAAA00u, 0x55555500u, 0x00000000u},
+		.sprite2    = {0xffffff00u, 0xAAAAAA00u, 0x55555500u, 0x00000000u}
 	},
 	{ /* brown: up */
 		.name = "Brown",

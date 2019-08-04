@@ -14,8 +14,8 @@ _gbcc()
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
         opts="--autoresume --background --config --fractional --help --interlace --palette --shader --turbo --vsync --vram-window"
-        palettes="blue brown dark-blue dark-brown dark-green green grey invert orange pastel red yellow"
-        shaders="nothing colour\ correct subpixel"
+        palettes="blue brown dark-blue dark-brown dark-green green grey invert monochrome orange pastel red yellow"
+        shaders="nothing colour\ correct subpixel dot\ matrix"
 
 
         case "${prev}" in

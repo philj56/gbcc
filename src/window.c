@@ -90,6 +90,12 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 			SHADER_PATH "nothing.frag"
 			);
 
+	win->gl.shaders[3].name = "Dot Matrix";
+	win->gl.shaders[3].program = gbcc_create_shader_program(
+			SHADER_PATH "vert.vert",
+			SHADER_PATH "dotmatrix.frag"
+			);
+
 	/* Buffer texture param for colour correction LUT */
 	GLuint tbo;
 	glGenBuffers(1, &tbo);

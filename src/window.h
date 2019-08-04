@@ -46,7 +46,7 @@ struct gbcc_window {
 		GLuint texture;
 		GLuint base_shader;
 		int cur_shader;
-		struct shader shaders[3];
+		struct shader shaders[4];
 	} gl;
 	struct fps_counter fps;
 	struct {
