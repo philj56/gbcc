@@ -8,7 +8,6 @@ uniform sampler2D tex;
 
 const vec3 background = vec3(99.0 / 255.0, 149.0 / 255.0, 50.0 / 255.0);
 const vec3 foreground = vec3(28.0 / 255.0, 66.0 / 255.0, 13.0 / 255.0);
-const float maxr = sqrt(18) - 3;
 
 float luma(vec3 col)
 {
@@ -18,25 +17,38 @@ float luma(vec3 col)
 void main()
 {
 	float src = luma(texture(tex, Texcoord).rgb);
-	int tmp = int(abs(mod(Texcoord.x * 160 * 7, 7) - 3));
-	int y = int(abs(mod(Texcoord.y * 144 * 7, 7) - 3));
-	int x = max(tmp, y);
-	y = min(tmp, y);
+	int x = int(mod(Texcoord.x * 160 * 7, 7));
+	int y = int(mod(Texcoord.y * 144 * 7, 7));
+
+        if (x >= 3) {
+                x -= 3;
+        } else if (x < 3) {
+                x = 3 - x;
+        }
+
+        if (y >= 3) {
+                y -= 3;
+        } else if (y < 3) {
+                y = 3 - y;
+        }
+
 	float alpha = 1;
 	if (x == 2 && y == 2) {
 		alpha = 0.959;
 	} else if (x == 3) {
-		switch (y) {
-			case 1:
-				alpha = 0.893;
-				break;
-			case 2:
-				alpha = 0.793;
-				break;
-			case 3:
-				alpha = 0.529;
-				break;
-		}
+                if (y == 3) {
+                        alpha = 0.529;
+                } else if (y == 2) {
+                        alpha = 0.793;
+                } else if (y == 1) {
+                        alpha = 0.893;
+                }
+	} else if (y == 3) {
+                if (x == 2) {
+                        alpha = 0.793;
+                } else if (x == 1) {
+                        alpha = 0.893;
+                }
 	}
 	out_colour = vec4(mix(background, foreground, (1.0 - src) * alpha), 1.0);
 }
