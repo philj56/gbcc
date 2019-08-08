@@ -29,6 +29,11 @@ printer_sound_location = join_paths(
   'print.wav'
 )
 
+gtk_ui_location = join_paths(
+  data_location,
+  'gbcc.ui'
+)
+
 shader_location = join_paths(
   data_location,
   'shaders',
@@ -47,9 +52,10 @@ add_project_arguments(
     '-march=native',
     '-mtune=native',
     '-Wno-unused-parameter',
-    '-Wno-missing-field-initializers',
+    '-Wno-missing-braces',
     '-DTILESET_PATH="@0@"'.format(tileset_location),
     '-DPRINTER_SOUND_PATH="@0@"'.format(printer_sound_location),
+    #'-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
     '-DSHADER_PATH="@0@"'.format(shader_location),
     '-g',
     #'-fprofile-instr-use'
@@ -57,8 +63,9 @@ add_project_arguments(
   language: 'c'
 )
 
-sources = files(
+common_sources = files(
   'src/apu.c',
+  'src/args.c',
   'src/audio.c',
   'src/bit_utils.c',
   'src/colour.c',
@@ -66,10 +73,10 @@ sources = files(
   'src/cpu.c',
   'src/debug.c',
   'src/fontmap.c',
+  'src/gbcc.c',
   'src/hdma.c',
   'src/init.c',
   'src/input.c',
-  'src/main.c',
   'src/mbc.c',
   'src/memory.c',
   'src/ops.c',
@@ -79,9 +86,21 @@ sources = files(
   'src/save.c',
   'src/screenshot.c',
   'src/time.c',
-  'src/vram_window.c',
   'src/wav.c',
   'src/window.c',
+  'src/vram_window.c'
+)
+
+sdl_sources = files(
+  'src/sdl/main.c',
+  'src/sdl/sdl.c',
+  'src/sdl/vram_window.c',
+)
+
+gtk_sources = files(
+  'src/gtk/main.c',
+  'src/gtk/gtk.c',
+  'src/gtk/input.c',
 )
 
 cc = meson.get_compiler('c')
@@ -92,13 +111,23 @@ gl = dependency('gl')
 epoxy = dependency('epoxy')
 openal = dependency('openal')
 thread = dependency('threads')
+gtk = dependency('gtk+-3.0')
 
 
 executable(
   'gbcc',
-  sources,
+  [common_sources, sdl_sources],
   dependencies: [m, sdl, png, gl, epoxy, openal, thread],
   install: true,
+  link_args: ['-g']
+)
+
+executable(
+  'gbcc-gtk',
+  [common_sources, gtk_sources],
+  dependencies: [m, sdl, png, gl, gtk, epoxy, openal, thread],
+  install: true,
+  c_args: ['-DGBCC_GTK'],
   link_args: ['-g']
 )
 
@@ -108,6 +137,11 @@ install_data(
 
 install_data(
   'print.wav'
+)
+
+install_data(
+  'src/gtk/gbcc.ui',
+  rename: 'gbcc.ui'
 )
 
 install_subdir(

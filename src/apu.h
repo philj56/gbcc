@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <time.h>
 
-struct gbc;
+struct gbcc_core;
 
 struct timer {
 	uint16_t period;
@@ -85,9 +85,9 @@ struct apu {
 	uint8_t sequencer_counter;
 };
 
-void gbcc_apu_init(struct gbc *gbc);
-void gbcc_apu_clock(struct gbc *gbc);
-void gbcc_apu_sequencer_clock(struct gbc *gbc);
-void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val);
+void gbcc_apu_init(struct gbcc_core *gbc);
+void gbcc_apu_clock(struct gbcc_core *gbc);
+void gbcc_apu_sequencer_clock(struct gbcc_core *gbc);
+void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 
 #endif /* GBCC_AUDIO_H */

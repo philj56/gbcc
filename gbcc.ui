@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+	<requires lib="gtk+" version="3.10"/>
+
+	<object class="GtkMenu" id="file_menu">
+		<property name="can_focus">False</property>
+		<signal name="show" handler="check_running"/>
+		<child>
+			<object class="GtkMenuItem" id="load">
+				<property name="can_focus">False</property>
+				<property name="label">Load ROM...</property>
+				<signal name="activate" handler="load"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="stop">
+				<property name="can_focus">False</property>
+				<property name="label">Stop</property>
+				<signal name="activate" handler="stop"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state">
+				<property name="can_focus">False</property>
+				<property name="label">Save state</property>
+				<property name="submenu">save_menu</property>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state">
+				<property name="can_focus">False</property>
+				<property name="label">Load state</property>
+				<property name="submenu">load_menu</property>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="quit">
+				<property name="can_focus">False</property>
+				<property name="label">Quit</property>
+				<signal name="activate" handler="quit"/>
+			</object>
+		</child>
+	</object>
+
+	<object class="GtkMenu" id="settings_menu">
+		<property name="can_focus">False</property>
+		<signal name="show" handler="check_vram_display"/>
+		<child>
+			<object class="GtkMenuItem" id="shader">
+				<property name="can_focus">False</property>
+				<property name="label">Shader</property>
+				<property name="submenu">shader_menu</property>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="palette">
+				<property name="can_focus">False</property>
+				<property name="label">Palette</property>
+				<property name="submenu">palette_menu</property>
+				<signal name="show" handler="check_palette"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkCheckMenuItem" id="vram_display">
+				<property name="can_focus">False</property>
+				<property name="label">VRAM display</property>
+				<signal name="toggled" handler="toggle_vram_display"/>
+			</object>
+		</child>
+	</object>
+
+	<object class="GtkMenu" id="shader_menu">
+		<property name="can_focus">False</property>
+		<signal name="show" handler="check_shader"/>
+	</object>
+
+	<object class="GtkMenu" id="palette_menu">
+		<property name="can_focus">False</property>
+	</object>
+
+	<object class="GtkMenu" id="save_menu">
+		<child>
+			<object class="GtkMenuItem" id="save_state_1">
+				<property name="label">State 1</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state_2">
+				<property name="label">State 2</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state_3">
+				<property name="label">State 3</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state_4">
+				<property name="label">State 4</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state_5">
+				<property name="label">State 5</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state_6">
+				<property name="label">State 6</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state_7">
+				<property name="label">State 7</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state_8">
+				<property name="label">State 8</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="save_state_9">
+				<property name="label">State 9</property>
+				<signal name="activate" handler="save_state"/>
+			</object>
+		</child>
+	</object>
+
+	<object class="GtkMenu" id="load_menu">
+		<signal name="show" handler="check_savestates"/>
+		<child>
+			<object class="GtkMenuItem" id="load_state_1">
+				<property name="label">State 1</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state_2">
+				<property name="label">State 2</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state_3">
+				<property name="label">State 3</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state_4">
+				<property name="label">State 4</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state_5">
+				<property name="label">State 5</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state_6">
+				<property name="label">State 6</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state_7">
+				<property name="label">State 7</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state_8">
+				<property name="label">State 8</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkMenuItem" id="load_state_9">
+				<property name="label">State 9</property>
+				<signal name="activate" handler="load_state"/>
+			</object>
+		</child>
+	</object>
+
+	<object class="GtkWindow" id="window">
+		<property name="visible">True</property>
+		<property name="can_focus">True</property>
+		<property name="title">GBCC</property>
+		<child>
+			<object class="GtkBox" id="main_box">
+				<property name="visible">True</property>
+				<property name="can_focus">False</property>
+				<property name="orientation">vertical</property>
+				<child>
+					<object class="GtkMenuBar" id="menu_bar">
+						<property name="can_focus">False</property>
+						<child>
+							<object class="GtkMenuItem" id="file">
+								<property name="can_focus">False</property>
+								<property name="label">File</property>
+								<property name="submenu">file_menu</property>
+							</object>
+						</child>
+						<child>
+							<object class="GtkMenuItem" id="settings">
+								<property name="can_focus">False</property>
+								<property name="label">Settings</property>
+								<property name="submenu">settings_menu</property>
+							</object>
+						</child>
+					</object>
+					<packing>
+						<property name="expand">False</property>
+						<property name="fill">True</property>
+						<property name="position">0</property>
+					</packing>
+				</child>
+				<child>
+					<object class="GtkGrid" id="drawing_box">
+						<property name="visible">True</property>
+						<property name="can_focus">False</property>
+						<property name="row_homogeneous">True</property>
+						<property name="column_homogeneous">True</property>
+						<child>
+							<object class="GtkGLArea" id="gl_area">
+								<property name="can_focus">True</property>
+							</object>
+							<packing>
+								<property name="width">3</property>
+							</packing>
+						</child>
+						<child>
+							<object class="GtkGLArea" id="vram_gl_area">
+								<property name="can_focus">True</property>
+							</object>
+							<packing>
+								<property name="width">2</property>
+							</packing>
+						</child>
+					</object>
+					<packing>
+						<property name="expand">True</property>
+						<property name="fill">True</property>
+						<property name="position">1</property>
+					</packing>
+				</child>
+			</object>
+		</child>
+	</object>
+</interface>

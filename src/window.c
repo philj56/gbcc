@@ -3,13 +3,12 @@
 #include "constants.h"
 #include "debug.h"
 #include "fontmap.h"
-#include "input.h"
 #include "memory.h"
+#include "nelem.h"
 #include "screenshot.h"
 #include "time.h"
 #include "window.h"
 #include <epoxy/gl.h>
-#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,45 +25,18 @@
 
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
-static void update_text(struct gbcc_window *win);
+static void update_text(struct gbcc *gbc);
 
-void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
+void gbcc_window_initialise(struct gbcc *gbc)
 {
-	if (win->initialised) {
-		gbcc_log_error("Window already initialised!\n");
-		return;
-	}
-	win->gbc = gbc;
+	struct gbcc_window *win = &gbc->window;
+	GLint read_framebuffer = 0;
+	GLint draw_framebuffer = 0;
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
+
 	clock_gettime(CLOCK_REALTIME, &win->fps.last_time);
 	gbcc_fontmap_load(&win->font, TILESET_PATH);
-
-	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
-		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
-	}
-
-	/* Main OpenGL settings */
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-
-	win->window = SDL_CreateWindow(
-			"GBCC",                    // window title
-			SDL_WINDOWPOS_UNDEFINED,   // initial x position
-			SDL_WINDOWPOS_UNDEFINED,   // initial y position
-			GBC_SCREEN_WIDTH,      // width, in pixels
-			GBC_SCREEN_HEIGHT,     // height, in pixels
-			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
-			);
-
-	if (win->window == NULL) {
-		gbcc_log_error("Could not create window: %s\n", SDL_GetError());
-		SDL_Quit();
-		exit(EXIT_FAILURE);
-	}
-
-	win->gl.context = SDL_GL_CreateContext(win->window);
 
 	/* Compile and link the shader programs */
 	win->gl.base_shader = gbcc_create_shader_program(
@@ -173,7 +145,6 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, win->gl.fbo_texture, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	/* We don't care about the depth and stencil, so just use a
 	 * renderbuffer */
@@ -188,7 +159,8 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 		gbcc_log_error("Framebuffer is not complete!\n");
 		exit(EXIT_FAILURE);
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
 
 	/* This is the texture we're going to render the raw screen output to
 	 * before post-processing */
@@ -207,20 +179,12 @@ void gbcc_window_initialise(struct gbcc_window *win, struct gbc *gbc)
 	/* Bind the actual bits we'll be using to render */
 	glBindVertexArray(win->gl.vao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
-	
-	win->initialised = true;
 }
 
-void gbcc_window_destroy(struct gbcc_window *win)
+void gbcc_window_deinitialise(struct gbcc *gbc)
 {
-	if (!win->initialised) {
-		gbcc_log_error("Window not initialised!\n");
-		return;
-	}
-	if (win->vram.initialised) {
-		gbcc_vram_window_destroy(&win->vram);
-	}
-	SDL_GL_MakeCurrent(win->window, win->gl.context);
+	struct gbcc_window *win = &gbc->window;
+
 	gbcc_fontmap_destroy(&win->font);
 	glDeleteBuffers(1, &win->gl.vbo);
 	glDeleteVertexArrays(1, &win->gl.vao);
@@ -229,45 +193,32 @@ void gbcc_window_destroy(struct gbcc_window *win)
 	glDeleteTextures(1, &win->gl.fbo_texture);
 	glDeleteRenderbuffers(1, &win->gl.rbo);
 	glDeleteTextures(1, &win->gl.texture);
-	for (size_t i = 0; i < sizeof(win->gl.shaders) / sizeof(*win->gl.shaders); i++) {
+	for (size_t i = 0; i < N_ELEM(win->gl.shaders); i++) {
 		glDeleteProgram(win->gl.shaders[i].program);
 	}
 	glDeleteProgram(win->gl.base_shader);
-	SDL_GL_DeleteContext(win->gl.context);
-	SDL_DestroyWindow(win->window);
-	win->initialised = false;
 }
 
-void gbcc_window_update(struct gbcc_window *win)
+void gbcc_window_clear()
 {
-	if (win->vram_display) {
-		if (!win->vram.initialised) {
-			gbcc_vram_window_initialise(&win->vram, win->gbc);
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
 
-			/* 
-			 * Workaround to allow input on vram window.
-			 * The VRAM window immediately grabs input focus,
-			 * causing an SDL_KEYDOWN to fire, and closing the
-			 * window instantly :). To stop that, we make sure that
-			 * the main window has focus, and then discard any
-			 * SDL_KEYDOWN events.
-			 */
-			SDL_RaiseWindow(win->window);
-			SDL_PumpEvents();
-			SDL_FlushEvent(SDL_KEYDOWN);
-		}
-		gbcc_vram_window_update(&win->vram);
-	} else if (win->vram.initialised) {
-		gbcc_vram_window_destroy(&win->vram);
-	}
+void gbcc_window_update(struct gbcc *gbc)
+{
+	struct gbcc_window *win = &gbc->window;
+	GLint read_framebuffer = 0;
+	GLint draw_framebuffer = 0;
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
-	SDL_GL_MakeCurrent(win->window, win->gl.context);
-	uint32_t *screen = win->gbc->ppu.screen.sdl;
+	uint32_t *screen = gbc->core.ppu.screen.sdl;
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
 	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
 
-	update_text(win);
+	update_text(gbc);
 	if (win->fps.show && !screenshot) {
 		char fps_text[16];
 		snprintf(fps_text, 16, " FPS: %.0f ", round(win->fps.fps));
@@ -289,21 +240,20 @@ void gbcc_window_update(struct gbcc_window *win)
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	/* Second pass - render the framebuffer to the screen */
-	int width;
-	int height;
-	SDL_GL_GetDrawableSize(win->window, &width, &height);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
+
 	double scale;
 	if (win->fractional_scaling) {
-		scale = min((double)width / GBC_SCREEN_WIDTH, (double)height / GBC_SCREEN_HEIGHT);
+		scale = min((double)win->width / GBC_SCREEN_WIDTH, (double)win->height / GBC_SCREEN_HEIGHT);
 	} else {
-		scale = min(width / GBC_SCREEN_WIDTH, height / GBC_SCREEN_HEIGHT);
+		scale = min(win->width / GBC_SCREEN_WIDTH, win->height / GBC_SCREEN_HEIGHT);
 	}
-	win->width = scale * GBC_SCREEN_WIDTH;
-	win->height = scale * GBC_SCREEN_HEIGHT;
-	win->x = (width - win->width) / 2;
-	win->y = (height - win->height) / 2;
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(win->x, win->y, win->width, win->height);
+	int width = scale * GBC_SCREEN_WIDTH;
+	int height = scale * GBC_SCREEN_HEIGHT;
+	win->x = (win->width - width) / 2;
+	win->y = (win->height - height) / 2;
+	glViewport(win->x, win->y, width, height);
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
@@ -311,10 +261,8 @@ void gbcc_window_update(struct gbcc_window *win)
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	if (screenshot) {
-		gbcc_screenshot(win);
+		gbcc_screenshot(gbc);
 	}
-
-	SDL_GL_SwapWindow(win->window);
 }
 
 void gbcc_load_shader(GLuint shader, const char *filename)
@@ -368,9 +316,10 @@ GLuint gbcc_create_shader_program(const char *vert, const char *frag)
 	return shader;
 }
 
-void gbcc_window_use_shader(struct gbcc_window *win, const char *name)
+void gbcc_window_use_shader(struct gbcc *gbc, const char *name)
 {
-	int num_shaders = sizeof(win->gl.shaders) / sizeof(win->gl.shaders[0]);
+	struct gbcc_window *win = &gbc->window;
+	int num_shaders = N_ELEM(win->gl.shaders);
 	int s;
 	for (s = 0; s < num_shaders; s++) {
 		if (strcasecmp(name, win->gl.shaders[s].name) == 0) {
@@ -384,8 +333,9 @@ void gbcc_window_use_shader(struct gbcc_window *win, const char *name)
 	}
 }
 
-void gbcc_window_show_message(struct gbcc_window *win, const char *msg, int seconds, bool pad)
+void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bool pad)
 {
+	struct gbcc_window *win = &gbc->window;
 	if (pad) {
 		snprintf(win->msg.text, MSG_BUF_SIZE, " %s ", msg);
 	} else {
@@ -440,8 +390,9 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 	}
 }
 
-void update_text(struct gbcc_window *win)
+void update_text(struct gbcc *gbc)
 {
+	struct gbcc_window *win = &gbc->window;
 	struct fps_counter *fps = &win->fps;
 	struct timespec cur_time;
 	clock_gettime(CLOCK_REALTIME, &cur_time);
@@ -449,8 +400,8 @@ void update_text(struct gbcc_window *win)
 
 	/* Update FPS counter */
 	fps->last_time = cur_time;
-	float df = win->gbc->ppu.frame - fps->last_frame;
-	uint8_t ly = gbcc_memory_read(win->gbc, LY, false);
+	float df = gbc->core.ppu.frame - fps->last_frame;
+	uint8_t ly = gbcc_memory_read(&gbc->core, LY, false);
 	uint8_t tmp = ly;
 	if (ly < fps->last_ly) {
 		df -= 1;
@@ -459,7 +410,7 @@ void update_text(struct gbcc_window *win)
 		ly -= fps->last_ly;
 	}
 	df += ly / 154.0;
-	fps->last_frame = win->gbc->ppu.frame;
+	fps->last_frame = gbc->core.ppu.frame;
 	fps->last_ly = tmp;
 	fps->previous[fps->idx] = df / (dt / 1e9);
 	fps->idx++;

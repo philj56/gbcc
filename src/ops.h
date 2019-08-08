@@ -1,71 +1,71 @@
 #ifndef GBCC_OPS_H
 #define GBCC_OPS_H
 
-#include "gbcc.h"
+#include "core.h"
 #include <stdint.h>
 
-extern void (*const gbcc_ops[0x100])(struct gbc *gbc);
+extern void (*const gbcc_ops[0x100])(struct gbcc_core *gbc);
 extern const uint8_t gbcc_op_times[0x100];
 
 /* Not really an opcode, but behaves like a cpu instruction */
-void INTERRUPT(struct gbc *gbc);
+void INTERRUPT(struct gbcc_core *gbc);
 
 /* Miscellaneous */
-void INVALID(struct gbc *gbc);
-void NOP(struct gbc *gbc);
-void HALT(struct gbc *gbc);
-void STOP(struct gbc *gbc);
-void DAA(struct gbc *gbc);
-void CPL(struct gbc *gbc);
-void SCF(struct gbc *gbc);
-void CCF(struct gbc *gbc);
-void EI(struct gbc *gbc);
-void DI(struct gbc *gbc);
+void INVALID(struct gbcc_core *gbc);
+void NOP(struct gbcc_core *gbc);
+void HALT(struct gbcc_core *gbc);
+void STOP(struct gbcc_core *gbc);
+void DAA(struct gbcc_core *gbc);
+void CPL(struct gbcc_core *gbc);
+void SCF(struct gbcc_core *gbc);
+void CCF(struct gbcc_core *gbc);
+void EI(struct gbcc_core *gbc);
+void DI(struct gbcc_core *gbc);
 
 /* Loads */
-void LD_REG_REG(struct gbc *gbc);
-void LD_REG_HL(struct gbc *gbc);
-void LD_d8(struct gbc *gbc);
-void LD_d16(struct gbc *gbc);
-void LD_A(struct gbc *gbc);
-void LD_a16(struct gbc *gbc);
-void LDH_a8(struct gbc *gbc);
-void LDH_C(struct gbc *gbc);
-void STORE_SP(struct gbc *gbc);
-void LD_HL_SP(struct gbc *gbc);
-void LD_SP_HL(struct gbc *gbc);
-void POP(struct gbc *gbc);
-void PUSH(struct gbc *gbc);
+void LD_REG_REG(struct gbcc_core *gbc);
+void LD_REG_HL(struct gbcc_core *gbc);
+void LD_d8(struct gbcc_core *gbc);
+void LD_d16(struct gbcc_core *gbc);
+void LD_A(struct gbcc_core *gbc);
+void LD_a16(struct gbcc_core *gbc);
+void LDH_a8(struct gbcc_core *gbc);
+void LDH_C(struct gbcc_core *gbc);
+void STORE_SP(struct gbcc_core *gbc);
+void LD_HL_SP(struct gbcc_core *gbc);
+void LD_SP_HL(struct gbcc_core *gbc);
+void POP(struct gbcc_core *gbc);
+void PUSH(struct gbcc_core *gbc);
 
 /* ALU */
-void ALU_OP(struct gbc *gbc);
-void INC_DEC_REG(struct gbc *gbc);
-void INC_DEC_HL(struct gbc *gbc);
-void INC_DEC_16_BIT(struct gbc *gbc);
-void ADD_HL(struct gbc *gbc);
-void ADD_SP(struct gbc *gbc);
-void SHIFT_A(struct gbc *gbc);
+void ALU_OP(struct gbcc_core *gbc);
+void INC_DEC_REG(struct gbcc_core *gbc);
+void INC_DEC_HL(struct gbcc_core *gbc);
+void INC_DEC_16_BIT(struct gbcc_core *gbc);
+void ADD_HL(struct gbcc_core *gbc);
+void ADD_SP(struct gbcc_core *gbc);
+void SHIFT_A(struct gbcc_core *gbc);
 
 /* Jumps */
-void JP(struct gbc *gbc);
-void JP_HL(struct gbc *gbc);
-void JP_COND(struct gbc *gbc);
-void JR(struct gbc *gbc);
-void JR_COND(struct gbc *gbc);
+void JP(struct gbcc_core *gbc);
+void JP_HL(struct gbcc_core *gbc);
+void JP_COND(struct gbcc_core *gbc);
+void JR(struct gbcc_core *gbc);
+void JR_COND(struct gbcc_core *gbc);
 
 /* Calls */
-void CALL(struct gbc *gbc);
-void CALL_COND(struct gbc *gbc);
-void RET(struct gbc *gbc);
-void RETI(struct gbc *gbc);
-void RET_COND(struct gbc *gbc);
-void RST(struct gbc *gbc);
+void CALL(struct gbcc_core *gbc);
+void CALL_COND(struct gbcc_core *gbc);
+void RET(struct gbcc_core *gbc);
+void RETI(struct gbcc_core *gbc);
+void RET_COND(struct gbcc_core *gbc);
+void RST(struct gbcc_core *gbc);
 
 /* CB-prefix */
-void PREFIX_CB(struct gbc *gbc);
-void CB_SHIFT_OP(struct gbc *gbc);
-void CB_BIT(struct gbc *gbc);
-void CB_RES(struct gbc *gbc);
-void CB_SET(struct gbc *gbc);
+void PREFIX_CB(struct gbcc_core *gbc);
+void CB_SHIFT_OP(struct gbcc_core *gbc);
+void CB_BIT(struct gbcc_core *gbc);
+void CB_RES(struct gbcc_core *gbc);
+void CB_SET(struct gbcc_core *gbc);
 
 #endif /* GBCC_OPS_H */

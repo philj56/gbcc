@@ -1,4 +1,4 @@
-#include "gbcc.h"
+#include "core.h"
 #include "apu.h"
 #include "bit_utils.h"
 #include "cpu.h"
@@ -11,12 +11,12 @@
 #include <sys/time.h>
 #include <time.h>
 
-static void clock_div(struct gbc *gbc);
-static void check_interrupts(struct gbc *gbc);
-static void cpu_clock(struct gbc *gbc);
+static void clock_div(struct gbcc_core *gbc);
+static void check_interrupts(struct gbcc_core *gbc);
+static void cpu_clock(struct gbcc_core *gbc);
 
 /* TODO: Check order of all of these */
-void gbcc_emulate_cycle(struct gbc *gbc)
+void gbcc_emulate_cycle(struct gbcc_core *gbc)
 {
 	check_interrupts(gbc);
 	gbcc_apu_clock(gbc);
@@ -29,7 +29,7 @@ void gbcc_emulate_cycle(struct gbc *gbc)
 	}
 }
 
-void cpu_clock(struct gbc *gbc)
+void cpu_clock(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	clock_div(gbc);
@@ -82,7 +82,7 @@ void cpu_clock(struct gbc *gbc)
 	}
 }
 
-void clock_div(struct gbc *gbc)
+void clock_div(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	cpu->div_timer++;
@@ -162,7 +162,7 @@ void clock_div(struct gbc *gbc)
 	}
 }
 
-void check_interrupts(struct gbc *gbc)
+void check_interrupts(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
@@ -179,7 +179,7 @@ void check_interrupts(struct gbc *gbc)
 	}
 }
 
-uint8_t gbcc_fetch_instruction(struct gbc *gbc)
+uint8_t gbcc_fetch_instruction(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->halt.skip) {

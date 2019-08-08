@@ -1,4 +1,4 @@
-#include "gbcc.h"
+#include "core.h"
 #include "bit_utils.h"
 #include "colour.h"
 #include "debug.h"
@@ -28,19 +28,19 @@
 
 enum palette_flag { BACKGROUND, SPRITE_1, SPRITE_2 };
 
-static void draw_background_pixel(struct gbc *gbc);
-static void draw_window_pixel(struct gbc *gbc);
-static void draw_sprite_pixel(struct gbc *gbc);
-static void composite_line(struct gbc *gbc);
+static void draw_background_pixel(struct gbcc_core *gbc);
+static void draw_window_pixel(struct gbcc_core *gbc);
+static void draw_sprite_pixel(struct gbcc_core *gbc);
+static void composite_line(struct gbcc_core *gbc);
 static uint8_t get_video_mode(uint8_t stat);
 static uint8_t set_video_mode(uint8_t stat, uint8_t mode);
-static uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum palette_flag pf);
-static void load_bg_tile(struct gbc *gbc);
-static void load_window_tile(struct gbc *gbc);
-static void load_sprite_tile(struct gbc *gbc, int n);
+static uint32_t get_palette_colour(struct gbcc_core *gbc, uint8_t palette, uint8_t n, enum palette_flag pf);
+static void load_bg_tile(struct gbcc_core *gbc);
+static void load_window_tile(struct gbcc_core *gbc);
+static void load_sprite_tile(struct gbcc_core *gbc, int n);
 static uint8_t get_tile_pixel(uint8_t hi, uint8_t lo, uint8_t x, bool flip);
 
-void gbcc_disable_lcd(struct gbc *gbc)
+void gbcc_disable_lcd(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	if (gbc->mode == GBC) {
@@ -68,7 +68,7 @@ void gbcc_disable_lcd(struct gbc *gbc)
 	gbcc_memory_write(gbc, STAT, stat, true);
 }
 
-void gbcc_enable_lcd(struct gbc *gbc)
+void gbcc_enable_lcd(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	if (!ppu->lcd_disable) {
@@ -84,7 +84,7 @@ void gbcc_enable_lcd(struct gbc *gbc)
 	ppu->clock = 248;
 }
 
-void gbcc_ppu_clock(struct gbc *gbc)
+void gbcc_ppu_clock(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	if (ppu->lcd_disable) {
@@ -237,7 +237,7 @@ void gbcc_ppu_clock(struct gbc *gbc)
 }
 
 /* TODO: GBC BG-to-OAM Priority */
-void draw_background_pixel(struct gbc *gbc)
+void draw_background_pixel(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	struct tile *t = &ppu->bg_tile;
@@ -264,7 +264,7 @@ void draw_background_pixel(struct gbc *gbc)
 	t->x %= 8;
 }
 
-void draw_window_pixel(struct gbc *gbc)
+void draw_window_pixel(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	struct tile *t = &ppu->window_tile;
@@ -299,7 +299,7 @@ void draw_window_pixel(struct gbc *gbc)
 	t->x %= 8;
 }
 
-void draw_sprite_pixel(struct gbc *gbc)
+void draw_sprite_pixel(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	if (!check_bit(gbcc_memory_read(gbc, LCDC, true), 1)) {
@@ -366,7 +366,7 @@ void draw_sprite_pixel(struct gbc *gbc)
 	}
 }
 
-void composite_line(struct gbc *gbc)
+void composite_line(struct gbcc_core *gbc)
 {
 	/* 
 	 * Composite the line according to various attributes. In order of
@@ -434,7 +434,7 @@ uint8_t set_video_mode(uint8_t stat, uint8_t mode)
 	return stat;
 }
 
-uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum palette_flag pf)
+uint32_t get_palette_colour(struct gbcc_core *gbc, uint8_t palette, uint8_t n, enum palette_flag pf)
 {
 	struct ppu *ppu = &gbc->ppu;
 	if (gbc->mode == DMG) {
@@ -475,7 +475,7 @@ uint32_t get_palette_colour(struct gbc *gbc, uint8_t palette, uint8_t n, enum pa
 	return res;
 }
 
-void load_bg_tile(struct gbc *gbc)
+void load_bg_tile(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
@@ -528,7 +528,7 @@ void load_bg_tile(struct gbc *gbc)
 	}
 }
 
-void load_window_tile(struct gbc *gbc)
+void load_window_tile(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
@@ -581,7 +581,7 @@ void load_window_tile(struct gbc *gbc)
 	}
 }
 
-void load_sprite_tile(struct gbc *gbc, int n)
+void load_sprite_tile(struct gbcc_core *gbc, int n)
 {
 	struct ppu *ppu = &gbc->ppu;
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);

@@ -1,15 +1,17 @@
 #ifndef GBCC_AUDIO_H
 #define GBCC_AUDIO_H
 
-#include "gbcc.h"
 #include <AL/al.h>
 #include <AL/alc.h>
+#include <stdint.h>
+#include <time.h>
 
 #define GBCC_AUDIO_BUFSIZE (1024*2) /* samples * channels */
 #define GBCC_AUDIO_FMT uint16_t
 
+struct gbcc;
+
 struct gbcc_audio {
-	struct gbc *gbc;
 	struct {
 		ALCdevice *device;
 		ALCcontext *context;
@@ -25,9 +27,9 @@ struct gbcc_audio {
 	GBCC_AUDIO_FMT mix_buffer[GBCC_AUDIO_BUFSIZE];
 };
 
-void gbcc_audio_initialise(struct gbcc_audio *audio, struct gbc *gbc);
-void gbcc_audio_destroy(struct gbcc_audio *audio);
-void gbcc_audio_update(struct gbcc_audio *audio);
+void gbcc_audio_initialise(struct gbcc *gbc);
+void gbcc_audio_destroy(struct gbcc *gbc);
+void gbcc_audio_update(struct gbcc *gbc);
 int gbcc_check_openal_error(const char *msg);
 
 #endif /* GBCC_AUDIO_H */

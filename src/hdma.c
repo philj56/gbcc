@@ -1,9 +1,9 @@
 #include "debug.h"
-#include "gbcc.h"
+#include "core.h"
 #include "hdma.h"
 #include "memory.h"
 
-void gbcc_hdma_copy_chunk(struct gbc *gbc)
+void gbcc_hdma_copy_chunk(struct gbcc_core *gbc)
 {
 	if (gbc->hdma.to_copy <= 0) {
 		gbcc_log_error("HDMA already finished.\n");

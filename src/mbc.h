@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <time.h>
 
-struct gbc;
+struct gbcc_core;
 
 struct gbcc_mbc {
 	enum MBC type;
@@ -31,11 +31,15 @@ struct gbcc_mbc {
 		bool mapped;
 		bool halt;
 	} rtc;
-	struct {
+	struct gbcc_accelerometer {
 		uint16_t x;
 		uint16_t y;
-		int dx;
-		int dy;
+		struct {
+			bool up;
+			bool down;
+			bool left;
+			bool right;
+		} tilt;
 		uint16_t real_x;
 		uint16_t real_y;
 		bool latch;
@@ -60,25 +64,25 @@ struct gbcc_mbc {
 	} eeprom;
 };
 
-uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_mbc2_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_mbc6_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_mbc6_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_mbc7_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_mbc7_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_huc1_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_huc1_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_huc3_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_huc3_write(struct gbc *gbc, uint16_t addr, uint8_t val);
-uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr);
-void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_none_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_none_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_mbc1_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_mbc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_mbc2_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_mbc2_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_mbc3_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_mbc3_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_mbc5_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_mbc5_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_mbc6_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_mbc6_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_mbc7_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_mbc7_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_huc1_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_huc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_huc3_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_huc3_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+uint8_t gbcc_mbc_mmm01_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_mmm01_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 
 #endif /* GBCC_MBC_H */

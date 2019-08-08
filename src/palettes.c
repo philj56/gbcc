@@ -1,11 +1,10 @@
 #include "colour.h"
 #include "debug.h"
+#include "nelem.h"
 #include "palettes.h"
 #include <strings.h>
 
-#define NUM_PALETTES 14
-
-static const struct palette palettes[NUM_PALETTES] = {
+const struct palette gbcc_palettes[GBCC_NUM_PALETTES] = {
 	{ /* Default */
 		.name = "Default",
 		.background = {0xc4cfa100u, 0x8b956d00u, 0x6b735300u, 0x00000000u},
@@ -95,14 +94,14 @@ static const struct palette palettes[NUM_PALETTES] = {
 struct palette gbcc_get_palette(const char *name)
 {
 	unsigned int p;
-	for (p = 0; p < NUM_PALETTES; p++) {
-		if (strcasecmp(name, palettes[p].name) == 0) {
+	for (p = 0; p < N_ELEM(gbcc_palettes); p++) {
+		if (strcasecmp(name, gbcc_palettes[p].name) == 0) {
 			break;
 		}
 	}
-	if (p >= NUM_PALETTES) {
+	if (p >= N_ELEM(gbcc_palettes)) {
 		gbcc_log_error("Invalid palette \"%s\"\n", name);
 		exit(EXIT_FAILURE);
 	}
-	return palettes[p];
+	return gbcc_palettes[p];
 }

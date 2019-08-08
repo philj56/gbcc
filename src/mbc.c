@@ -1,4 +1,4 @@
-#include "gbcc.h"
+#include "core.h"
 #include "bit_utils.h"
 #include "debug.h"
 #include "mbc.h"
@@ -7,11 +7,11 @@
 #include <string.h>
 #include <time.h>
 
-static void set_mbc_banks(struct gbc *gbc);
-static void eeprom_write(struct gbc *gbc, uint8_t val);
+static void set_mbc_banks(struct gbcc_core *gbc);
+static void eeprom_write(struct gbcc_core *gbc, uint8_t val);
 static void eeprom_reset(struct gbcc_eeprom *eeprom);
 
-void set_mbc_banks(struct gbc *gbc)
+void set_mbc_banks(struct gbcc_core *gbc)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 	/*
@@ -37,7 +37,7 @@ void set_mbc_banks(struct gbc *gbc)
 	gbc->memory.sram = gbc->cart.ram + mbc->sram_bank * SRAM_SIZE;
 }
 
-uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_none_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
@@ -56,7 +56,7 @@ uint8_t gbcc_mbc_none_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_none_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	if (gbc->cart.ram_size == 0) {
 		gbcc_log_debug("Trying to write to SRAM when there isn't any!\n");
@@ -68,7 +68,7 @@ void gbcc_mbc_none_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	}
 }
 
-uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_mbc1_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
@@ -91,7 +91,7 @@ uint8_t gbcc_mbc_mbc1_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_mbc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
@@ -150,7 +150,7 @@ void gbcc_mbc_mbc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	set_mbc_banks(gbc);
 }
 
-uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_mbc2_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
@@ -170,7 +170,7 @@ uint8_t gbcc_mbc_mbc2_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc2_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_mbc2_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
@@ -207,7 +207,7 @@ void gbcc_mbc_mbc2_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	set_mbc_banks(gbc);
 }
 
-uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_mbc3_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	struct gbcc_rtc *rtc = &gbc->cart.mbc.rtc;
 	if (addr < ROM0_END) {
@@ -247,7 +247,7 @@ uint8_t gbcc_mbc_mbc3_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_mbc3_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	/* NB: For MBC3, sram_enable controls BOTH SRAM and RTC registers */
 	/* TODO: Handle halt flag */
@@ -336,7 +336,7 @@ void gbcc_mbc_mbc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	set_mbc_banks(gbc);
 }
 
-uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_mbc5_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	if (addr < ROMX_START) {
 		return gbc->memory.rom0[addr];
@@ -358,7 +358,7 @@ uint8_t gbcc_mbc_mbc5_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_mbc5_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
@@ -394,10 +394,20 @@ void gbcc_mbc_mbc5_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	/* Lower 4 bits of RAMB select SRAM bank number */
 	mbc->sram_bank = mbc->ramb & 0x0Fu;
 
+	/*
+	 * With the rumble pak, bit 3 of RAMB is repurposed to control the
+	 * rumble
+	 */
+	/* N.B.: this is not confirmed, but it works */
+	if (gbc->cart.rumble) {
+		mbc->sram_bank = mbc->ramb & 0x07u;
+		gbc->cart.rumble_state = (mbc->ramb & 0x08u) >> 3u;
+	}
+
 	set_mbc_banks(gbc);
 }
 
-uint8_t gbcc_mbc_mbc6_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_mbc6_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	(void)gbc;
 	(void)addr;
@@ -405,7 +415,7 @@ uint8_t gbcc_mbc_mbc6_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc6_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_mbc6_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	(void)gbc;
 	(void)addr;
@@ -413,7 +423,7 @@ void gbcc_mbc_mbc6_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	gbcc_log_debug("Stubbed function gbcc_mbc_mbc6_write() called\n");
 }
 
-uint8_t gbcc_mbc_mbc7_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_mbc7_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 	if (addr < ROM0_END) {
@@ -457,7 +467,7 @@ uint8_t gbcc_mbc_mbc7_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_mbc7_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_mbc7_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
@@ -506,7 +516,7 @@ void gbcc_mbc_mbc7_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	set_mbc_banks(gbc);
 }
 
-uint8_t gbcc_mbc_huc1_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_huc1_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	if (addr < ROM0_END) {
 		return gbc->memory.rom0[addr];
@@ -525,7 +535,7 @@ uint8_t gbcc_mbc_huc1_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_huc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_huc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
@@ -560,7 +570,7 @@ void gbcc_mbc_huc1_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	set_mbc_banks(gbc);
 }
 
-uint8_t gbcc_mbc_huc3_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_huc3_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	struct gbcc_rtc *rtc = &gbc->cart.mbc.rtc;
 	if (addr < ROM0_END) {
@@ -603,7 +613,7 @@ uint8_t gbcc_mbc_huc3_read(struct gbc *gbc, uint16_t addr)
 	return 0xFFu;
 }
 
-void gbcc_mbc_huc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_huc3_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	/* NB: For HuC3, sram_enable controls BOTH SRAM and RTC registers */
 	/* TODO: Handle halt flag */
@@ -692,12 +702,12 @@ void gbcc_mbc_huc3_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	set_mbc_banks(gbc);
 }
 
-uint8_t gbcc_mbc_mmm01_read(struct gbc *gbc, uint16_t addr)
+uint8_t gbcc_mbc_mmm01_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	return gbcc_mbc_mbc1_read(gbc, addr);
 }
 
-void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_mbc_mmm01_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	struct gbcc_mbc *mbc = &gbc->cart.mbc;
 
@@ -722,10 +732,9 @@ void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 		mbc->ramg = (mbc->ramg & mask) | (val & ~mask);
 
 		mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
-		if (!mbc->unlocked && check_bit(mbc->ramg, 6)) {
-			/* Map enable cannot be unset without a reboot */
-			mbc->unlocked = true;
-		}
+
+		/* Map enable cannot be unset without a reboot */
+		mbc->unlocked |= check_bit(mbc->ramg, 6);
 	} else if (addr < 0x4000u) {
 		/*
 		 * Bits 0-4: ROM bank bits 0-4
@@ -798,7 +807,7 @@ void gbcc_mbc_mmm01_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	}
 }
 
-void eeprom_write(struct gbc *gbc, uint8_t val)
+void eeprom_write(struct gbcc_core *gbc, uint8_t val)
 {
 	struct gbcc_eeprom *eeprom = &gbc->cart.mbc.eeprom;
 	eeprom->last_DI = eeprom->DI;

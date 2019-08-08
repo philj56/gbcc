@@ -1,4 +1,4 @@
-#include "gbcc.h"
+#include "core.h"
 #include "debug.h"
 #include "memory.h"
 #include "ops.h"
@@ -195,7 +195,7 @@ static const char* const ioreg_names[0x80] = {
 /* 0xFF7C */ 	NULL, 		NULL, 		NULL, 		NULL,
 };
 
-void gbcc_print_registers(struct gbc *gbc)
+void gbcc_print_registers(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	gbcc_log_debug("Registers:\n");
@@ -210,7 +210,7 @@ void gbcc_print_registers(struct gbc *gbc)
 	gbcc_log_debug("\tpc: %04X\n", cpu->reg.pc);
 }
 
-void gbcc_print_op(struct gbc *gbc)
+void gbcc_print_op(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t op = cpu->opcode;
@@ -322,7 +322,7 @@ void gbcc_log_append_info(const char *const fmt, ...)
 	va_end(args);
 }
 
-void gbcc_vram_dump(struct gbc *gbc, const char *filename)
+void gbcc_vram_dump(struct gbcc_core *gbc, const char *filename)
 {
 	FILE *fp = fopen(filename, "wbe");
 	if (!fp) {
@@ -336,7 +336,7 @@ void gbcc_vram_dump(struct gbc *gbc, const char *filename)
 	fclose(fp);
 }
 
-void gbcc_sram_dump(struct gbc *gbc, const char* filename)
+void gbcc_sram_dump(struct gbcc_core *gbc, const char* filename)
 {
 	FILE *fp = fopen(filename, "wbe");
 	fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, fp);

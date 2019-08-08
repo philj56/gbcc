@@ -1,19 +1,19 @@
 #define _GNU_SOURCE
 
-#include "gbcc.h"
-#include "apu.h"
-#include "audio.h"
-#include "config.h"
-#include "cpu.h"
-#include "debug.h"
-#include "input.h"
-#include "memory.h"
-#include "palettes.h"
-#include "save.h"
-#include "time.h"
+#include "../core.h"
+#include "../apu.h"
+#include "../audio.h"
+#include "../config.h"
+#include "../cpu.h"
+#include "../debug.h"
+#include "../memory.h"
+#include "../palettes.h"
+#include "../save.h"
+#include "../time.h"
+#include "../window.h"
 #include "vram_window.h"
-#include "window.h"
 #include <getopt.h>
+#include <gtk/gtk.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -54,7 +54,7 @@ void usage()
 void *emulation_loop(void *_audio)
 {
 	struct gbcc_audio *audio = (struct gbcc_audio *)_audio;
-	struct gbc *gbc = audio->gbc;
+	struct gbcc_core *gbc = audio->gbc;
 	gbcc_load(gbc);
 	while (!gbc->quit) {
 		for (int i = 1000; i > 0; i--) {
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 	sigfillset(&act.sa_mask);
 	sigaction(SIGINT, &act, NULL);
 
-	struct gbc gbc;
+	struct gbcc_core gbc;
 	struct gbcc_audio audio = {0};
 	struct gbcc_window win = {0};
 	opterr = 0;
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
 	}
 	gbcc_load_config(&win, config);
 
-	SDL_Init(0);
+	//SDL_Init(0);
 
 	optind = 1;
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 				gbc.turbo_speed = strtod(optarg, NULL);
 				break;
 			case 'v':
-				SDL_GL_SetSwapInterval(1);
+				//SDL_GL_SetSwapInterval(1);
 				break;
 			case 'V':
 				win.vram_display = true;
@@ -190,9 +190,13 @@ int main(int argc, char **argv)
 	pthread_create(&emu_thread, NULL, emulation_loop, &audio);
 	pthread_setname_np(emu_thread, "EmulationThread");
 
+	gbc.has_focus = true;
+	gtk_main();
+	/*
 	struct timespec t1;
 	struct timespec t2;
 	int time_to_sleep;
+	printf("GGG\n");
 	while (!gbc.quit) {
 		clock_gettime(CLOCK_REALTIME, &t2);
 		gbcc_window_update(&win);
@@ -208,8 +212,8 @@ int main(int argc, char **argv)
 
 	gbc.save_state = 0;
 	gbc.quit = false;
-	gbc.has_focus = true;
 	gbcc_save_state(&gbc);
 
+	*/
 	exit(EXIT_SUCCESS);
 }

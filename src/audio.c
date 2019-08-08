@@ -3,6 +3,7 @@
 #include "bit_utils.h"
 #include "debug.h"
 #include "memory.h"
+#include "nelem.h"
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <stdint.h>
@@ -12,14 +13,14 @@
 #define SAMPLE_RATE 65536
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
 
-static void ch1_update(struct gbcc_audio *audio);
-static void ch2_update(struct gbcc_audio *audio);
-static void ch3_update(struct gbcc_audio *audio);
-static void ch4_update(struct gbcc_audio *audio);
+static void ch1_update(struct gbcc *gbc);
+static void ch2_update(struct gbcc *gbc);
+static void ch3_update(struct gbcc *gbc);
+static void ch4_update(struct gbcc *gbc);
 
-void gbcc_audio_initialise(struct gbcc_audio *audio, struct gbc *gbc)
+void gbcc_audio_initialise(struct gbcc *gbc)
 {
-	audio->gbc = gbc;
+	struct gbcc_audio *audio = &gbc->audio;
 	audio->al.device = alcOpenDevice(NULL);
 	if (!audio->al.device) {
 		gbcc_log_error("Failed to open audio device.\n");
@@ -60,31 +61,32 @@ void gbcc_audio_initialise(struct gbcc_audio *audio, struct gbc *gbc)
 		exit(EXIT_FAILURE);
 	}
 
-	alGenBuffers(sizeof(audio->al.buffers) / sizeof(audio->al.buffers[0]), audio->al.buffers);
+	alGenBuffers(N_ELEM(audio->al.buffers), audio->al.buffers);
 	if (gbcc_check_openal_error("Failed to create buffers.\n")) {
 		exit(EXIT_FAILURE);
 	}
 
 	clock_gettime(CLOCK_REALTIME, &audio->start_time);
-	for (int i = 0; i < sizeof(audio->al.buffers) / sizeof(audio->al.buffers[0]); i++) {
+	for (size_t i = 0; i < N_ELEM(audio->al.buffers); i++) {
 		alBufferData(audio->al.buffers[i], AL_FORMAT_STEREO16, audio->mix_buffer, sizeof(audio->mix_buffer), SAMPLE_RATE);
 	}
-	alSourceQueueBuffers(audio->al.source, sizeof(audio->al.buffers) / sizeof(audio->al.buffers[0]), audio->al.buffers);
+	alSourceQueueBuffers(audio->al.source, N_ELEM(audio->al.buffers), audio->al.buffers);
 	gbcc_check_openal_error("Failed to queue buffers.\n");
 	alSourcePlay(audio->al.source);
 	gbcc_check_openal_error("Failed to play audio.\n");
 }
 
-void gbcc_audio_destroy(struct gbcc_audio *audio) {
-	alcCloseDevice(audio->al.device);
+void gbcc_audio_destroy(struct gbcc *gbc) {
+	alcCloseDevice(gbc->audio.al.device);
 }
 
-void gbcc_audio_update(struct gbcc_audio *audio)
+void gbcc_audio_update(struct gbcc *gbc)
 {
+	struct gbcc_audio *audio = &gbc->audio;
 	double mult = 1;
-	if (audio->gbc->keys.turbo) {
-		if (audio->gbc->turbo_speed > 0) {
-			mult = audio->gbc->turbo_speed;
+	if (gbc->core.keys.turbo) {
+		if (gbc->core.turbo_speed > 0) {
+			mult = gbc->core.turbo_speed;
 		} else {
 			return;
 		}
@@ -108,8 +110,8 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 			alGetSourcei(audio->al.source, AL_SOURCE_STATE, &state);
 			gbcc_check_openal_error("Failed to get source state.\n");
 			if (state == AL_STOPPED) {
-				clock_gettime(CLOCK_REALTIME, &audio->gbc->apu.start_time);
-				audio->gbc->apu.sample = 0;
+				clock_gettime(CLOCK_REALTIME, &gbc->core.apu.start_time);
+				gbc->core.apu.sample = 0;
 				alSourcePlay(audio->al.source);
 				gbcc_check_openal_error("Failed to resume audio playback.\n");
 			}
@@ -117,57 +119,57 @@ void gbcc_audio_update(struct gbcc_audio *audio)
 		audio->sample_clock = audio->clock;
 		audio->mix_buffer[audio->index] = 0;
 		audio->mix_buffer[audio->index + 1] = 0;
-		ch1_update(audio);
-		ch2_update(audio);
-		ch3_update(audio);
-		ch4_update(audio);
-		audio->mix_buffer[audio->index] *= (1 + audio->gbc->apu.left_vol);
-		audio->mix_buffer[audio->index + 1] *= (1 + audio->gbc->apu.right_vol);
+		ch1_update(gbc);
+		ch2_update(gbc);
+		ch3_update(gbc);
+		ch4_update(gbc);
+		audio->mix_buffer[audio->index] *= (1 + gbc->core.apu.left_vol);
+		audio->mix_buffer[audio->index + 1] *= (1 + gbc->core.apu.right_vol);
 		audio->index += 2;
 	}
 }
 
-void ch1_update(struct gbcc_audio *audio)
+void ch1_update(struct gbcc *gbc)
 {
-	struct channel *ch1 = &audio->gbc->apu.ch1;
+	struct channel *ch1 = &gbc->core.apu.ch1;
 	if (!ch1->enabled) {
 		return;
 	}
 	uint8_t volume = ch1->envelope.volume;
-	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(ch1->left * ch1->state * volume * BASE_AMPLITUDE);
-	audio->mix_buffer[audio->index + 1] += (GBCC_AUDIO_FMT)(ch1->right * ch1->state * volume * BASE_AMPLITUDE);
+	gbc->audio.mix_buffer[gbc->audio.index] += (GBCC_AUDIO_FMT)(ch1->left * ch1->state * volume * BASE_AMPLITUDE);
+	gbc->audio.mix_buffer[gbc->audio.index + 1] += (GBCC_AUDIO_FMT)(ch1->right * ch1->state * volume * BASE_AMPLITUDE);
 }
 
-void ch2_update(struct gbcc_audio *audio)
+void ch2_update(struct gbcc *gbc)
 {
-	struct channel *ch2 = &audio->gbc->apu.ch2;
+	struct channel *ch2 = &gbc->core.apu.ch2;
 	if (!ch2->enabled) {
 		return;
 	}
 	uint8_t volume = ch2->envelope.volume;
-	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(ch2->left * ch2->state * volume * BASE_AMPLITUDE);
-	audio->mix_buffer[audio->index + 1] += (GBCC_AUDIO_FMT)(ch2->right * ch2->state * volume * BASE_AMPLITUDE);
+	gbc->audio.mix_buffer[gbc->audio.index] += (GBCC_AUDIO_FMT)(ch2->left * ch2->state * volume * BASE_AMPLITUDE);
+	gbc->audio.mix_buffer[gbc->audio.index + 1] += (GBCC_AUDIO_FMT)(ch2->right * ch2->state * volume * BASE_AMPLITUDE);
 }
 
-void ch3_update(struct gbcc_audio *audio)
+void ch3_update(struct gbcc *gbc)
 {
-	struct channel *ch3 = &audio->gbc->apu.ch3;
-	if (!audio->gbc->apu.ch3.enabled || audio->gbc->apu.wave.shift == 0) {
+	struct channel *ch3 = &gbc->core.apu.ch3;
+	if (!ch3->enabled || gbc->core.apu.wave.shift == 0) {
 		return;
 	}
-	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(ch3->left * (audio->gbc->apu.wave.buffer >> (audio->gbc->apu.wave.shift - 1u)) * BASE_AMPLITUDE);
-	audio->mix_buffer[audio->index + 1] += (GBCC_AUDIO_FMT)(ch3->right * (audio->gbc->apu.wave.buffer >> (audio->gbc->apu.wave.shift - 1u)) * BASE_AMPLITUDE);
+	gbc->audio.mix_buffer[gbc->audio.index] += (GBCC_AUDIO_FMT)(ch3->left * (gbc->core.apu.wave.buffer >> (gbc->core.apu.wave.shift - 1u)) * BASE_AMPLITUDE);
+	gbc->audio.mix_buffer[gbc->audio.index + 1] += (GBCC_AUDIO_FMT)(ch3->right * (gbc->core.apu.wave.buffer >> (gbc->core.apu.wave.shift - 1u)) * BASE_AMPLITUDE);
 }
 
-void ch4_update(struct gbcc_audio *audio)
+void ch4_update(struct gbcc *gbc)
 {
-	struct channel *ch4 = &audio->gbc->apu.ch4;
+	struct channel *ch4 = &gbc->core.apu.ch4;
 	if (!ch4->enabled) {
 		return;
 	}
 	uint8_t volume = ch4->envelope.volume;
-	audio->mix_buffer[audio->index] += (GBCC_AUDIO_FMT)(ch4->left * ch4->state * volume * BASE_AMPLITUDE);
-	audio->mix_buffer[audio->index + 1] += (GBCC_AUDIO_FMT)(ch4->right * ch4->state * volume * BASE_AMPLITUDE);
+	gbc->audio.mix_buffer[gbc->audio.index] += (GBCC_AUDIO_FMT)(ch4->left * ch4->state * volume * BASE_AMPLITUDE);
+	gbc->audio.mix_buffer[gbc->audio.index + 1] += (GBCC_AUDIO_FMT)(ch4->right * ch4->state * volume * BASE_AMPLITUDE);
 }
 
 

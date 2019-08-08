@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct gbc;
+struct gbcc_core;
 
 struct line_buffer {
 	uint32_t colour[GBC_SCREEN_WIDTH];
@@ -63,8 +63,8 @@ struct ppu {
 	struct tile window_tile;
 };
 
-void gbcc_ppu_clock(struct gbc *gbc);
-void gbcc_disable_lcd(struct gbc *gbc);
-void gbcc_enable_lcd(struct gbc *gbc);
+void gbcc_ppu_clock(struct gbcc_core *gbc);
+void gbcc_disable_lcd(struct gbcc_core *gbc);
+void gbcc_enable_lcd(struct gbcc_core *gbc);
 
 #endif /* GBCC_PPU_H */

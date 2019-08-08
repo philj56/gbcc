@@ -2,60 +2,44 @@
 #include "bit_utils.h"
 #include "constants.h"
 #include "debug.h"
-#include "vram_window.h"
+#include "memory.h"
+#include "nelem.h"
 #include "window.h"
+#include "vram_window.h"
 #include <epoxy/gl.h>
-#include <SDL2/SDL.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
+
+#ifndef TILESET_PATH
+#define TILESET_PATH "tileset.png"
+#endif
 
 #ifndef SHADER_PATH
 #define SHADER_PATH "shaders/"
 #endif
 
-void gbcc_vram_window_initialise(struct gbcc_vram_window *win, struct gbc *gbc)
+void gbcc_vram_window_initialise(struct gbcc *gbc)
 {
-	if (win->initialised) {
-		gbcc_log_error("VRAM window already initialised!\n");
-		return;
-	}
-	win->gbc = gbc;
-	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
-		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
-	}
-
-	/* Main OpenGL settings */
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-	win->window = SDL_CreateWindow(
-			"GBCC VRAM Data",                    // window title
-			SDL_WINDOWPOS_UNDEFINED,   // initial x position
-			SDL_WINDOWPOS_UNDEFINED,   // initial y position
-			VRAM_WINDOW_WIDTH,      // width, in pixels
-			VRAM_WINDOW_HEIGHT,     // height, in pixels
-			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
-			);
-
-	if (win->window == NULL) {
-		gbcc_log_error("Could not create window: %s\n", SDL_GetError());
-		SDL_Quit();
-		exit(EXIT_FAILURE);
-	}
-
-	win->gl.context = SDL_GL_CreateContext(win->window);
+	struct gbcc_vram_window *win = &gbc->vram_window;
+	GLint read_framebuffer = 0;
+	GLint draw_framebuffer = 0;
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
 	/* Compile and link the shader programs */
 	win->gl.shader = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "nothing.frag"
 			);
+
 	win->gl.flip_shader = gbcc_create_shader_program(
 			SHADER_PATH "flipped.vert",
 			SHADER_PATH "nothing.frag"
 			);
+
 
 	/* Create a vertex buffer for a quad filling the screen */
 	float vertices[] = {
@@ -113,7 +97,6 @@ void gbcc_vram_window_initialise(struct gbcc_vram_window *win, struct gbc *gbc)
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, win->gl.fbo_texture, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	/* We don't care about the depth and stencil, so just use a
 	 * renderbuffer */
@@ -128,7 +111,8 @@ void gbcc_vram_window_initialise(struct gbcc_vram_window *win, struct gbc *gbc)
 		gbcc_log_error("Framebuffer is not complete!\n");
 		exit(EXIT_FAILURE);
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
 
 	/* This is the texture we're going to render the raw screen output to
 	 * before post-processing */
@@ -151,13 +135,10 @@ void gbcc_vram_window_initialise(struct gbcc_vram_window *win, struct gbc *gbc)
 	win->initialised = true;
 }
 
-void gbcc_vram_window_destroy(struct gbcc_vram_window *win)
+void gbcc_vram_window_deinitialise(struct gbcc *gbc)
 {
-	if (!win->initialised) {
-		gbcc_log_error("VRAM window not initialised!\n");
-		return;
-	}
-	SDL_GL_MakeCurrent(win->window, win->gl.context);
+	struct gbcc_vram_window *win = &gbc->vram_window;
+
 	glDeleteBuffers(1, &win->gl.vbo);
 	glDeleteVertexArrays(1, &win->gl.vao);
 	glDeleteBuffers(1, &win->gl.ebo);
@@ -166,21 +147,19 @@ void gbcc_vram_window_destroy(struct gbcc_vram_window *win)
 	glDeleteRenderbuffers(1, &win->gl.rbo);
 	glDeleteTextures(1, &win->gl.texture);
 	glDeleteProgram(win->gl.shader);
-	glDeleteProgram(win->gl.flip_shader);
-	SDL_GL_DeleteContext(win->gl.context);
-	SDL_DestroyWindow(win->window);
 	win->initialised = false;
 }
 
-void gbcc_vram_window_update(struct gbcc_vram_window *win)
+void gbcc_vram_window_update(struct gbcc *gbc)
 {
-	SDL_GL_MakeCurrent(win->window, win->gl.context);
+	struct gbcc_vram_window *win = &gbc->vram_window;
+
 	for (int bank = 0; bank < 2; bank++) {
 		for (int j = 0; j < VRAM_WINDOW_HEIGHT_TILES / 2; j++) {
 			for (int i = 0; i < VRAM_WINDOW_WIDTH_TILES; i++) {
 				for (int y = 0; y < 8; y++) {
-					uint8_t lo = win->gbc->memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y];
-					uint8_t hi = win->gbc->memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y + 1];
+					uint8_t lo = gbc->core.memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y];
+					uint8_t hi = gbc->core.memory.vram_bank[bank][16 * (j * VRAM_WINDOW_WIDTH_TILES + i) + 2*y + 1];
 					for (uint8_t x = 0; x < 8; x++) {
 						uint8_t colour = (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
 						uint32_t p = 0;
@@ -205,6 +184,13 @@ void gbcc_vram_window_update(struct gbcc_vram_window *win)
 		}
 	}
 
+	
+	GLint read_framebuffer = 0;
+	GLint draw_framebuffer = 0;
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
+
+
 	/* First pass - render the gbc screen to the framebuffer */
 	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
 	glViewport(0, 0, VRAM_WINDOW_WIDTH, VRAM_WINDOW_HEIGHT);
@@ -213,25 +199,22 @@ void gbcc_vram_window_update(struct gbcc_vram_window *win)
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VRAM_WINDOW_WIDTH, VRAM_WINDOW_HEIGHT, GL_RGBA,
 			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->buffer);
-	glUseProgram(win->gl.flip_shader);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-	/* Second pass - render the framebuffer to the screen */
-	int width;
-	int height;
-	SDL_GL_GetDrawableSize(win->window, &width, &height);
-	double scale = min(width / VRAM_WINDOW_WIDTH, height / VRAM_WINDOW_HEIGHT);
-	win->width = scale * VRAM_WINDOW_WIDTH;
-	win->height = scale * VRAM_WINDOW_HEIGHT;
-	win->x = (width - win->width) / 2;
-	win->y = (height - win->height) / 2;
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(win->x, win->y, win->width, win->height);
-	glClearColor(0.0, 0.0, 0.0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glUseProgram(win->gl.shader);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-	SDL_GL_SwapWindow(win->window);
+	/* Second pass - render the framebuffer to the screen */
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
+
+	double scale = min(win->width / VRAM_WINDOW_WIDTH, win->height / VRAM_WINDOW_HEIGHT);
+	int width = scale * VRAM_WINDOW_WIDTH;
+	int height = scale * VRAM_WINDOW_HEIGHT;
+	win->x = (win->width - width) / 2;
+	win->y = (win->height - height) / 2;
+	glViewport(win->x, win->y, width, height);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
+	glUseProgram(win->gl.flip_shader);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }

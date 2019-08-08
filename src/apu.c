@@ -1,4 +1,4 @@
-#include "gbcc.h"
+#include "core.h"
 #include "apu.h"
 #include "bit_utils.h"
 #include "debug.h"
@@ -26,20 +26,20 @@ static bool timer_clock(struct timer *timer);
 static void timer_reset(struct timer *timer);
 static bool duty_clock(struct duty *duty);
 static void envelope_clock(struct envelope *envelope);
-static void time_sync(struct gbc *gbc);
-static void ch1_trigger(struct gbc *gbc);
-static void ch2_trigger(struct gbc *gbc);
-static void ch3_trigger(struct gbc *gbc);
-static void ch4_trigger(struct gbc *gbc);
+static void time_sync(struct gbcc_core *gbc);
+static void ch1_trigger(struct gbcc_core *gbc);
+static void ch2_trigger(struct gbcc_core *gbc);
+static void ch3_trigger(struct gbcc_core *gbc);
+static void ch4_trigger(struct gbcc_core *gbc);
 
-void gbcc_apu_init(struct gbc *gbc)
+void gbcc_apu_init(struct gbcc_core *gbc)
 {
 	gbc->apu = (struct apu){0};
 	gbc->apu.wave.addr = WAVE_START;
 	clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 }
 
-void gbcc_apu_clock(struct gbc *gbc)
+void gbcc_apu_clock(struct gbcc_core *gbc)
 {
 	gbc->apu.sync_clock++;
 	if (gbc->apu.sync_clock == CLOCKS_PER_SYNC) {
@@ -147,7 +147,7 @@ uint16_t frequency_calc(struct sweep *sweep)
 	return sweep->freq + sweep->dir * (sweep->freq >> sweep->shift);
 }
 
-void gbcc_apu_sequencer_clock(struct gbc *gbc)
+void gbcc_apu_sequencer_clock(struct gbcc_core *gbc)
 {
 	/*static struct timespec last = {0};
 	static struct timespec cur = {0};
@@ -201,7 +201,7 @@ void gbcc_apu_sequencer_clock(struct gbc *gbc)
 	gbc->apu.sequencer_counter &= 0x7u;
 }
 
-void time_sync(struct gbc *gbc)
+void time_sync(struct gbcc_core *gbc)
 {
 	clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
 	uint64_t diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
@@ -215,6 +215,8 @@ void time_sync(struct gbc *gbc)
 		mult = gbc->turbo_speed;
 	}
 	if (mult == 0) {
+		gbc->apu.start_time = gbc->apu.cur_time;
+		gbc->apu.sample = 0;
 		return;
 	}
 	while (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult)) {
@@ -229,7 +231,7 @@ void time_sync(struct gbc *gbc)
 	}
 }
 
-void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
+void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
 	uint8_t tmp;
 	switch (addr) {
@@ -423,7 +425,7 @@ void gbcc_apu_memory_write(struct gbc *gbc, uint16_t addr, uint8_t val)
 	}
 }
 
-void ch1_trigger(struct gbc *gbc)
+void ch1_trigger(struct gbcc_core *gbc)
 {
 	uint8_t nr11 = gbcc_memory_read(gbc, NR11, true);
 	uint8_t nr13 = gbcc_memory_read(gbc, NR13, true);
@@ -462,7 +464,7 @@ void ch1_trigger(struct gbc *gbc)
 	}
 }
 
-void ch2_trigger(struct gbc *gbc)
+void ch2_trigger(struct gbcc_core *gbc)
 {
 	uint8_t nr21 = gbcc_memory_read(gbc, NR21, true);
 	uint8_t nr23 = gbcc_memory_read(gbc, NR23, true);
@@ -487,7 +489,7 @@ void ch2_trigger(struct gbc *gbc)
 	}
 }
 
-void ch3_trigger(struct gbc *gbc)
+void ch3_trigger(struct gbcc_core *gbc)
 {
 	gbc->apu.ch3.enabled = true;
 	if (gbc->apu.ch3.counter == 0) {
@@ -508,7 +510,7 @@ void ch3_trigger(struct gbc *gbc)
 	}
 }
 
-void ch4_trigger(struct gbc *gbc)
+void ch4_trigger(struct gbcc_core *gbc)
 {
 	gbc->apu.ch4.enabled = true;
 	if (gbc->apu.ch4.counter == 0) {

@@ -10,7 +10,7 @@
 #endif
 
 
-struct gbc;
+struct gbcc_core;
 
 struct cpu {
 	/* Registers */
@@ -106,7 +106,7 @@ struct cpu {
 	} instruction;
 };
 
-uint8_t gbcc_fetch_instruction(struct gbc *gbc);
-void gbcc_emulate_cycle(struct gbc *gbc);
+uint8_t gbcc_fetch_instruction(struct gbcc_core *gbc);
+void gbcc_emulate_cycle(struct gbcc_core *gbc);
 
 #endif /* GBCC_CPU_H */

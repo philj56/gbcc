@@ -1,300 +1,231 @@
 #include "gbcc.h"
-#include "debug.h"
 #include "input.h"
 #include "memory.h"
-#include "save.h"
-#include "window.h"
-#include <SDL2/SDL.h>
+#include "nelem.h"
 
-static const SDL_Scancode keymap[31] = {
-	SDL_SCANCODE_Z,		/* A */
-	SDL_SCANCODE_X, 	/* B */
-	SDL_SCANCODE_RETURN,	/* Start */
-	SDL_SCANCODE_SPACE,	/* Select */
-	SDL_SCANCODE_UP,	/* DPAD up */
-	SDL_SCANCODE_DOWN,	/* DPAD down */
-	SDL_SCANCODE_LEFT,	/* DPAD left */
-	SDL_SCANCODE_RIGHT,	/* DPAD right */
-	SDL_SCANCODE_RSHIFT, 	/* Turbo */
-	SDL_SCANCODE_S, 	/* Screenshot */
-	SDL_SCANCODE_P, 	/* Pause */
-	SDL_SCANCODE_F, 	/* FPS Counter */
-	SDL_SCANCODE_V, 	/* Switch shader */
-	SDL_SCANCODE_1, 	/* Toggle background */
-	SDL_SCANCODE_2, 	/* Toggle window */
-	SDL_SCANCODE_3, 	/* Toggle sprites */
-	SDL_SCANCODE_L, 	/* Toggle link cable loop */
-	SDL_SCANCODE_B, 	/* Toggle background playback */
-	SDL_SCANCODE_KP_2, 	/* MBC7 accelerometer down */
-	SDL_SCANCODE_KP_4, 	/* MBC7 accelerometer left */
-	SDL_SCANCODE_KP_6, 	/* MBC7 accelerometer right */
-	SDL_SCANCODE_KP_8, 	/* MBC7 accelerometer up */
-	SDL_SCANCODE_F1,	/* State n */
-	SDL_SCANCODE_F2,
-	SDL_SCANCODE_F3,
-	SDL_SCANCODE_F4,
-	SDL_SCANCODE_F5,
-	SDL_SCANCODE_F6,
-	SDL_SCANCODE_F7,
-	SDL_SCANCODE_F8,
-	SDL_SCANCODE_F9
-};
-
-// Returns key that changed, or -1 for a non-emulated key
-static int process_input(struct gbcc_window *win, const SDL_Event *e);
-
-void gbcc_input_process_all(struct gbcc_window *win)
+void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 {
-	struct gbc *gbc = win->gbc;
-	SDL_Event e;
-	const uint8_t *state = SDL_GetKeyboardState(NULL);
-	while (SDL_PollEvent(&e) != 0) {
-		int key = process_input(win, &e);
-		bool val;
-		if (e.type == SDL_KEYDOWN) {
-			val = true;
-		//	gbc->halt.set = false;
-		//	gbc->cpu.stop = false;
-		} else if (e.type == SDL_KEYUP) {
-			val = false;
-		} else {
-			continue;
-		}
-
-		switch(key) {
-			case 0:
-				gbc->keys.a = val;
-				gbcc_memory_set_bit(gbc, IF, 4, true);
+	switch(key) {
+		case GBCC_KEY_A:
+			gbc->core.keys.a = pressed;
+			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			break;
+		case GBCC_KEY_B:
+			gbc->core.keys.b = pressed;
+			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			break;
+		case GBCC_KEY_START:
+			gbc->core.keys.start = pressed;
+			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			break;
+		case GBCC_KEY_SELECT:
+			gbc->core.keys.select = pressed;
+			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			break;
+		case GBCC_KEY_UP:
+			gbc->core.keys.dpad.up = pressed;
+			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			break;
+		case GBCC_KEY_DOWN:
+			gbc->core.keys.dpad.down = pressed;
+			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			break;
+		case GBCC_KEY_LEFT:
+			gbc->core.keys.dpad.left = pressed;
+			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			break;
+		case GBCC_KEY_RIGHT:
+			gbc->core.keys.dpad.right = pressed;
+			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			break;
+		case GBCC_KEY_TURBO:
+			gbc->core.keys.turbo ^= pressed;
+			break;
+		case GBCC_KEY_SCREENSHOT:
+			gbc->window.screenshot ^= pressed;
+			break;
+		case GBCC_KEY_RAW_SCREENSHOT:
+			gbc->window.raw_screenshot ^= pressed;
+			break;
+		case GBCC_KEY_PAUSE:
+			gbc->pause ^= pressed;
+			break;
+		case GBCC_KEY_PRINTER:
+			gbc->core.printer.connected ^= pressed;
+			if (gbc->core.printer.connected) {
+				gbcc_window_show_message(gbc, "Printer connected", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Printer disconnected", 1, true);
+			}
+			break;
+		case GBCC_KEY_FPS:
+			gbc->window.fps.show ^= pressed;
+			break;
+		case GBCC_KEY_SHADER:
+			gbc->window.gl.cur_shader += pressed;
+			gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);
+			gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
+			break;
+		case GBCC_KEY_VRAM:
+			gbc->window.vram_display ^= pressed;
+			break;
+		case GBCC_KEY_DISPLAY_BACKGROUND:
+			gbc->core.hide_background ^= pressed;
+			if (!pressed) {
 				break;
-			case 1:
-				gbc->keys.b = val;
-				gbcc_memory_set_bit(gbc, IF, 4, true);
+			}
+			if (gbc->core.hide_background) {
+				gbcc_window_show_message(gbc, "Background disabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Background enabled", 1, true);
+			}
+			break;
+		case GBCC_KEY_DISPLAY_WINDOW:
+			gbc->core.hide_window ^= pressed;
+			if (!pressed) {
 				break;
-			case 2:
-				gbc->keys.start = val;
-				gbcc_memory_set_bit(gbc, IF, 4, true);
+			}
+			if (gbc->core.hide_window) {
+				gbcc_window_show_message(gbc, "Window disabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Window enabled", 1, true);
+			}
+			break;
+		case GBCC_KEY_DISPLAY_SPRITES:
+			gbc->core.hide_sprites ^= pressed;
+			if (!pressed) {
 				break;
-			case 3:
-				gbc->keys.select = val;
-				gbcc_memory_set_bit(gbc, IF, 4, true);
+			}
+			if (gbc->core.hide_sprites) {
+				gbcc_window_show_message(gbc, "Sprites disabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Sprites enabled", 1, true);
+			}
+			break;
+		case GBCC_KEY_LINK_CABLE:
+			gbc->core.link_cable_loop ^= pressed;
+			if (gbc->core.link_cable_loop) {
+				gbcc_window_show_message(gbc, "Link cable connected", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Link cable disconnected", 1, true);
+			}
+			break;
+		case GBCC_KEY_BACKGROUND_PLAY:
+			gbc->background_play ^= pressed;
+			if (gbc->background_play) {
+				gbcc_window_show_message(gbc, "Background playback enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Background playback disabled", 1, true);
+			}
+			break;
+		case GBCC_KEY_ACCELEROMETER_UP:
+			gbc->core.cart.mbc.accelerometer.tilt.up = pressed;
+			break;
+		case GBCC_KEY_ACCELEROMETER_DOWN:
+			gbc->core.cart.mbc.accelerometer.tilt.down = pressed;
+			break;
+		case GBCC_KEY_ACCELEROMETER_LEFT:
+			gbc->core.cart.mbc.accelerometer.tilt.left = pressed;
+			break;
+		case GBCC_KEY_ACCELEROMETER_RIGHT:
+			gbc->core.cart.mbc.accelerometer.tilt.right = pressed;
+			break;
+		case GBCC_KEY_ACCELEROMETER_MAX_UP:
+			if (pressed) {
+				gbc->core.cart.mbc.accelerometer.real_y = 0x81D0u + 0x70u;
+			}
+			break;
+		case GBCC_KEY_ACCELEROMETER_MAX_DOWN:
+			if (pressed) {
+				gbc->core.cart.mbc.accelerometer.real_y = 0x81D0u - 0x70u;
+			}
+			break;
+		case GBCC_KEY_ACCELEROMETER_MAX_LEFT:
+			if (pressed) {
+				gbc->core.cart.mbc.accelerometer.real_x = 0x81D0u + 0x70u;
+			}
+			break;
+		case GBCC_KEY_ACCELEROMETER_MAX_RIGHT:
+			if (pressed) {
+				gbc->core.cart.mbc.accelerometer.real_x = 0x81D0u - 0x70u;
+			}
+			break;
+		case GBCC_KEY_SAVE_STATE_1:
+		case GBCC_KEY_SAVE_STATE_2:
+		case GBCC_KEY_SAVE_STATE_3:
+		case GBCC_KEY_SAVE_STATE_4:
+		case GBCC_KEY_SAVE_STATE_5:
+		case GBCC_KEY_SAVE_STATE_6:
+		case GBCC_KEY_SAVE_STATE_7:
+		case GBCC_KEY_SAVE_STATE_8:
+		case GBCC_KEY_SAVE_STATE_9:
+			if (!pressed) {
 				break;
-			case 4:
-				gbc->keys.dpad.up = val;
-				gbcc_memory_set_bit(gbc, IF, 4, true);
+			}
+			gbc->save_state = (int8_t)(key - GBCC_KEY_SAVE_STATE_1 + 1);
+			break;
+		case GBCC_KEY_LOAD_STATE_1:
+		case GBCC_KEY_LOAD_STATE_2:
+		case GBCC_KEY_LOAD_STATE_3:
+		case GBCC_KEY_LOAD_STATE_4:
+		case GBCC_KEY_LOAD_STATE_5:
+		case GBCC_KEY_LOAD_STATE_6:
+		case GBCC_KEY_LOAD_STATE_7:
+		case GBCC_KEY_LOAD_STATE_8:
+		case GBCC_KEY_LOAD_STATE_9:
+			if (!pressed) {
 				break;
-			case 5:
-				gbc->keys.dpad.down = val;
-				gbcc_memory_set_bit(gbc, IF, 4, true);
-				break;
-			case 6:
-				gbc->keys.dpad.left = val;
-				gbcc_memory_set_bit(gbc, IF, 4, true);
-				break;
-			case 7:
-				gbc->keys.dpad.right = val;
-				gbcc_memory_set_bit(gbc, IF, 4, true);
-				break;
-			case 8:
-				gbc->keys.turbo ^= val;
-				/* TODO: This shouldn't really be done here */
-				gbc->apu.start_time = gbc->apu.cur_time;
-				gbc->apu.sample = 0;
-				break;
-			case 9:
-				if (state[SDL_SCANCODE_LSHIFT]) {
-					win->raw_screenshot ^= val;
-				} else {
-					win->screenshot ^= val;
-				}
-				break;
-			case 10:
-				if (state[SDL_SCANCODE_LSHIFT]) {
-					gbc->printer.connected ^= val;
-					if (gbc->printer.connected) {
-						gbcc_window_show_message(win, "Printer connected", 1, true);
-					} else {
-						gbcc_window_show_message(win, "Printer disconnected", 1, true);
-					}
-				} else {
-					gbc->pause ^= val;
-				}
-				break;
-			case 11:
-				win->fps.show ^= val;
-				break;
-			case 12:
-				if (state[SDL_SCANCODE_LSHIFT]) {
-					win->vram_display ^= val;
-				} else {
-					win->gl.cur_shader += val;
-					win->gl.cur_shader %= sizeof(win->gl.shaders) / sizeof(win->gl.shaders[0]);
-					gbcc_window_show_message(win, win->gl.shaders[win->gl.cur_shader].name, 1, true);
-				}
-				break;
-			case 13:
-				gbc->hide_background ^= val;
-				if (!val) {
-					break;
-				}
-				if (gbc->hide_background) {
-					gbcc_window_show_message(win, "Background disabled", 1, true);
-				} else {
-					gbcc_window_show_message(win, "Background enabled", 1, true);
-				}
-				break;
-			case 14:
-				gbc->hide_window ^= val;
-				if (!val) {
-					break;
-				}
-				if (gbc->hide_window) {
-					gbcc_window_show_message(win, "Window disabled", 1, true);
-				} else {
-					gbcc_window_show_message(win, "Window enabled", 1, true);
-				}
-				break;
-			case 15:
-				gbc->hide_sprites ^= val;
-				if (!val) {
-					break;
-				}
-				if (gbc->hide_sprites) {
-					gbcc_window_show_message(win, "Sprites disabled", 1, true);
-				} else {
-					gbcc_window_show_message(win, "Sprites enabled", 1, true);
-				}
-				break;
-			case 16:
-				gbc->link_cable_loop ^= val;
-				if (gbc->link_cable_loop) {
-					gbcc_window_show_message(win, "Link cable connected", 1, true);
-				} else {
-					gbcc_window_show_message(win, "Link cable disconnected", 1, true);
-				}
-				break;
-			case 17:
-				gbc->background_play ^= val;
-				if (gbc->background_play) {
-					gbcc_window_show_message(win, "Background playback enabled", 1, true);
-				} else {
-					gbcc_window_show_message(win, "Background playback disabled", 1, true);
-				}
-				break;
-			case 18:
-				if (state[SDL_SCANCODE_LSHIFT] && val) {
-					gbc->cart.mbc.accelerometer.real_y = 0x81D0u - 0x70u;
-				}
-				break;
-			case 19:
-				if (state[SDL_SCANCODE_LSHIFT] && val) {
-					gbc->cart.mbc.accelerometer.real_x = 0x81D0u + 0x70u;
-				}
-				break;
-			case 20:
-				if (state[SDL_SCANCODE_LSHIFT] && val) {
-					gbc->cart.mbc.accelerometer.real_x = 0x81D0u - 0x70u;
-				}
-				break;
-			case 21:
-				if (state[SDL_SCANCODE_LSHIFT] && val) {
-					gbc->cart.mbc.accelerometer.real_y = 0x81D0u + 0x70u;
-				}
-				break;
-			case 22:
-			case 23:
-			case 24:
-			case 25:
-			case 26:
-			case 27:
-			case 28:
-			case 29:
-			case 30:
-				if (!val) {
-					break;
-				}
-				if (state[SDL_SCANCODE_LSHIFT]) {
-					gbc->save_state = (int8_t)(key - 21);
-				} else {
-					gbc->load_state = (int8_t)(key - 21);
-				}
-				break;
-			default:
-				break;
-		}
-	}
-	if (state[SDL_SCANCODE_KP_6]) {
-		gbc->cart.mbc.accelerometer.dx = -8;
-	} else if (state[SDL_SCANCODE_KP_4]) {
-		gbc->cart.mbc.accelerometer.dx = 8;
-	} else {
-		gbc->cart.mbc.accelerometer.dx = 0;
-	}
-	if (state[SDL_SCANCODE_KP_2]) {
-		gbc->cart.mbc.accelerometer.dy = -8;
-	} else if (state[SDL_SCANCODE_KP_8]) {
-		gbc->cart.mbc.accelerometer.dy = 8;
-	} else {
-		gbc->cart.mbc.accelerometer.dy = 0;
-	}
-	if (gbc->cart.mbc.accelerometer.dx == 0) {
-		if (gbc->cart.mbc.accelerometer.real_x > 0x81D0u) {
-			gbc->cart.mbc.accelerometer.dx = -8;
-		}
-		if (gbc->cart.mbc.accelerometer.real_x < 0x81D0u) {
-			gbc->cart.mbc.accelerometer.dx = 8;
-		}
-	}
-	if (gbc->cart.mbc.accelerometer.dy == 0) {
-		if (gbc->cart.mbc.accelerometer.real_y > 0x81D0u) {
-			gbc->cart.mbc.accelerometer.dy = -8;
-		}
-		if (gbc->cart.mbc.accelerometer.real_y < 0x81D0u) {
-			gbc->cart.mbc.accelerometer.dy = 8;
-		}
-	}
-	gbc->cart.mbc.accelerometer.real_x += gbc->cart.mbc.accelerometer.dx;
-	gbc->cart.mbc.accelerometer.real_y += gbc->cart.mbc.accelerometer.dy;
-
-	if (gbc->cart.mbc.accelerometer.real_x > 0x81D0u + 0x70u) {
-		gbc->cart.mbc.accelerometer.real_x = 0x81D0u + 0x70u;
-	} else if (gbc->cart.mbc.accelerometer.real_x < 0x81D0u - 0x70u) {
-		gbc->cart.mbc.accelerometer.real_x = 0x81D0u - 0x70u;
-	}
-	if (gbc->cart.mbc.accelerometer.real_y > 0x81D0u + 0x70u) {
-		gbc->cart.mbc.accelerometer.real_y = 0x81D0u + 0x70u;
-	} else if (gbc->cart.mbc.accelerometer.real_y < 0x81D0u - 0x70u) {
-		gbc->cart.mbc.accelerometer.real_y = 0x81D0u - 0x70u;
+			}
+			gbc->load_state = (int8_t)(key - GBCC_KEY_LOAD_STATE_1 + 1);
+			break;
+		default:
+			break;
 	}
 }
 
-int process_input(struct gbcc_window *win, const SDL_Event *e)
+void gbcc_input_accelerometer_update(struct gbcc_accelerometer *acc)
 {
-	if (e->type == SDL_QUIT) {
-		win->gbc->quit = true;
-	} else if (e->type == SDL_WINDOWEVENT) {
-		if (e->window.event == SDL_WINDOWEVENT_CLOSE) {
-			uint32_t id = e->window.windowID;
-			if (id == SDL_GetWindowID(win->window)) {
-				win->gbc->quit = true;
-				gbcc_window_destroy(win);
-			} else if (id == SDL_GetWindowID(win->vram.window)) {
-				win->vram_display = false;
-			} else {
-				gbcc_log_error("Unknown window ID %u\n", id);
-			}
-		} else if (e->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
-			win->gbc->has_focus = true;
-			SDL_PumpEvents();
-			SDL_FlushEvent(SDL_KEYDOWN);
-		} else if (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
-			win->gbc->has_focus = false;
-		}
-	} else if (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) {
-		for (size_t i = 0; i < sizeof(keymap) / sizeof(keymap[0]); i++) {
-			if (e->key.keysym.scancode == keymap[i]) {
-				return (int)i;
-			}
+	int dx = 0;
+	int dy = 0;
+
+	if (acc->tilt.up) {
+		dy += 8;
+	}
+	if (acc->tilt.down) {
+		dy -= 8;
+	}
+	if (acc->tilt.left) {
+		dx += 8;
+	}
+	if (acc->tilt.right) {
+		dx -= 8;
+	}
+
+	if (dx == 0) {
+		if (acc->real_x > 0x81D0u) {
+			dx = -8;
+		} else if (acc->real_x < 0x81D0u) {
+			dx = 8;
 		}
 	}
-	return -1;
+	if (dy == 0) {
+		if (acc->real_y > 0x81D0u) {
+			dy = -8;
+		} else if (acc->real_y < 0x81D0u) {
+			dy = 8;
+		}
+	}
+	acc->real_x += dx;
+	acc->real_y += dy;
+
+	if (acc->real_x > 0x81D0u + 0x70u) {
+		acc->real_x = 0x81D0u + 0x70u;
+	} else if (acc->real_x < 0x81D0u - 0x70u) {
+		acc->real_x = 0x81D0u - 0x70u;
+	}
+	if (acc->real_y > 0x81D0u + 0x70u) {
+		acc->real_y = 0x81D0u + 0x70u;
+	} else if (acc->real_y < 0x81D0u - 0x70u) {
+		acc->real_y = 0x81D0u - 0x70u;
+	}
 }

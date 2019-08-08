@@ -1,9 +1,10 @@
-#include "gbcc.h"
+#include "core.h"
 #include "apu.h"
 #include "bit_utils.h"
 #include "constants.h"
 #include "debug.h"
 #include "memory.h"
+#include "nelem.h"
 #include "palettes.h"
 #include "save.h"
 #include <stdbool.h>
@@ -21,22 +22,22 @@ static const uint8_t nintendo_logo[CART_LOGO_SIZE] = {
 	0xDDu, 0xDCu, 0x99u, 0x9Fu, 0xBBu, 0xB9u, 0x33u, 0x3Eu
 };
 
-static void load_rom(struct gbc *gbc, const char *filename);
-static void parse_header(struct gbc *gbc);
-static bool verify_cartridge(struct gbc *gbc, bool print);
-static void load_title(struct gbc *gbc);
-static void init_mode(struct gbc *gbc);
-static void print_licensee_code(struct gbc *gbc);
-static void get_cartridge_hardware(struct gbc *gbc);
-static void init_ram(struct gbc *gbc);
-static void print_destination_code(struct gbc *gbc);
-static void init_registers(struct gbc *gbc);
-static void init_mmap(struct gbc *gbc);
-static void init_ioreg(struct gbc *gbc);
+static void load_rom(struct gbcc_core *gbc, const char *filename);
+static void parse_header(struct gbcc_core *gbc);
+static bool verify_cartridge(struct gbcc_core *gbc, bool print);
+static void load_title(struct gbcc_core *gbc);
+static void init_mode(struct gbcc_core *gbc);
+static void print_licensee_code(struct gbcc_core *gbc);
+static void get_cartridge_hardware(struct gbcc_core *gbc);
+static void init_ram(struct gbcc_core *gbc);
+static void print_destination_code(struct gbcc_core *gbc);
+static void init_registers(struct gbcc_core *gbc);
+static void init_mmap(struct gbcc_core *gbc);
+static void init_ioreg(struct gbcc_core *gbc);
 
-void gbcc_initialise(struct gbc *gbc, const char *filename)
+void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 {
-	*gbc = (const struct gbc){{{{{0}}}}};
+	*gbc = (const struct gbcc_core){0};
 	gbc->cart.filename = filename;
 	gbc->cart.mbc.type = NONE;
 	gbc->cart.mbc.romx_bank = 0x01u;
@@ -54,17 +55,21 @@ void gbcc_initialise(struct gbc *gbc, const char *filename)
 	init_mmap(gbc);
 	init_ioreg(gbc);
 	gbcc_apu_init(gbc);
+	gbc->initialised = true;
 }
 
-void gbcc_free(struct gbc *gbc)
+void gbcc_free(struct gbcc_core *gbc)
 {
+	if (!gbc->initialised) {
+		return;
+	}
 	free(gbc->cart.rom);
 	if (gbc->cart.ram_size > 0) {
 		free(gbc->cart.ram);
 	}
 }
 
-void load_rom(struct gbc *gbc, const char *filename)
+void load_rom(struct gbcc_core *gbc, const char *filename)
 {
 	gbcc_log_info("Loading %s...\n", filename);
 	size_t read;
@@ -113,7 +118,7 @@ void load_rom(struct gbc *gbc, const char *filename)
 	gbcc_log_info("\tROM loaded.\n");
 }
 
-void parse_header(struct gbc *gbc)
+void parse_header(struct gbcc_core *gbc)
 {
 	gbcc_log_info("Parsing header...\n");
 	/* Check for MMM01, which has its header at the end of the file */
@@ -150,7 +155,7 @@ void parse_header(struct gbc *gbc)
 	gbcc_log_info("\tHeader parsed.\n");
 }
 
-bool verify_cartridge(struct gbc *gbc, bool print)
+bool verify_cartridge(struct gbcc_core *gbc, bool print)
 {
 	for (uint16_t i = CART_LOGO_START; i < CART_LOGO_GBC_CHECK_END; i++) {
 		if (gbc->memory.rom0[i] != nintendo_logo[i - CART_LOGO_START]) {
@@ -180,7 +185,7 @@ bool verify_cartridge(struct gbc *gbc, bool print)
 	return true;
 }
 
-void load_title(struct gbc *gbc)
+void load_title(struct gbcc_core *gbc)
 {
 	uint8_t *title = gbc->memory.rom0 + CART_TITLE_START;
 	memcpy(gbc->cart.title, title, CART_TITLE_SIZE);
@@ -188,11 +193,11 @@ void load_title(struct gbc *gbc)
 	gbcc_log_info("\tTitle: %s\n", gbc->cart.title);
 }
 
-void print_licensee_code(struct gbc *gbc)
+void print_licensee_code(struct gbcc_core *gbc)
 {
 	uint8_t old_code = gbc->memory.rom0[CART_OLD_LICENSEE_CODE];
 	char buffer[CART_NEW_LICENSEE_CODE_SIZE + 21];
-	size_t len = sizeof(buffer) / sizeof(buffer[0]);
+	size_t len = N_ELEM(buffer);
 	if (old_code != 0x33u) {
 		snprintf(buffer, len, "\tLicensee code: 0x%02X\n", old_code);
 	} else {
@@ -206,7 +211,7 @@ void print_licensee_code(struct gbc *gbc)
 	gbcc_log_info("%s", buffer);
 }
 
-void init_mode(struct gbc *gbc)
+void init_mode(struct gbcc_core *gbc)
 {
 	uint8_t mode_flag;
 
@@ -229,7 +234,7 @@ void init_mode(struct gbc *gbc)
 	}
 }
 
-void get_cartridge_hardware(struct gbc *gbc)
+void get_cartridge_hardware(struct gbcc_core *gbc)
 {
 	switch (gbc->memory.rom0[CART_TYPE]) {
 		case 0x00u:	/* ROM ONLY */
@@ -366,7 +371,7 @@ void get_cartridge_hardware(struct gbc *gbc)
 	}
 }
 
-void init_ram(struct gbc *gbc)
+void init_ram(struct gbcc_core *gbc)
 {
 	uint8_t ram_size_flag;
 
@@ -392,12 +397,6 @@ void init_ram(struct gbc *gbc)
 			exit(EXIT_FAILURE);
 	}
 
-	/* Assume SRAM is connected when there's no MBC, as we can't detect it */
-	/* TODO: Not correct */
-	/*if (gbc->cart.mbc.type == NONE) {
-		gbc->cart.ram_size = 0x2000u;
-	}*/
-
 	if (gbc->cart.ram_size > 0) {
 		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;
 		gbcc_log_info("\tCartridge RAM: 0x%0zX bytes (%zu banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
@@ -409,7 +408,7 @@ void init_ram(struct gbc *gbc)
 	}
 }
 
-void print_destination_code(struct gbc *gbc)
+void print_destination_code(struct gbcc_core *gbc)
 {
 	uint8_t dest_code = gbc->memory.rom0[CART_DESTINATION_CODE];
 	switch (dest_code) {
@@ -425,7 +424,7 @@ void print_destination_code(struct gbc *gbc)
 	}
 }
 
-void init_registers(struct gbc *gbc) {
+void init_registers(struct gbcc_core *gbc) {
 	struct cpu *cpu = &gbc->cpu;
 	switch (gbc->mode) {
 		case DMG:
@@ -447,7 +446,7 @@ void init_registers(struct gbc *gbc) {
 	}
 }
 
-void init_mmap(struct gbc *gbc)
+void init_mmap(struct gbcc_core *gbc)
 {
 	gbc->memory.romx = gbc->memory.rom0 + ROM0_SIZE;
 	gbc->memory.vram = gbc->memory.vram_bank[0];
@@ -457,7 +456,7 @@ void init_mmap(struct gbc *gbc)
 	gbc->memory.echo = gbc->memory.wram0;
 }
 
-void init_ioreg(struct gbc *gbc)
+void init_ioreg(struct gbcc_core *gbc)
 {
 	/* Values taken from the pandocs and mooneye tests*/
 	gbc->memory.ioreg[JOYP - IOREG_START] = 0xCFu;

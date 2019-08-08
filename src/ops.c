@@ -1,4 +1,4 @@
-#include "gbcc.h"
+#include "core.h"
 #include "bit_utils.h"
 #include "cpu.h"
 #include "debug.h"
@@ -10,9 +10,9 @@
 
 #define YIELD {cpu->instruction.step++; return;}
 
-static uint8_t READ_OPERAND_MOD(struct gbc *gbc);
-static void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val);
-static void WRITE_OPERAND_DIV(struct gbc *gbc, uint8_t offset, uint8_t val);
+static uint8_t READ_OPERAND_MOD(struct gbcc_core *gbc);
+static void WRITE_OPERAND_MOD(struct gbcc_core *gbc, uint8_t val);
+static void WRITE_OPERAND_DIV(struct gbcc_core *gbc, uint8_t offset, uint8_t val);
 static bool mod_is_hl(struct cpu *cpu);
 static bool div_is_hl(struct cpu *cpu, uint8_t offset);
 static void done(struct cpu *cpu);
@@ -46,7 +46,7 @@ static void cond_flag(struct cpu *cpu, uint8_t flag, bool cond) {
 }
 
 /* Main opcode jump table */
-void (*const gbcc_ops[0x100])(struct gbc *gbc) = {
+void (*const gbcc_ops[0x100])(struct gbcc_core *gbc) = {
 /* 0x00 */	NOP,		LD_d16,		LD_A,		INC_DEC_16_BIT,
 /* 0x04 */	INC_DEC_REG,	INC_DEC_REG,	LD_d8,		SHIFT_A,
 /* 0x08 */	STORE_SP,	ADD_HL,		LD_A,		INC_DEC_16_BIT,
@@ -114,7 +114,7 @@ void (*const gbcc_ops[0x100])(struct gbc *gbc) = {
 };
 
 
-void INTERRUPT(struct gbc *gbc)
+void INTERRUPT(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->halt.no_interrupt) {
@@ -207,20 +207,20 @@ void INTERRUPT(struct gbc *gbc)
 /* Miscellaneous */
 
 __attribute__((noreturn))
-void INVALID(struct gbc *gbc)
+void INVALID(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	gbcc_log_error("Invalid opcode: 0x%02X\n", cpu->opcode);
 	exit(EXIT_FAILURE);
 }
 
-void NOP(struct gbc *gbc)
+void NOP(struct gbcc_core *gbc)
 {
 	(void) gbc;
 	done(&gbc->cpu);
 }
 
-void STOP(struct gbc *gbc)
+void STOP(struct gbcc_core *gbc)
 {
 	uint8_t key1 = gbcc_memory_read(gbc, KEY1, true);
 	if (gbc->mode == GBC && check_bit(key1, 0)) {
@@ -234,7 +234,7 @@ void STOP(struct gbc *gbc)
 	done(&gbc->cpu);
 }
 
-void HALT(struct gbc *gbc)
+void HALT(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
@@ -259,7 +259,7 @@ void HALT(struct gbc *gbc)
 	done(cpu);
 }
 
-void DAA(struct gbc *gbc)
+void DAA(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t *op = &(cpu->reg.a);
@@ -284,7 +284,7 @@ void DAA(struct gbc *gbc)
 	done(cpu);
 }
 
-void CPL(struct gbc *gbc)
+void CPL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	cpu->reg.a = ~cpu->reg.a;
@@ -293,7 +293,7 @@ void CPL(struct gbc *gbc)
 	done(cpu);
 }
 
-void SCF(struct gbc *gbc)
+void SCF(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	set_flag(cpu, CF);
@@ -302,7 +302,7 @@ void SCF(struct gbc *gbc)
 	done(cpu);
 }
 
-void CCF(struct gbc *gbc)
+void CCF(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	toggle_flag(cpu, CF);
@@ -318,7 +318,7 @@ void CCF(struct gbc *gbc)
  * EI, hence setting the timer to 2, and making the IME change on step 1
  * normally.
  */
-void EI(struct gbc *gbc)
+void EI(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	cpu->ime_timer.target_state = true;
@@ -326,7 +326,7 @@ void EI(struct gbc *gbc)
 	done(cpu);
 }
 
-void DI(struct gbc *gbc)
+void DI(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->ime_timer.timer > 0 && cpu->ime_timer.target_state == true) {
@@ -341,13 +341,13 @@ void DI(struct gbc *gbc)
 
 /* Loads */
 
-void LD_REG_REG(struct gbc *gbc)
+void LD_REG_REG(struct gbcc_core *gbc)
 {
 	WRITE_OPERAND_DIV(gbc, 0x40u, READ_OPERAND_MOD(gbc));
 	done(&gbc->cpu);
 }
 
-void LD_REG_HL(struct gbc *gbc)
+void LD_REG_HL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -360,7 +360,7 @@ void LD_REG_HL(struct gbc *gbc)
 	done(cpu);
 }
 
-void LD_d8(struct gbc *gbc)
+void LD_d8(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -378,7 +378,7 @@ void LD_d8(struct gbc *gbc)
 	done(cpu);
 }
 
-void LD_d16(struct gbc *gbc)
+void LD_d16(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -411,7 +411,7 @@ void LD_d16(struct gbc *gbc)
 	done(cpu);
 }
 
-void LD_A(struct gbc *gbc)
+void LD_A(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
@@ -448,7 +448,7 @@ void LD_A(struct gbc *gbc)
 	done(cpu);
 }
 
-void LD_a16(struct gbc *gbc)
+void LD_a16(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -476,7 +476,7 @@ void LD_a16(struct gbc *gbc)
 	done(cpu);
 }
 
-void LDH_a8(struct gbc *gbc)
+void LDH_a8(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -500,7 +500,7 @@ void LDH_a8(struct gbc *gbc)
 	done(cpu);
 }
 
-void LDH_C(struct gbc *gbc)
+void LDH_C(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
@@ -522,7 +522,7 @@ void LDH_C(struct gbc *gbc)
 	done(cpu);
 }
 
-void STORE_SP(struct gbc *gbc)
+void STORE_SP(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -544,7 +544,7 @@ void STORE_SP(struct gbc *gbc)
 	done(cpu);
 }
 
-void LD_HL_SP(struct gbc *gbc)
+void LD_HL_SP(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -564,7 +564,7 @@ void LD_HL_SP(struct gbc *gbc)
 	done(cpu);
 }
 
-void LD_SP_HL(struct gbc *gbc)
+void LD_SP_HL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
@@ -574,7 +574,7 @@ void LD_SP_HL(struct gbc *gbc)
 	done(cpu);
 }
 
-void POP(struct gbc *gbc)
+void POP(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -609,7 +609,7 @@ void POP(struct gbc *gbc)
 	done(cpu);
 }
 
-void PUSH(struct gbc *gbc)
+void PUSH(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -649,7 +649,7 @@ void PUSH(struct gbc *gbc)
 
 /* ALU */
 
-void ALU_OP(struct gbc *gbc)
+void ALU_OP(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t *op1 = &(cpu->reg.a);
@@ -753,7 +753,7 @@ void ALU_OP(struct gbc *gbc)
 	done(cpu);
 }
 
-void INC_DEC_REG(struct gbc *gbc)
+void INC_DEC_REG(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t op;
@@ -807,7 +807,7 @@ void INC_DEC_REG(struct gbc *gbc)
 	done(cpu);
 }
 
-void INC_DEC_HL(struct gbc *gbc)
+void INC_DEC_HL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -837,7 +837,7 @@ void INC_DEC_HL(struct gbc *gbc)
 	done(cpu);
 }
 
-void INC_DEC_16_BIT(struct gbc *gbc)
+void INC_DEC_16_BIT(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
@@ -875,7 +875,7 @@ void INC_DEC_16_BIT(struct gbc *gbc)
 	done(cpu);
 }
 
-void ADD_HL(struct gbc *gbc)
+void ADD_HL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
@@ -908,7 +908,7 @@ void ADD_HL(struct gbc *gbc)
 	done(cpu);
 }
 
-void ADD_SP(struct gbc *gbc)
+void ADD_SP(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -929,7 +929,7 @@ void ADD_SP(struct gbc *gbc)
 	done(cpu);
 }
 
-void SHIFT_A(struct gbc *gbc)
+void SHIFT_A(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t *op = &(cpu->reg.a);
@@ -966,7 +966,7 @@ void SHIFT_A(struct gbc *gbc)
 
 /* Jumps */
 
-void JP(struct gbc *gbc)
+void JP(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -983,14 +983,14 @@ void JP(struct gbc *gbc)
 	done(cpu);
 }
 
-void JP_HL(struct gbc *gbc)
+void JP_HL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	cpu->reg.pc = cpu->reg.hl;
 	done(cpu);
 }
 
-void JP_COND(struct gbc *gbc)
+void JP_COND(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	bool jp = false;
@@ -1027,7 +1027,7 @@ void JP_COND(struct gbc *gbc)
 	done(cpu);
 }
 
-void JR(struct gbc *gbc)
+void JR(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -1042,7 +1042,7 @@ void JR(struct gbc *gbc)
 	done(cpu);
 }
 
-void JR_COND(struct gbc *gbc)
+void JR_COND(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -1089,7 +1089,7 @@ void JR_COND(struct gbc *gbc)
 
 /* Calls */
 
-void CALL(struct gbc *gbc)
+void CALL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -1114,7 +1114,7 @@ void CALL(struct gbc *gbc)
 	done(cpu);
 }
 
-void CALL_COND(struct gbc *gbc)
+void CALL_COND(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -1161,7 +1161,7 @@ void CALL_COND(struct gbc *gbc)
 	done(cpu);
 }
 
-void RET(struct gbc *gbc)
+void RET(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -1179,7 +1179,7 @@ void RET(struct gbc *gbc)
 	done(cpu);
 }
 
-void RETI(struct gbc *gbc)
+void RETI(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	RET(gbc);
@@ -1189,7 +1189,7 @@ void RETI(struct gbc *gbc)
 	}
 }
 
-void RET_COND(struct gbc *gbc)
+void RET_COND(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	bool ret = false;
@@ -1228,7 +1228,7 @@ void RET_COND(struct gbc *gbc)
 	done(cpu);
 }
 
-void RST(struct gbc *gbc)
+void RST(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
@@ -1248,7 +1248,7 @@ void RST(struct gbc *gbc)
 
 /* CB-prefix */
 
-void PREFIX_CB(struct gbc *gbc)
+void PREFIX_CB(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	cpu->instruction.prefix_cb = true;
@@ -1275,7 +1275,7 @@ void PREFIX_CB(struct gbc *gbc)
 	}
 }
 
-void CB_SHIFT_OP(struct gbc *gbc)
+void CB_SHIFT_OP(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (mod_is_hl(cpu)) {
@@ -1339,7 +1339,7 @@ void CB_SHIFT_OP(struct gbc *gbc)
 	done(cpu);
 }
 
-void CB_BIT(struct gbc *gbc)
+void CB_BIT(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 1 && mod_is_hl(cpu)) {
@@ -1354,7 +1354,7 @@ void CB_BIT(struct gbc *gbc)
 	done(cpu);
 }
 
-void CB_RES(struct gbc *gbc)
+void CB_RES(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (mod_is_hl(cpu)) {
@@ -1374,7 +1374,7 @@ void CB_RES(struct gbc *gbc)
 	done(cpu);
 }
 
-void CB_SET(struct gbc *gbc)
+void CB_SET(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (mod_is_hl(cpu)) {
@@ -1396,7 +1396,7 @@ void CB_SET(struct gbc *gbc)
 
 /* Helper functions */
 
-uint8_t READ_OPERAND_MOD(struct gbc *gbc)
+uint8_t READ_OPERAND_MOD(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t ret;
@@ -1423,7 +1423,7 @@ uint8_t READ_OPERAND_MOD(struct gbc *gbc)
 	}
 }
 
-void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val)
+void WRITE_OPERAND_MOD(struct gbcc_core *gbc, uint8_t val)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->opcode % 0x08u) {
@@ -1454,7 +1454,7 @@ void WRITE_OPERAND_MOD(struct gbc *gbc, uint8_t val)
 	}
 }
 
-void WRITE_OPERAND_DIV(struct gbc *gbc, uint8_t offset, uint8_t val)
+void WRITE_OPERAND_DIV(struct gbcc_core *gbc, uint8_t offset, uint8_t val)
 {
 	struct cpu *cpu = &gbc->cpu;
 	switch ((cpu->opcode - offset) / 0x08u) {

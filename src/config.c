@@ -1,27 +1,33 @@
-#include "gbcc.h"
+#include "core.h"
 #include "config.h"
 #include "debug.h"
 #include "save.h"
 #include "window.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
 static char *strip(const char *str);
-static void parse_option(struct gbcc_window *win, const char *option, const char *value);
+static void parse_option(struct gbcc *gbc, const char *option, const char *value);
 static char *get_config_path();
 
-void gbcc_load_config(struct gbcc_window *win, char *filename)
+void gbcc_load_config(struct gbcc *gbc, char *filename)
 {
 	bool default_filename = false;
 	if (!filename) {
 		default_filename = true;
 		filename = get_config_path();
 	}
-	gbcc_log_info("Loading config from %s...\n", filename);
 	char *config;
 	int size;
 	FILE *fp = fopen(filename, "rbe");
 	if (!fp) {
+		if (errno == ENOENT) {
+			if (default_filename) {
+				free(filename);
+			}
+			return;
+		}
 		gbcc_log_error("Failed to open config file %s\n", filename);
 		if (default_filename) {
 			free(filename);
@@ -43,6 +49,8 @@ void gbcc_load_config(struct gbcc_window *win, char *filename)
 	fread(config, 1, size, fp);
 	fclose(fp);
 	config[size] = '\0';
+	
+	gbcc_log_info("Loading config from %s...\n", filename);
 	
 	char *str1;
 	char *line;
@@ -69,7 +77,7 @@ void gbcc_load_config(struct gbcc_window *win, char *filename)
 			gbcc_log_warning("\tBad config line \"%s\"\n", line);
 			continue;
 		}
-		parse_option(win, option, value);
+		parse_option(gbc, option, value);
 	}
 	free(config);
 	if (default_filename) {
@@ -97,7 +105,7 @@ char *strip(const char *str)
 }
 
 /* TODO: Lots */
-void parse_option(struct gbcc_window *win, const char *option, const char *value)
+void parse_option(struct gbcc *gbc, const char *option, const char *value)
 {
 	char *opt = strip(option);
 	if (!opt) {
@@ -114,23 +122,23 @@ void parse_option(struct gbcc_window *win, const char *option, const char *value
 
 	if (strcmp(opt, "autoresume") == 0) {
 		if (strtol(val, NULL, 0)) {
-			gbcc_load_state(win->gbc);
+			gbcc_load_state(gbc);
 		}
 	} else if (strcmp(opt, "background") == 0) {
-		win->gbc->background_play = strtol(val, NULL, 0);
+		gbc->background_play = strtol(val, NULL, 0);
 	} else if (strcmp(opt, "fractional") == 0) {
-		win->fractional_scaling = strtol(val, NULL, 0);
+		gbc->window.fractional_scaling = strtol(val, NULL, 0);
 	} else if (strcmp(opt, "interlace") == 0) {
-		win->gbc->interlace = strtol(val, NULL, 0);
+		gbc->interlace = strtol(val, NULL, 0);
 	} else if (strcmp(opt, "palette") == 0) {
-		win->gbc->ppu.palette = gbcc_get_palette(val);
+		gbc->core.ppu.palette = gbcc_get_palette(val);
 	} else if (strcmp(opt, "shader") == 0) {
-		gbcc_window_use_shader(win, val);
+		gbcc_window_use_shader(gbc, val);
 	} else if (strcmp(opt, "turbo") == 0) {
-		win->gbc->turbo_speed = strtod(val, NULL);
+		gbc->core.turbo_speed = strtod(val, NULL);
 	} else if (strcmp(opt, "vsync") == 0) {
 	} else if (strcmp(opt, "vram-window") == 0) {
-		win->vram_display = strtol(val, NULL, 0);
+		gbc->window.vram_display = strtol(val, NULL, 0);
 	} else {
 		gbcc_log_warning("\tBad config file option \"%s\"\n", opt);
 	}
