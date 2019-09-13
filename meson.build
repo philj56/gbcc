@@ -55,7 +55,7 @@ add_project_arguments(
     '-Wno-missing-braces',
     '-DTILESET_PATH="@0@"'.format(tileset_location),
     '-DPRINTER_SOUND_PATH="@0@"'.format(printer_sound_location),
-    #'-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
+    '-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
     '-DSHADER_PATH="@0@"'.format(shader_location),
     '-g',
     #'-fprofile-instr-use'
