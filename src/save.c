@@ -138,6 +138,8 @@ void gbcc_load_state(struct gbcc *gbc)
 	uint8_t wram_bank;
 	uint8_t vram_bank;
 	const char *name = core->cart.filename;
+	uint32_t *buf0 = core->ppu.screen.buffer_0;
+	uint32_t *buf1 = core->ppu.screen.buffer_1;
 
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
@@ -159,8 +161,8 @@ void gbcc_load_state(struct gbcc *gbc)
 	fread(gbc, sizeof(struct gbcc_core), 1, sav);
 	/* FIXME: Thread-unsafe, screen could try to read from here while the
 	 * pointer is still invalid */
-	core->ppu.screen.gbc = core->ppu.screen.buffer_0;
-	core->ppu.screen.sdl = core->ppu.screen.buffer_1;
+	core->ppu.screen.gbc = buf0;
+	core->ppu.screen.sdl = buf1;
 
 	core->cart.rom = rom;
 	core->cart.ram = ram;

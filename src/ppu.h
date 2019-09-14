@@ -39,8 +39,8 @@ struct ppu {
 	struct line_buffer window_line;
 	struct line_buffer sprite_line;
 	struct {
-		uint32_t buffer_0[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
-		uint32_t buffer_1[GBC_SCREEN_HEIGHT * GBC_SCREEN_WIDTH];
+		uint32_t *buffer_0;
+		uint32_t *buffer_1;
 		uint32_t *gbc;
 		uint32_t *sdl;
 	} screen;

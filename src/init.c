@@ -48,6 +48,8 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 	gbc->cpu.ime = false;
 	gbc->ppu.clock = 0;
 	gbc->ppu.palette = gbcc_get_palette("default");
+	gbc->ppu.screen.buffer_0 = calloc(GBC_SCREEN_SIZE, sizeof(uint32_t));
+	gbc->ppu.screen.buffer_1 = calloc(GBC_SCREEN_SIZE, sizeof(uint32_t));
 	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
 	gbc->ppu.screen.sdl = gbc->ppu.screen.buffer_1;
 	load_rom(gbc, filename);
@@ -67,6 +69,8 @@ void gbcc_free(struct gbcc_core *gbc)
 	if (gbc->cart.ram_size > 0) {
 		free(gbc->cart.ram);
 	}
+	free(gbc->ppu.screen.buffer_0);
+	free(gbc->ppu.screen.buffer_1);
 }
 
 void load_rom(struct gbcc_core *gbc, const char *filename)
