@@ -6,7 +6,7 @@ gbcc - Game Boy Color emulator written in C
 
 # SYNOPSIS
 
-*gbcc* [-abfhivV] [-c _config_file_] [-p _palette_] [-s shader] [-t _speed_] rom
+*gbcc* [-abfFhivV] [-c _config_file_] [-p _palette_] [-s shader] [-t _speed_] rom
 
 # DESCRIPTION
 
@@ -27,6 +27,9 @@ slow).
 
 *-f, --fractional*
 	Enable fractional scaling (default is integer).
+
+*-F, --frame-blending*
+	Enable frame blending.
 
 *-h, --help*
 	Show help message and exit.

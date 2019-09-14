@@ -207,7 +207,11 @@ void gbcc_sdl_process_input(struct gbcc *gbc)
 				}
 				break;
 			case 11:
-				emulator_key = GBCC_KEY_FPS;
+				if (state[SDL_SCANCODE_LSHIFT]) {
+					emulator_key = GBCC_KEY_FRAME_BLENDING;
+				} else {
+					emulator_key = GBCC_KEY_FPS;
+				}
 				break;
 			case 12:
 				if (state[SDL_SCANCODE_LSHIFT]) {

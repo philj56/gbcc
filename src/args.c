@@ -7,11 +7,12 @@
 
 static void usage()
 {
-	printf("Usage: gbcc [-abfhivV] [-c config_file] [-p palette] [-s shader] [-t speed] rom\n"
+	printf("Usage: gbcc [-abfFhivV] [-c config_file] [-p palette] [-s shader] [-t speed] rom\n"
 	       "  -a, --autoresume      Automatically resume gameplay if possible.\n"
 	       "  -b, --background      Enable playback while unfocused.\n"
 	       "  -c, --config=PATH     Path to custom config file.\n"
 	       "  -f, --fractional      Enable fractional scaling.\n"
+	       "  -F, --frame-blending  Enable simple frame blending.\n"
 	       "  -h, --help            Print this message and exit.\n"
 	       "  -i, --interlace       Enable interlacing (experimental).\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
@@ -32,6 +33,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"background", no_argument, NULL, 'b'},
 		{"config", required_argument, NULL, 'c'},
 		{"fractional", no_argument, NULL, 'f'},
+		{"frame-blending", no_argument, NULL, 'F'},
 		{"help", no_argument, NULL, 'h'},
 		{"interlace", no_argument, NULL, 'i'},
 		{"palette", required_argument, NULL, 'p'},
@@ -40,7 +42,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "abc:fhip:s:t:vV";
+	const char *short_options = "abc:fFhip:s:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -79,6 +81,9 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				break;
 			case 'f':
 				gbc->window.fractional_scaling = true;
+				break;
+			case 'F':
+				gbc->window.frame_blending = true;
 				break;
 			case 'h':
 				usage();

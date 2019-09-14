@@ -61,6 +61,14 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 		case GBCC_KEY_FPS:
 			gbc->window.fps.show ^= pressed;
 			break;
+		case GBCC_KEY_FRAME_BLENDING:
+			gbc->window.frame_blending ^= pressed;
+			if (gbc->window.frame_blending) {
+				gbcc_window_show_message(gbc, "Frame blending enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Frame blending disabled", 1, true);
+			}
+			break;
 		case GBCC_KEY_SHADER:
 			gbc->window.gl.cur_shader += pressed;
 			gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);

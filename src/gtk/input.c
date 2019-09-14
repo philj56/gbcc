@@ -16,6 +16,7 @@ guint default_keymap[51] = {
 	GDK_KEY_p,
 	GDK_KEY_P,
 	GDK_KEY_f,
+	GDK_KEY_F,
 	GDK_KEY_v,
 	GDK_KEY_V,
 	GDK_KEY_1,

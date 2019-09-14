@@ -216,7 +216,9 @@ void gbcc_window_update(struct gbcc *gbc)
 	uint32_t *screen = gbc->core.ppu.screen.sdl;
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
-	memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
+	if (win->frame_blending) {
+		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
+	}
 	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
 
 	update_text(gbc);
@@ -227,6 +229,10 @@ void gbcc_window_update(struct gbcc *gbc)
 	}
 	if (win->msg.time_left > 0 && !screenshot) {
 		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
+	}
+
+	if (!win->frame_blending) {
+		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
 	}
 
 	/* First pass - render the gbc screen to the framebuffer */
