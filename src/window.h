@@ -38,6 +38,7 @@ struct gbcc_window {
 	int32_t width;
 	int32_t height;
 	uint32_t buffer[GBC_SCREEN_SIZE];
+	uint32_t last_buffer[GBC_SCREEN_SIZE];
 	struct gbcc_platform platform;
 	struct {
 		GLuint vbo;

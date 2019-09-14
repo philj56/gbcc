@@ -41,7 +41,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	/* Compile and link the shader programs */
 	win->gl.base_shader = gbcc_create_shader_program(
 			SHADER_PATH "flipped.vert",
-			SHADER_PATH "nothing.frag"
+			SHADER_PATH "frameblend.frag"
 			);
 
 	win->gl.shaders[0].name = "Colour Correct";
@@ -166,7 +166,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	 * before post-processing */
 	glGenTextures(1, &win->gl.texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH * 2, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
 			GL_UNSIGNED_INT_8_8_8_8, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -216,6 +216,7 @@ void gbcc_window_update(struct gbcc *gbc)
 	uint32_t *screen = gbc->core.ppu.screen.sdl;
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
+	memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
 	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
 
 	update_text(gbc);
@@ -236,6 +237,8 @@ void gbcc_window_update(struct gbcc *gbc)
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
 			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->buffer);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, GBC_SCREEN_WIDTH, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
+			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->last_buffer);
 	glUseProgram(win->gl.base_shader);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
