@@ -2,10 +2,6 @@
 #define GBCC_GTK
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include "../gbcc.h"
 #include "../args.h"
 #include "../audio.h"

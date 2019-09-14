@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include "bit_utils.h"
 #include "debug.h"
 #include "printer.h"

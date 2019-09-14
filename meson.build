@@ -53,6 +53,8 @@ add_project_arguments(
     '-mtune=native',
     '-Wno-unused-parameter',
     '-Wno-missing-braces',
+    '-D_POSIX_C_SOURCE=200809L',
+    '-D_GNU_SOURCE',
     '-DTILESET_PATH="@0@"'.format(tileset_location),
     '-DPRINTER_SOUND_PATH="@0@"'.format(printer_sound_location),
     '-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
@@ -112,7 +114,6 @@ epoxy = dependency('epoxy')
 openal = dependency('openal')
 thread = dependency('threads')
 gtk = dependency('gtk+-3.0')
-
 
 executable(
   'gbcc',

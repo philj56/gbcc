@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include "../gbcc.h"
 #include "../apu.h"
 #include "../args.h"
