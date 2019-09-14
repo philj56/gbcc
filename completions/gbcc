@@ -68,3 +68,4 @@ _gbcc()
         true
 }
 complete -F _gbcc gbcc
+complete -F _gbcc gbcc-gtk
