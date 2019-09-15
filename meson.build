@@ -115,19 +115,27 @@ openal = dependency('openal')
 thread = dependency('threads')
 gtk = dependency('gtk+-3.0')
 
+libgbcc = static_library(
+  'gbcc',
+  common_sources,
+  install: false
+)
+
 executable(
   'gbcc',
-  [common_sources, sdl_sources],
+  sdl_sources,
   dependencies: [m, sdl, png, gl, epoxy, openal, thread],
   install: true,
+  link_with: libgbcc,
   link_args: ['-g']
 )
 
 executable(
   'gbcc-gtk',
-  [common_sources, gtk_sources],
+  gtk_sources,
   dependencies: [m, sdl, png, gl, gtk, epoxy, openal, thread],
   install: true,
+  link_with: libgbcc,
   c_args: ['-DGBCC_GTK'],
   link_args: ['-g']
 )

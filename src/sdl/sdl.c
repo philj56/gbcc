@@ -56,16 +56,16 @@ const SDL_GameControllerButton buttonmap[8] = {
 };
 
 // Returns key that changed, or -1 for a non-emulated key
-static int process_input(struct gbcc *gbc, const SDL_Event *e);
-static void process_game_controller(struct gbcc *gbc);
+static int process_input(struct gbcc_sdl *sdl, const SDL_Event *e);
+static void process_game_controller(struct gbcc_sdl *sdl);
 
-void gbcc_sdl_initialise(struct gbcc *gbc)
+void gbcc_sdl_initialise(struct gbcc_sdl *sdl)
 {
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
 	}
 
-	gbc->window.platform.game_controller = NULL;
+	sdl->game_controller = NULL;
 	
 	/* Main OpenGL settings */
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -74,7 +74,7 @@ void gbcc_sdl_initialise(struct gbcc *gbc)
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
 
-	gbc->window.platform.window = SDL_CreateWindow(
+	sdl->window = SDL_CreateWindow(
 			"GBCC",                    // window title
 			SDL_WINDOWPOS_UNDEFINED,   // initial x position
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
@@ -83,37 +83,37 @@ void gbcc_sdl_initialise(struct gbcc *gbc)
 			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
 			);
 
-	if (gbc->window.platform.window == NULL) {
+	if (sdl->window == NULL) {
 		gbcc_log_error("Could not create window: %s\n", SDL_GetError());
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
 
-	gbc->window.platform.context = SDL_GL_CreateContext(gbc->window.platform.window);
-	SDL_GL_MakeCurrent(gbc->window.platform.window, gbc->window.platform.context);
+	sdl->context = SDL_GL_CreateContext(sdl->window);
+	SDL_GL_MakeCurrent(sdl->window, sdl->context);
 
-	gbcc_window_initialise(gbc);
+	gbcc_window_initialise(&sdl->gbc);
 }
 
-void gbcc_sdl_destroy(struct gbcc *gbc)
+void gbcc_sdl_destroy(struct gbcc_sdl *sdl)
 {
-	struct gbcc_window *win = &gbc->window;
-	if (win->platform.game_controller != NULL) {
-		SDL_GameControllerClose(win->platform.game_controller);
-		win->platform.game_controller = NULL;
+	if (sdl->game_controller != NULL) {
+		SDL_GameControllerClose(sdl->game_controller);
+		sdl->game_controller = NULL;
 	}
-	SDL_GL_MakeCurrent(win->platform.window, win->platform.context);
-	gbcc_window_deinitialise(gbc);
-	SDL_GL_DeleteContext(win->platform.context);
-	SDL_DestroyWindow(win->platform.window);
+	SDL_GL_MakeCurrent(sdl->window, sdl->context);
+	gbcc_window_deinitialise(&sdl->gbc);
+	SDL_GL_DeleteContext(sdl->context);
+	SDL_DestroyWindow(sdl->window);
 }
 
-void gbcc_sdl_update(struct gbcc *gbc)
+void gbcc_sdl_update(struct gbcc_sdl *sdl)
 {
+	struct gbcc *gbc = &sdl->gbc;
 	struct gbcc_window *win = &gbc->window;
 	if (win->vram_display) {
 		if (!gbc->vram_window.initialised) {
-			gbcc_sdl_vram_window_initialise(gbc);
+			gbcc_sdl_vram_window_initialise(sdl);
 
 			/* 
 			 * Workaround to allow input on vram window.
@@ -123,29 +123,30 @@ void gbcc_sdl_update(struct gbcc *gbc)
 			 * the main window has focus, and then discard any
 			 * SDL_KEYDOWN events.
 			 */
-			SDL_RaiseWindow(win->platform.window);
+			SDL_RaiseWindow(sdl->window);
 			SDL_PumpEvents();
 			SDL_FlushEvent(SDL_KEYDOWN);
 		}
-		gbcc_sdl_vram_window_update(gbc);
+		gbcc_sdl_vram_window_update(sdl);
 	} else if (gbc->vram_window.initialised) {
-		gbcc_sdl_vram_window_destroy(gbc);
+		gbcc_sdl_vram_window_destroy(sdl);
 	}
 
-	SDL_GL_MakeCurrent(win->platform.window, win->platform.context);
-	SDL_GL_GetDrawableSize(win->platform.window, &win->width, &win->height);
+	SDL_GL_MakeCurrent(sdl->window, sdl->context);
+	SDL_GL_GetDrawableSize(sdl->window, &win->width, &win->height);
 	gbcc_window_update(gbc);
-	SDL_GL_SwapWindow(win->platform.window);
+	SDL_GL_SwapWindow(sdl->window);
 }
 
-void gbcc_sdl_process_input(struct gbcc *gbc)
+void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 {
-	int jx = SDL_GameControllerGetAxis(gbc->window.platform.game_controller, SDL_CONTROLLER_AXIS_LEFTX);
-	int jy = SDL_GameControllerGetAxis(gbc->window.platform.game_controller, SDL_CONTROLLER_AXIS_LEFTY);
+	struct gbcc *gbc = &sdl->gbc;
+	int jx = SDL_GameControllerGetAxis(sdl->game_controller, SDL_CONTROLLER_AXIS_LEFTX);
+	int jy = SDL_GameControllerGetAxis(sdl->game_controller, SDL_CONTROLLER_AXIS_LEFTY);
 	SDL_Event e;
 	const uint8_t *state = SDL_GetKeyboardState(NULL);
 	while (SDL_PollEvent(&e) != 0) {
-		int key = process_input(gbc, &e);
+		int key = process_input(sdl, &e);
 		enum gbcc_key emulator_key;
 		bool val;
 		if (e.type == SDL_KEYDOWN || e.type == SDL_CONTROLLERBUTTONDOWN) {
@@ -157,6 +158,8 @@ void gbcc_sdl_process_input(struct gbcc *gbc)
 				val = (abs(e.caxis.value) > abs(jx));
 			} else if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
 				val = (abs(e.caxis.value) > abs(jy));
+			} else {
+				continue;
 			}
 		} else {
 			continue;
@@ -313,22 +316,23 @@ void gbcc_sdl_process_input(struct gbcc *gbc)
 		gbcc_input_process_key(gbc, GBCC_KEY_ACCELEROMETER_UP, false);
 		gbcc_input_process_key(gbc, GBCC_KEY_ACCELEROMETER_DOWN, false);
 	}
-	process_game_controller(gbc);
+	process_game_controller(sdl);
 	gbcc_input_accelerometer_update(&gbc->core.cart.mbc.accelerometer);
 }
 
-int process_input(struct gbcc *gbc, const SDL_Event *e)
+int process_input(struct gbcc_sdl *sdl, const SDL_Event *e)
 {
+	struct gbcc *gbc = &sdl->gbc;
 	if (e->type == SDL_QUIT) {
 		gbc->quit = true;
 	} else if (e->type == SDL_WINDOWEVENT) {
 		if (e->window.event == SDL_WINDOWEVENT_CLOSE) {
 			uint32_t id = e->window.windowID;
-			if (id == SDL_GetWindowID(gbc->window.platform.window)) {
+			if (id == SDL_GetWindowID(sdl->window)) {
 				gbc->quit = true;
-				gbcc_sdl_destroy(gbc);
+				gbcc_sdl_destroy(sdl);
 				return -2;
-			} else if (id == SDL_GetWindowID(gbc->vram_window.platform.window)) {
+			} else if (id == SDL_GetWindowID(sdl->vram_window)) {
 				gbc->window.vram_display = false;
 			} else {
 				gbcc_log_error("Unknown window ID %u\n", id);
@@ -370,9 +374,8 @@ int process_input(struct gbcc *gbc, const SDL_Event *e)
 	return -1;
 }
 
-void process_game_controller(struct gbcc *gbc)
+void process_game_controller(struct gbcc_sdl *sdl)
 {
-	struct gbcc_platform *sdl = &gbc->window.platform;
 	if (sdl->game_controller != NULL && !SDL_GameControllerGetAttached(sdl->game_controller)) {
 		gbcc_log_info("Controller \"%s\" disconnected.\n", SDL_GameControllerName(sdl->game_controller));
 		SDL_GameControllerClose(sdl->game_controller);
@@ -396,7 +399,7 @@ void process_game_controller(struct gbcc *gbc)
 		}
 	}
 
-	if (gbc->core.cart.rumble_state) {
+	if (sdl->gbc.core.cart.rumble_state) {
 		if (SDL_HapticRumblePlay(sdl->haptic, 0.1, 100) != 0) {
 			printf("%s\n", SDL_GetError());
 		}

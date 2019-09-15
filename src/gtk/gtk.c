@@ -37,15 +37,12 @@ static void check_vram_display(GtkWidget *widget, void *data);
 static void change_shader(GtkWidget *widget, void *data);
 static void change_palette(GtkWidget *widget, void *data);
 static void toggle_vram_display(GtkWidget *widget, void *data);
-static void start_emulation_thread(struct gbcc *gbc, char *file);
-static void stop_emulation_thread(struct gbcc *gbc);
-static void gbcc_gtk_process_input(struct gbcc *gbc);
+static void start_emulation_thread(struct gbcc_gtk *gtk, char *file);
+static void stop_emulation_thread(struct gbcc_gtk *gtk);
+static void gbcc_gtk_process_input(struct gbcc_gtk *gtk);
 
-void gbcc_gtk_initialise(struct gbcc *gbc, int *argc, char ***argv)
+void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 {
-	struct gbcc_window *win = &gbc->window;
-	struct gbcc_platform *gtk = &win->platform;
-
 	gtk_init(argc, argv);
 
 	GError *error = NULL;
@@ -57,22 +54,22 @@ void gbcc_gtk_initialise(struct gbcc *gbc, int *argc, char ***argv)
 	}
 
 	gtk->window = GTK_WINDOW(gtk_builder_get_object(builder, "window"));
-	g_signal_connect(G_OBJECT(gtk->window), "destroy", G_CALLBACK(on_destroy), gbc);
+	g_signal_connect(G_OBJECT(gtk->window), "destroy", G_CALLBACK(on_destroy), gtk);
 	g_signal_connect(G_OBJECT(gtk->window), "destroy", gtk_main_quit, NULL);
-	g_signal_connect(G_OBJECT(gtk->window), "window-state-event", G_CALLBACK(on_window_state_change), gbc);
+	g_signal_connect(G_OBJECT(gtk->window), "window-state-event", G_CALLBACK(on_window_state_change), gtk);
 
 	gtk->gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "gl_area"));
 	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK);
-	g_signal_connect(G_OBJECT(gtk->gl_area), "realize", G_CALLBACK(on_realise), gbc);
-	g_signal_connect(G_OBJECT(gtk->gl_area), "render", G_CALLBACK(on_render), gbc);
-	g_signal_connect(G_OBJECT(gtk->gl_area), "key_press_event", G_CALLBACK(on_keypress), gbc);
-	g_signal_connect(G_OBJECT(gtk->gl_area), "key_release_event", G_CALLBACK(on_keypress), gbc);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "realize", G_CALLBACK(on_realise), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "render", G_CALLBACK(on_render), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "key_press_event", G_CALLBACK(on_keypress), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "key_release_event", G_CALLBACK(on_keypress), gtk);
 	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->gl_area), 3, 2);
 	
-	gbc->vram_window.platform.gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "vram_gl_area"));
-	g_signal_connect(G_OBJECT(gbc->vram_window.platform.gl_area), "realize", G_CALLBACK(on_vram_realise), gbc);
-	g_signal_connect(G_OBJECT(gbc->vram_window.platform.gl_area), "render", G_CALLBACK(on_vram_render), gbc);
-	gtk_gl_area_set_required_version(GTK_GL_AREA(gbc->vram_window.platform.gl_area), 3, 2);
+	gtk->vram_gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "vram_gl_area"));
+	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "realize", G_CALLBACK(on_vram_realise), gtk);
+	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "render", G_CALLBACK(on_vram_render), gtk);
+	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->vram_gl_area), 3, 2);
 	
 	gtk->menu.bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
 	gtk->menu.stop = GTK_WIDGET(gtk_builder_get_object(builder, "stop"));
@@ -105,7 +102,7 @@ void gbcc_gtk_initialise(struct gbcc *gbc, int *argc, char ***argv)
 	gtk_builder_add_callback_symbol(builder, "check_shader", G_CALLBACK(check_shader));
 	gtk_builder_add_callback_symbol(builder, "check_vram_display", G_CALLBACK(check_vram_display));
 	gtk_builder_add_callback_symbol(builder, "toggle_vram_display", G_CALLBACK(toggle_vram_display));
-	gtk_builder_connect_signals(builder, gbc);
+	gtk_builder_connect_signals(builder, gtk);
 
 	gtk_widget_show_all(GTK_WIDGET(gtk->window));
 	gtk_window_set_focus(gtk->window, gtk->gl_area);
@@ -118,36 +115,36 @@ void gbcc_gtk_initialise(struct gbcc *gbc, int *argc, char ***argv)
 
 void on_realise(GtkGLArea *gl_area, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	gtk_gl_area_make_current(gl_area);
 	gtk_gl_area_attach_buffers(gl_area);
 
-	gbcc_window_initialise(gbc);
+	gbcc_window_initialise(&gtk->gbc);
 	
-	for (size_t i = 0; i < N_ELEM(gbc->window.platform.menu.shader.shader); i++) {
+	for (size_t i = 0; i < N_ELEM(gtk->menu.shader.shader); i++) {
 		GtkWidget *button =  gtk_radio_menu_item_new_with_label(
-				gbc->window.platform.menu.shader.group,
-				gbc->window.gl.shaders[i].name);
-		gtk_menu_attach(GTK_MENU(gbc->window.platform.menu.shader.submenu),
+				gtk->menu.shader.group,
+				gtk->gbc.window.gl.shaders[i].name);
+		gtk_menu_attach(GTK_MENU(gtk->menu.shader.submenu),
 				button,
 				0, 1, i, i + 1);
-		gbc->window.platform.menu.shader.group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(button));
-		g_signal_connect(G_OBJECT(button), "toggled", G_CALLBACK(change_shader), gbc);
+		gtk->menu.shader.group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(button));
+		g_signal_connect(G_OBJECT(button), "toggled", G_CALLBACK(change_shader), gtk);
 		gtk_widget_show(button);
-		gbc->window.platform.menu.shader.shader[i] = button;
+		gtk->menu.shader.shader[i] = button;
 	}
 	
-	for (size_t i = 0; i < N_ELEM(gbc->window.platform.menu.palette.palette); i++) {
+	for (size_t i = 0; i < N_ELEM(gtk->menu.palette.palette); i++) {
 		GtkWidget *button =  gtk_radio_menu_item_new_with_label(
-				gbc->window.platform.menu.palette.group,
+				gtk->menu.palette.group,
 				gbcc_palettes[i].name);
-		gtk_menu_attach(GTK_MENU(gbc->window.platform.menu.palette.submenu),
+		gtk_menu_attach(GTK_MENU(gtk->menu.palette.submenu),
 				button,
 				0, 1, i, i + 1);
-		gbc->window.platform.menu.palette.group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(button));
-		g_signal_connect(G_OBJECT(button), "toggled", G_CALLBACK(change_palette), gbc);
+		gtk->menu.palette.group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(button));
+		g_signal_connect(G_OBJECT(button), "toggled", G_CALLBACK(change_palette), gtk);
 		gtk_widget_show(button);
-		gbc->window.platform.menu.palette.palette[i] = button;
+		gtk->menu.palette.palette[i] = button;
 	}
 
 	// Get frame clock:
@@ -169,7 +166,8 @@ void on_realise(GtkGLArea *gl_area, void *data)
 
 gboolean on_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	if (!gbc->core.initialised) {
 		gbcc_window_clear();
 		return true;
@@ -179,18 +177,19 @@ gboolean on_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 	gbc->window.height = gtk_widget_get_allocated_height(GTK_WIDGET(gl_area));
 	gbcc_window_update(gbc);
 	if (gbc->window.vram_display) {
-		gtk_widget_show(GTK_WIDGET(gbc->vram_window.platform.gl_area));
+		gtk_widget_show(GTK_WIDGET(gtk->vram_gl_area));
 	} else if (gbc->vram_window.initialised) {
-		gtk_widget_hide(GTK_WIDGET(gbc->vram_window.platform.gl_area));
+		gtk_widget_hide(GTK_WIDGET(gtk->vram_gl_area));
 	}
-	gbcc_gtk_process_input(gbc);
+	gbcc_gtk_process_input(gtk);
 
 	return true;
 }
 
 void on_vram_realise(GtkGLArea *gl_area, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	gtk_gl_area_make_current(gl_area);
 	gtk_gl_area_attach_buffers(gl_area);
 
@@ -215,7 +214,8 @@ void on_vram_realise(GtkGLArea *gl_area, void *data)
 
 gboolean on_vram_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	if (!gbc->core.initialised) {
 		gbcc_window_clear();
 		return true;
@@ -230,22 +230,24 @@ gboolean on_vram_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 
 void on_destroy(GtkWidget *window, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	if (gbc->core.initialised) {
-		stop_emulation_thread(gbc);
-		free(gbc->window.platform.filename);
+		stop_emulation_thread(gtk);
+		free(gtk->filename);
 	}
 	gbcc_audio_destroy(gbc);
 }
 
 void on_window_state_change(GtkWidget *window, GdkEvent *event, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	GdkWindowState state = event->window_state.new_window_state;
 	if (state & GDK_WINDOW_STATE_FULLSCREEN) {
-		gtk_widget_hide(gbc->window.platform.menu.bar);
+		gtk_widget_hide(gtk->menu.bar);
 	} else {
-		gtk_widget_show(gbc->window.platform.menu.bar);
+		gtk_widget_show(gtk->menu.bar);
 	}
 	gbc->has_focus = state & GDK_WINDOW_STATE_FOCUSED;
 }
@@ -253,7 +255,7 @@ void on_window_state_change(GtkWidget *window, GdkEvent *event, void *data)
 
 void load_rom(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	GtkWidget *dialog;
 	gint res;
 
@@ -277,7 +279,7 @@ void load_rom(GtkWidget *widget, void *data)
 	res = gtk_dialog_run(GTK_DIALOG(dialog));
 	if (res == GTK_RESPONSE_ACCEPT) {
 		char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
-		start_emulation_thread(gbc, filename);
+		start_emulation_thread(gtk, filename);
 		g_free(filename);
 	}
 	gtk_widget_destroy(dialog);
@@ -285,58 +287,63 @@ void load_rom(GtkWidget *widget, void *data)
 
 void stop(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
-	stop_emulation_thread(gbc);
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	stop_emulation_thread(gtk);
 }
 
 void save_state(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
 	gbc->save_state = strtol(strstr(name, " "), NULL, 10);
 }
 
 void load_state(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
 	gbc->load_state = strtol(strstr(name, " "), NULL, 10);
 }
 
 void quit(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
-	gtk_widget_destroy(GTK_WIDGET(gbc->window.platform.window));
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk_widget_destroy(GTK_WIDGET(gtk->window));
 }
 
 
 void check_savestates(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
-	for (size_t i = 0; i < N_ELEM(gbc->window.platform.menu.load_state.state); i++) {
-		gtk_widget_set_sensitive(gbc->window.platform.menu.load_state.state[i], gbcc_check_savestate(gbc, i + 1));
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
+	for (size_t i = 0; i < N_ELEM(gtk->menu.load_state.state); i++) {
+		gtk_widget_set_sensitive(gtk->menu.load_state.state[i], gbcc_check_savestate(gbc, i + 1));
 	}
 }
 
 void check_running(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 
-	gtk_widget_set_sensitive(gbc->window.platform.menu.stop, gbc->core.initialised);
-	gtk_widget_set_sensitive(gbc->window.platform.menu.save_state.submenu, gbc->core.initialised);
-	gtk_widget_set_sensitive(gbc->window.platform.menu.load_state.submenu, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.stop, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.save_state.submenu, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.load_state.submenu, gbc->core.initialised);
 }
 
 void check_palette(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	if (!gbc->core.initialised || gbc->core.mode == GBC) {
-		gtk_widget_set_sensitive(gbc->window.platform.menu.palette.menuitem, false);
+		gtk_widget_set_sensitive(gtk->menu.palette.menuitem, false);
 		return;
 	}
-	gtk_widget_set_sensitive(gbc->window.platform.menu.palette.menuitem, true);
-	for (size_t i = 0; i < N_ELEM(gbc->window.platform.menu.palette.palette); i++) {
-		GtkWidget *radio = gbc->window.platform.menu.palette.palette[i];
+	gtk_widget_set_sensitive(gtk->menu.palette.menuitem, true);
+	for (size_t i = 0; i < N_ELEM(gtk->menu.palette.palette); i++) {
+		GtkWidget *radio = gtk->menu.palette.palette[i];
 		const char *label = gtk_menu_item_get_label(GTK_MENU_ITEM(radio));
 		if (strcmp(label, gbc->core.ppu.palette.name) == 0) {
 			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(radio), true);
@@ -347,10 +354,11 @@ void check_palette(GtkWidget *widget, void *data)
 
 void check_shader(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	const char *shader = gbc->window.gl.shaders[gbc->window.gl.cur_shader].name;
-	for (size_t i = 0; i < N_ELEM(gbc->window.platform.menu.shader.shader); i++) {
-		GtkWidget *radio = gbc->window.platform.menu.shader.shader[i];
+	for (size_t i = 0; i < N_ELEM(gtk->menu.shader.shader); i++) {
+		GtkWidget *radio = gtk->menu.shader.shader[i];
 		const char *label = gtk_menu_item_get_label(GTK_MENU_ITEM(radio));
 		if (strcmp(label, shader) == 0) {
 			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(radio), true);
@@ -361,53 +369,58 @@ void check_shader(GtkWidget *widget, void *data)
 
 void check_vram_display(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	int visible;
-	g_object_get(gbc->vram_window.platform.gl_area, "visible", &visible, NULL);
-	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gbc->window.platform.menu.vram_display), visible);
+	g_object_get(gtk->vram_gl_area, "visible", &visible, NULL);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.vram_display), visible);
 }
 
 void change_shader(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
 	gbcc_window_use_shader(gbc, name);
 }
 
 void change_palette(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
 	gbc->core.ppu.palette = gbcc_get_palette(name);
 }
 
 void toggle_vram_display(GtkWidget *widget, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
-	gbc->window.vram_display = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(gbc->window.platform.menu.vram_display));
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
+	gbc->window.vram_display = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(gtk->menu.vram_display));
 }
 
-void start_emulation_thread(struct gbcc *gbc, char *file)
+void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
 {
+	struct gbcc *gbc = &gtk->gbc;
 	if (gbc->core.initialised) {
-		stop_emulation_thread(gbc);
-		free(gbc->window.platform.filename);
+		stop_emulation_thread(gtk);
+		free(gtk->filename);
 		gbc->quit = false;
 	}
-	gbc->window.platform.filename = malloc(strlen(file) + 1);
-	strncpy(gbc->window.platform.filename, file, strlen(file) + 1);
-	gbcc_initialise(&gbc->core, gbc->window.platform.filename);
-	pthread_create(&gbc->window.platform.emulation_thread, NULL, gbcc_emulation_loop, gbc);
-	pthread_setname_np(gbc->window.platform.emulation_thread, "EmulationThread");
+	gtk->filename = malloc(strlen(file) + 1);
+	strncpy(gtk->filename, file, strlen(file) + 1);
+	gbcc_initialise(&gbc->core, gtk->filename);
+	pthread_create(&gtk->emulation_thread, NULL, gbcc_emulation_loop, gbc);
+	pthread_setname_np(gtk->emulation_thread, "EmulationThread");
 }
 
-void stop_emulation_thread(struct gbcc *gbc)
+void stop_emulation_thread(struct gbcc_gtk *gtk)
 {
+	struct gbcc *gbc = &gtk->gbc;
 	if (!gbc->core.initialised) {
 		return;
 	}
 	gbc->quit = true;
-	pthread_join(gbc->window.platform.emulation_thread, NULL);
+	pthread_join(gtk->emulation_thread, NULL);
 	gbc->save_state = 0;
 	gbcc_save_state(gbc);
 	gbcc_free(&gbc->core);
@@ -416,7 +429,8 @@ void stop_emulation_thread(struct gbcc *gbc)
 
 void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
 {
-	struct gbcc *gbc = (struct gbcc *)data;
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	struct gbcc *gbc = &gtk->gbc;
 	bool val = false;
 	if (event->type == GDK_KEY_PRESS) {
 		val = true;
@@ -459,18 +473,19 @@ const SDL_GameControllerButton buttonmap[8] = {
 };
 
 // Returns key that changed, or -1 for a non-emulated key
-static int process_input(struct gbcc *gbc, const SDL_Event *e);
-static void process_game_controller(struct gbcc *gbc);
+static int process_input(struct gbcc_gtk *gtk, const SDL_Event *e);
+static void process_game_controller(struct gbcc_gtk *gtk);
 
-void gbcc_gtk_process_input(struct gbcc *gbc)
+void gbcc_gtk_process_input(struct gbcc_gtk *gtk)
 {
-	int jx = SDL_GameControllerGetAxis(gbc->window.platform.game_controller, SDL_CONTROLLER_AXIS_LEFTX);
-	int jy = SDL_GameControllerGetAxis(gbc->window.platform.game_controller, SDL_CONTROLLER_AXIS_LEFTY);
-	int ax = SDL_GameControllerGetAxis(gbc->window.platform.game_controller, SDL_CONTROLLER_AXIS_RIGHTX);
-	int ay = SDL_GameControllerGetAxis(gbc->window.platform.game_controller, SDL_CONTROLLER_AXIS_RIGHTY);
+	struct gbcc *gbc = &gtk->gbc;
+	int jx = SDL_GameControllerGetAxis(gtk->game_controller, SDL_CONTROLLER_AXIS_LEFTX);
+	int jy = SDL_GameControllerGetAxis(gtk->game_controller, SDL_CONTROLLER_AXIS_LEFTY);
+	int ax = SDL_GameControllerGetAxis(gtk->game_controller, SDL_CONTROLLER_AXIS_RIGHTX);
+	int ay = SDL_GameControllerGetAxis(gtk->game_controller, SDL_CONTROLLER_AXIS_RIGHTY);
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0) {
-		int key = process_input(gbc, &e);
+		int key = process_input(gtk, &e);
 		enum gbcc_key emulator_key;
 		bool val;
 		if (e.type == SDL_KEYDOWN || e.type == SDL_CONTROLLERBUTTONDOWN) {
@@ -478,15 +493,17 @@ void gbcc_gtk_process_input(struct gbcc *gbc)
 		} else if (e.type == SDL_KEYUP || e.type == SDL_CONTROLLERBUTTONUP) {
 			val = false;
 		} else if (e.type == SDL_CONTROLLERAXISMOTION) {
-			if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
-				val = (abs(e.caxis.value) > abs(jx));
-			} else if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
-				val = (abs(e.caxis.value) > abs(jy));
-			}
 			if (e.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY) {
 				gbc->core.cart.mbc.accelerometer.real_y = 0x81D0u - (0x70 * ay / 32768.0);
 			} else if (e.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX) {
 				gbc->core.cart.mbc.accelerometer.real_x = 0x81D0u - (0x70 * ax / 32768.0);
+			}
+			if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+				val = (abs(e.caxis.value) > abs(jx));
+			} else if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
+				val = (abs(e.caxis.value) > abs(jy));
+			} else {
+				continue;
 			}
 		} else {
 			continue;
@@ -531,11 +548,11 @@ void gbcc_gtk_process_input(struct gbcc *gbc)
 		}
 		gbcc_input_process_key(gbc, emulator_key, val);
 	}
-	process_game_controller(gbc);
+	process_game_controller(gtk);
 	gbcc_input_accelerometer_update(&gbc->core.cart.mbc.accelerometer);
 }
 
-int process_input(struct gbcc *gbc, const SDL_Event *e)
+int process_input(struct gbcc_gtk *gtk, const SDL_Event *e)
 {
 	if (e->type == SDL_CONTROLLERBUTTONDOWN || e->type == SDL_CONTROLLERBUTTONUP) {
 		for (size_t i = 0; i < N_ELEM(buttonmap); i++) {
@@ -561,39 +578,38 @@ int process_input(struct gbcc *gbc, const SDL_Event *e)
 	return -1;
 }
 
-void process_game_controller(struct gbcc *gbc)
+void process_game_controller(struct gbcc_gtk *gtk)
 {
-	struct gbcc_platform *sdl = &gbc->window.platform;
-	if (sdl->game_controller != NULL && !SDL_GameControllerGetAttached(sdl->game_controller)) {
-		gbcc_log_info("Controller \"%s\" disconnected.\n", SDL_GameControllerName(sdl->game_controller));
-		SDL_HapticClose(sdl->haptic);
-		SDL_GameControllerClose(sdl->game_controller);
-		sdl->game_controller = NULL;
+	if (gtk->game_controller != NULL && !SDL_GameControllerGetAttached(gtk->game_controller)) {
+		gbcc_log_info("Controller \"%s\" disconnected.\n", SDL_GameControllerName(gtk->game_controller));
+		SDL_HapticClose(gtk->haptic);
+		SDL_GameControllerClose(gtk->game_controller);
+		gtk->game_controller = NULL;
 	} 
-	if (sdl->game_controller == NULL) {
+	if (gtk->game_controller == NULL) {
 		for (int i = 0; i < SDL_NumJoysticks(); i++) {
 			if (SDL_IsGameController(i)) {
-				sdl->game_controller = SDL_GameControllerOpen(i);
-				gbcc_log_info("Controller \"%s\" connected.\n", SDL_GameControllerName(sdl->game_controller));
+				gtk->game_controller = SDL_GameControllerOpen(i);
+				gbcc_log_info("Controller \"%s\" connected.\n", SDL_GameControllerName(gtk->game_controller));
 				break;
 			}
 		}
-		if (sdl->game_controller == NULL || SDL_NumHaptics() == 0) {
+		if (gtk->game_controller == NULL || SDL_NumHaptics() == 0) {
 			return;
 		}
-		sdl->haptic = SDL_HapticOpenFromJoystick(SDL_GameControllerGetJoystick(sdl->game_controller));
-		if (SDL_HapticRumbleInit(sdl->haptic) != 0) {
+		gtk->haptic = SDL_HapticOpenFromJoystick(SDL_GameControllerGetJoystick(gtk->game_controller));
+		if (SDL_HapticRumbleInit(gtk->haptic) != 0) {
 			printf("%s\n", SDL_GetError());
 			return;
 		}
 	}
 
-	if (gbc->core.cart.rumble_state) {
-		if (SDL_HapticRumblePlay(sdl->haptic, 0.1, 1000) != 0) {
+	if (gtk->gbc.core.cart.rumble_state) {
+		if (SDL_HapticRumblePlay(gtk->haptic, 0.1, 1000) != 0) {
 			printf("%s\n", SDL_GetError());
 		}
 	} else {
-		if (SDL_HapticRumbleStop(sdl->haptic) != 0) {
+		if (SDL_HapticRumbleStop(gtk->haptic) != 0) {
 			printf("%s\n", SDL_GetError());
 		}
 	}

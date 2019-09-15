@@ -3,11 +3,6 @@
 
 #include "constants.h"
 #include "fontmap.h"
-#ifdef GBCC_GTK
-#include "gtk/platform.h"
-#else
-#include "sdl/platform.h"
-#endif
 #include <epoxy/gl.h>
 #include <stdint.h>
 #include <time.h>
@@ -40,7 +35,6 @@ struct gbcc_window {
 	float scale;
 	uint32_t buffer[GBC_SCREEN_SIZE];
 	uint32_t last_buffer[GBC_SCREEN_SIZE];
-	struct gbcc_platform platform;
 	struct {
 		GLuint vbo;
 		GLuint vao;

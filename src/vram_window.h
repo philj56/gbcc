@@ -1,11 +1,6 @@
 #ifndef GBCC_VRAM_WINDOW_H
 #define GBCC_VRAM_WINDOW_H
 
-#ifdef GBCC_GTK
-#include "gtk/platform.h"
-#else
-#include "sdl/platform.h"
-#endif
 #include <epoxy/gl.h>
 #include <stdint.h>
 
@@ -24,7 +19,6 @@ struct gbcc_vram_window {
 	int32_t width;
 	int32_t height;
 	uint32_t buffer[VRAM_WINDOW_SIZE];
-	struct gbcc_platform platform;
 	struct {
 		GLuint vbo;
 		GLuint vao;

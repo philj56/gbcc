@@ -30,21 +30,22 @@ int main(int argc, char **argv)
 	sigfillset(&act.sa_mask);
 	sigaction(SIGINT, &act, NULL);
 
-	struct gbcc gbc = {0};
+	struct gbcc_gtk gtk = {0};
+	struct gbcc *gbc = &gtk.gbc;
 
-	gbcc_audio_initialise(&gbc);
-	gbcc_gtk_initialise(&gbc, &argc, &argv);
+	gbcc_audio_initialise(gbc);
+	gbcc_gtk_initialise(&gtk, &argc, &argv);
 
-	if (!gbcc_parse_args(&gbc, false, argc, argv)) {
-		gbcc_audio_destroy(&gbc);
+	if (!gbcc_parse_args(gbc, false, argc, argv)) {
+		gbcc_audio_destroy(gbc);
 		exit(EXIT_FAILURE);
 	}
 
-	if (gbc.core.initialised) {
-		pthread_create(&gbc.window.platform.emulation_thread, NULL, gbcc_emulation_loop, &gbc);
-		pthread_setname_np(gbc.window.platform.emulation_thread, "EmulationThread");
+	if (gbc->core.initialised) {
+		pthread_create(&gtk.emulation_thread, NULL, gbcc_emulation_loop, gbc);
+		pthread_setname_np(gtk.emulation_thread, "EmulationThread");
 	}
-	gbc.has_focus = true;
+	gbc->has_focus = true;
 	gtk_main();
 
 	exit(EXIT_SUCCESS);

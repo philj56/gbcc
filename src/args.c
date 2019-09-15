@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "gbcc.h"
 #include "save.h"
+#include <ctype.h>
 #include <getopt.h>
 #include <stdio.h>
 
