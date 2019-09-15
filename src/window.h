@@ -37,6 +37,7 @@ struct gbcc_window {
 	uint32_t y;
 	int32_t width;
 	int32_t height;
+	float scale;
 	uint32_t buffer[GBC_SCREEN_SIZE];
 	uint32_t last_buffer[GBC_SCREEN_SIZE];
 	struct gbcc_platform platform;

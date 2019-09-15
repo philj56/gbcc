@@ -252,14 +252,13 @@ void gbcc_window_update(struct gbcc *gbc)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
 
-	double scale;
 	if (win->fractional_scaling) {
-		scale = min((double)win->width / GBC_SCREEN_WIDTH, (double)win->height / GBC_SCREEN_HEIGHT);
+		win->scale = min((double)win->width / GBC_SCREEN_WIDTH, (double)win->height / GBC_SCREEN_HEIGHT);
 	} else {
-		scale = min(win->width / GBC_SCREEN_WIDTH, win->height / GBC_SCREEN_HEIGHT);
+		win->scale = min(win->width / GBC_SCREEN_WIDTH, win->height / GBC_SCREEN_HEIGHT);
 	}
-	int width = scale * GBC_SCREEN_WIDTH;
-	int height = scale * GBC_SCREEN_HEIGHT;
+	int width = win->scale * GBC_SCREEN_WIDTH;
+	int height = win->scale * GBC_SCREEN_HEIGHT;
 	win->x = (win->width - width) / 2;
 	win->y = (win->height - height) / 2;
 	glViewport(win->x, win->y, width, height);
