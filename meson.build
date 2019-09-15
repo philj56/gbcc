@@ -115,7 +115,7 @@ openal = dependency('openal')
 thread = dependency('threads')
 gtk = dependency('gtk+-3.0')
 
-libgbcc = shared_library(
+libgbcc = static_library(
   'gbcc',
   common_sources,
   dependencies: [m, sdl, png, gl, epoxy, openal, thread],
