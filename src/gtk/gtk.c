@@ -1,7 +1,3 @@
-#ifndef GBCC_GTK
-#define GBCC_GTK
-#endif
-
 #include "../gbcc.h"
 #include "../debug.h"
 #include "../input.h"
