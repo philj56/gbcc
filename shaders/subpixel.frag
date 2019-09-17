@@ -6,23 +6,9 @@ out vec4 out_colour;
 
 uniform sampler2D tex;
 
-const vec3 r = vec3(
-	255.0 / 255.0,
-	113.0 / 255.0,
-	69.0 / 255.0
-);
-
-const vec3 g = vec3(
-	193.0 / 255.0,
-	214.0 / 255.0,
-	80.0 / 255.0
-);
-
-const vec3 b = vec3(
-	59.0 / 255.0,
-	206.0 / 255.0,
-	255.0 / 255.0
-);
+const vec3 r = vec3(255, 113, 69) / 255.0;
+const vec3 g = vec3(193, 214, 80) / 255.0;
+const vec3 b = vec3(59, 206, 255) / 255.0;
 
 const float radius = 2.0;
 const float radius2 = radius * radius;
