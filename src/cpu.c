@@ -72,6 +72,7 @@ void cpu_clock(struct gbcc_core *gbc)
 		}
 		//printf("%d::%04X\n", gbc->cart.mbc.romx_bank, cpu->reg.pc);
 		cpu->opcode = gbcc_fetch_instruction(gbc);
+		//gbcc_print_registers(gbc);
 		//gbcc_print_op(gbc);
 		cpu->instruction.running = true;
 	}

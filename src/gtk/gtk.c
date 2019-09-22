@@ -32,7 +32,8 @@ static void check_shader(GtkWidget *widget, void *data);
 static void check_vram_display(GtkWidget *widget, void *data);
 static void change_shader(GtkWidget *widget, void *data);
 static void change_palette(GtkWidget *widget, void *data);
-static void toggle_vram_display(GtkWidget *widget, void *data);
+static void toggle_vram_display(GtkCheckMenuItem *widget, void *data);
+static void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data);
 static void start_emulation_thread(struct gbcc_gtk *gtk, char *file);
 static void stop_emulation_thread(struct gbcc_gtk *gtk);
 static void gbcc_gtk_process_input(struct gbcc_gtk *gtk);
@@ -70,6 +71,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk->menu.bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
 	gtk->menu.stop = GTK_WIDGET(gtk_builder_get_object(builder, "stop"));
 	gtk->menu.vram_display = GTK_WIDGET(gtk_builder_get_object(builder, "vram_display"));
+	gtk->menu.fractional_scaling = GTK_WIDGET(gtk_builder_get_object(builder, "fractional_scaling"));
 	gtk->menu.save_state.submenu = GTK_WIDGET(gtk_builder_get_object(builder, "save_state"));
 	gtk->menu.load_state.submenu = GTK_WIDGET(gtk_builder_get_object(builder, "load_state"));
 	gtk->menu.shader.menuitem = GTK_WIDGET(gtk_builder_get_object(builder, "shader"));
@@ -98,6 +100,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_builder_add_callback_symbol(builder, "check_shader", G_CALLBACK(check_shader));
 	gtk_builder_add_callback_symbol(builder, "check_vram_display", G_CALLBACK(check_vram_display));
 	gtk_builder_add_callback_symbol(builder, "toggle_vram_display", G_CALLBACK(toggle_vram_display));
+	gtk_builder_add_callback_symbol(builder, "toggle_fractional_scaling", G_CALLBACK(toggle_fractional_scaling));
 	gtk_builder_connect_signals(builder, gtk);
 
 	gtk_widget_show_all(GTK_WIDGET(gtk->window));
@@ -172,11 +175,7 @@ gboolean on_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 	gbc->window.width = gtk_widget_get_allocated_width(GTK_WIDGET(gl_area));
 	gbc->window.height = gtk_widget_get_allocated_height(GTK_WIDGET(gl_area));
 	gbcc_window_update(gbc);
-	if (gbc->window.vram_display) {
-		gtk_widget_show(GTK_WIDGET(gtk->vram_gl_area));
-	} else if (gbc->vram_window.initialised) {
-		gtk_widget_hide(GTK_WIDGET(gtk->vram_gl_area));
-	}
+	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), gbc->window.vram_display);
 	gbcc_gtk_process_input(gtk);
 
 	return true;
@@ -240,11 +239,7 @@ void on_window_state_change(GtkWidget *window, GdkEvent *event, void *data)
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	struct gbcc *gbc = &gtk->gbc;
 	GdkWindowState state = event->window_state.new_window_state;
-	if (state & GDK_WINDOW_STATE_FULLSCREEN) {
-		gtk_widget_hide(gtk->menu.bar);
-	} else {
-		gtk_widget_show(gtk->menu.bar);
-	}
+	gtk_widget_set_visible(gtk->menu.bar, !(state & GDK_WINDOW_STATE_FULLSCREEN));
 	gbc->has_focus = state & GDK_WINDOW_STATE_FOCUSED;
 }
 
@@ -327,6 +322,8 @@ void check_running(GtkWidget *widget, void *data)
 	gtk_widget_set_sensitive(gtk->menu.stop, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.save_state.submenu, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.load_state.submenu, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.vram_display, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.fractional_scaling, gbc->core.initialised);
 }
 
 void check_palette(GtkWidget *widget, void *data)
@@ -387,11 +384,16 @@ void change_palette(GtkWidget *widget, void *data)
 	gbc->core.ppu.palette = gbcc_get_palette(name);
 }
 
-void toggle_vram_display(GtkWidget *widget, void *data)
+void toggle_vram_display(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	struct gbcc *gbc = &gtk->gbc;
-	gbc->window.vram_display = gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(gtk->menu.vram_display));
+	gtk->gbc.window.vram_display = gtk_check_menu_item_get_active(widget);
+}
+
+void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk->gbc.window.fractional_scaling = gtk_check_menu_item_get_active(widget);
 }
 
 void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
@@ -400,8 +402,8 @@ void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
 	if (gbc->core.initialised) {
 		stop_emulation_thread(gtk);
 		free(gtk->filename);
-		gbc->quit = false;
 	}
+	gbc->quit = false;
 	gtk->filename = malloc(strlen(file) + 1);
 	strncpy(gtk->filename, file, strlen(file) + 1);
 	gbcc_initialise(&gbc->core, gtk->filename);

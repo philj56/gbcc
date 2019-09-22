@@ -19,6 +19,7 @@ struct gbcc_gtk {
 		GtkWidget *bar;
 		GtkWidget *stop;
 		GtkWidget *vram_display;
+		GtkWidget *fractional_scaling;
 		struct {
 			GtkWidget *submenu;
 			GtkWidget *state[9];
