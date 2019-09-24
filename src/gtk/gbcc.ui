@@ -3,140 +3,158 @@
 	<requires lib="gtk+" version="3.10"/>
 
 	<object class="GtkMenu" id="file_menu">
-		<property name="can_focus">False</property>
+		<property name="can_focus">True</property>
 		<signal name="show" handler="check_running"/>
 		<child>
 			<object class="GtkMenuItem" id="load">
 				<property name="can_focus">False</property>
-				<property name="label">Load ROM...</property>
+				<property name="label">L_oad ROM...</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="stop">
 				<property name="can_focus">False</property>
-				<property name="label">Stop</property>
+				<property name="label">S_top</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="stop"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state">
 				<property name="can_focus">False</property>
-				<property name="label">Save state</property>
+				<property name="label">_Save state</property>
 				<property name="submenu">save_menu</property>
+				<property name="use-underline">True</property>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state">
 				<property name="can_focus">False</property>
-				<property name="label">Load state</property>
+				<property name="label">_Load state</property>
 				<property name="submenu">load_menu</property>
+				<property name="use-underline">True</property>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="quit">
 				<property name="can_focus">False</property>
-				<property name="label">Quit</property>
+				<property name="label">_Quit</property>
 				<signal name="activate" handler="quit"/>
+				<property name="use-underline">True</property>
 			</object>
 		</child>
 	</object>
 
 	<object class="GtkMenu" id="settings_menu">
-		<property name="can_focus">False</property>
+		<property name="can_focus">True</property>
 		<signal name="show" handler="check_running"/>
 		<child>
 			<object class="GtkMenuItem" id="shader">
 				<property name="can_focus">False</property>
-				<property name="label">Shader</property>
+				<property name="label">_Shader</property>
 				<property name="submenu">shader_menu</property>
+				<property name="use-underline">True</property>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="palette">
 				<property name="can_focus">False</property>
-				<property name="label">Palette</property>
+				<property name="label">_Palette</property>
 				<property name="submenu">palette_menu</property>
+				<property name="use-underline">True</property>
 				<signal name="show" handler="check_palette"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkCheckMenuItem" id="vram_display">
 				<property name="can_focus">False</property>
-				<property name="label">VRAM display</property>
+				<property name="label">_VRAM display</property>
+				<property name="use-underline">True</property>
 				<signal name="toggled" handler="toggle_vram_display"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkCheckMenuItem" id="fractional_scaling">
 				<property name="can_focus">False</property>
-				<property name="label">Fractional scaling</property>
+				<property name="label">_Fractional scaling</property>
+				<property name="use-underline">True</property>
 				<signal name="toggled" handler="toggle_fractional_scaling"/>
 			</object>
 		</child>
 	</object>
 
 	<object class="GtkMenu" id="shader_menu">
-		<property name="can_focus">False</property>
+		<property name="can_focus">True</property>
 		<signal name="show" handler="check_shader"/>
 	</object>
 
 	<object class="GtkMenu" id="palette_menu">
-		<property name="can_focus">False</property>
+		<property name="can_focus">True</property>
 	</object>
 
 	<object class="GtkMenu" id="save_menu">
 		<child>
 			<object class="GtkMenuItem" id="save_state_1">
-				<property name="label">State 1</property>
+				<property name="label">State _1</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state_2">
-				<property name="label">State 2</property>
+				<property name="label">State _2</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state_3">
-				<property name="label">State 3</property>
+				<property name="label">State _3</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state_4">
-				<property name="label">State 4</property>
+				<property name="label">State _4</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state_5">
-				<property name="label">State 5</property>
+				<property name="label">State _5</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state_6">
-				<property name="label">State 6</property>
+				<property name="label">State _6</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state_7">
-				<property name="label">State 7</property>
+				<property name="label">State _7</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state_8">
-				<property name="label">State 8</property>
+				<property name="label">State _8</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="save_state_9">
-				<property name="label">State 9</property>
+				<property name="label">State _9</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="save_state"/>
 			</object>
 		</child>
@@ -146,55 +164,64 @@
 		<signal name="show" handler="check_savestates"/>
 		<child>
 			<object class="GtkMenuItem" id="load_state_1">
-				<property name="label">State 1</property>
+				<property name="label">State _1</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state_2">
-				<property name="label">State 2</property>
+				<property name="label">State _2</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state_3">
-				<property name="label">State 3</property>
+				<property name="label">State _3</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state_4">
-				<property name="label">State 4</property>
+				<property name="label">State _4</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state_5">
-				<property name="label">State 5</property>
+				<property name="label">State _5</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state_6">
-				<property name="label">State 6</property>
+				<property name="label">State _6</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state_7">
-				<property name="label">State 7</property>
+				<property name="label">State _7</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state_8">
-				<property name="label">State 8</property>
+				<property name="label">State _8</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
 		<child>
 			<object class="GtkMenuItem" id="load_state_9">
-				<property name="label">State 9</property>
+				<property name="label">State _9</property>
+				<property name="use-underline">True</property>
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
@@ -214,16 +241,18 @@
 						<property name="can_focus">False</property>
 						<child>
 							<object class="GtkMenuItem" id="file">
-								<property name="can_focus">False</property>
-								<property name="label">File</property>
+								<property name="can_focus">True</property>
+								<property name="label">_File</property>
 								<property name="submenu">file_menu</property>
+								<property name="use-underline">True</property>
 							</object>
 						</child>
 						<child>
 							<object class="GtkMenuItem" id="settings">
-								<property name="can_focus">False</property>
-								<property name="label">Settings</property>
+								<property name="can_focus">True</property>
+								<property name="label">_Settings</property>
 								<property name="submenu">settings_menu</property>
+								<property name="use-underline">True</property>
 							</object>
 						</child>
 					</object>

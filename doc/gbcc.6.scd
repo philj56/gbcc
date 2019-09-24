@@ -6,7 +6,7 @@ gbcc - Game Boy Color emulator written in C
 
 # SYNOPSIS
 
-*gbcc* [-abfFhivV] [-c _config_file_] [-p _palette_] [-s shader] [-t _speed_] rom
+*gbcc* [-abfFhivV] [-c _config_file_] [-p _palette_] [-s _shader_] [-t _speed_] rom
 
 # DESCRIPTION
 

@@ -70,9 +70,11 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			}
 			break;
 		case GBCC_KEY_SHADER:
-			gbc->window.gl.cur_shader += pressed;
-			gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);
-			gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
+			if (pressed) {
+				gbc->window.gl.cur_shader++;
+				gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);
+				gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
+			}
 			break;
 		case GBCC_KEY_VRAM:
 			gbc->window.vram_display ^= pressed;

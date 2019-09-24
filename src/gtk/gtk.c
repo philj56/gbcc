@@ -287,7 +287,7 @@ void save_state(GtkWidget *widget, void *data)
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	struct gbcc *gbc = &gtk->gbc;
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
-	gbc->save_state = strtol(strstr(name, " "), NULL, 10);
+	gbc->save_state = strtol(strstr(name, " _") + 2, NULL, 10);
 }
 
 void load_state(GtkWidget *widget, void *data)
@@ -295,7 +295,7 @@ void load_state(GtkWidget *widget, void *data)
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	struct gbcc *gbc = &gtk->gbc;
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
-	gbc->load_state = strtol(strstr(name, " "), NULL, 10);
+	gbc->load_state = strtol(strstr(name, " _") + 2, NULL, 10);
 }
 
 void quit(GtkWidget *widget, void *data)
