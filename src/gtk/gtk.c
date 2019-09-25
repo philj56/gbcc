@@ -34,6 +34,7 @@ static void change_shader(GtkWidget *widget, void *data);
 static void change_palette(GtkWidget *widget, void *data);
 static void toggle_vram_display(GtkCheckMenuItem *widget, void *data);
 static void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data);
+static void toggle_frame_blending(GtkCheckMenuItem *widget, void *data);
 static void start_emulation_thread(struct gbcc_gtk *gtk, char *file);
 static void stop_emulation_thread(struct gbcc_gtk *gtk);
 static void gbcc_gtk_process_input(struct gbcc_gtk *gtk);
@@ -41,6 +42,8 @@ static void gbcc_gtk_process_input(struct gbcc_gtk *gtk);
 void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 {
 	gtk_init(argc, argv);
+
+	memcpy(gtk->keymap, default_keymap, sizeof(gtk->keymap));
 
 	GError *error = NULL;
 	GtkBuilder *builder = gtk_builder_new();
@@ -72,6 +75,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk->menu.stop = GTK_WIDGET(gtk_builder_get_object(builder, "stop"));
 	gtk->menu.vram_display = GTK_WIDGET(gtk_builder_get_object(builder, "vram_display"));
 	gtk->menu.fractional_scaling = GTK_WIDGET(gtk_builder_get_object(builder, "fractional_scaling"));
+	gtk->menu.frame_blending = GTK_WIDGET(gtk_builder_get_object(builder, "frame_blending"));
 	gtk->menu.save_state.submenu = GTK_WIDGET(gtk_builder_get_object(builder, "save_state"));
 	gtk->menu.load_state.submenu = GTK_WIDGET(gtk_builder_get_object(builder, "load_state"));
 	gtk->menu.shader.menuitem = GTK_WIDGET(gtk_builder_get_object(builder, "shader"));
@@ -101,6 +105,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_builder_add_callback_symbol(builder, "check_vram_display", G_CALLBACK(check_vram_display));
 	gtk_builder_add_callback_symbol(builder, "toggle_vram_display", G_CALLBACK(toggle_vram_display));
 	gtk_builder_add_callback_symbol(builder, "toggle_fractional_scaling", G_CALLBACK(toggle_fractional_scaling));
+	gtk_builder_add_callback_symbol(builder, "toggle_frame_blending", G_CALLBACK(toggle_frame_blending));
 	gtk_builder_connect_signals(builder, gtk);
 
 	gtk_widget_show_all(GTK_WIDGET(gtk->window));
@@ -324,6 +329,7 @@ void check_running(GtkWidget *widget, void *data)
 	gtk_widget_set_sensitive(gtk->menu.load_state.submenu, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.vram_display, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.fractional_scaling, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.frame_blending, gbc->core.initialised);
 }
 
 void check_palette(GtkWidget *widget, void *data)
@@ -396,6 +402,12 @@ void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data)
 	gtk->gbc.window.fractional_scaling = gtk_check_menu_item_get_active(widget);
 }
 
+void toggle_frame_blending(GtkCheckMenuItem *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk->gbc.window.frame_blending = gtk_check_menu_item_get_active(widget);
+}
+
 void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
 {
 	struct gbcc *gbc = &gtk->gbc;
@@ -433,8 +445,8 @@ void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
 	if (event->type == GDK_KEY_PRESS) {
 		val = true;
 	}
-	for (size_t i = 0; i < N_ELEM(default_keymap); i++) {
-		if (event->keyval == default_keymap[i]) {
+	for (size_t i = 0; i < N_ELEM(gtk->keymap); i++) {
+		if (event->keyval == gtk->keymap[i]) {
 			if (!(event->state & GDK_SHIFT_MASK)) {
 				gbcc_input_process_key(gbc, i, val);
 				break;

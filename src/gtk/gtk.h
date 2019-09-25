@@ -15,11 +15,13 @@ struct gbcc_gtk {
 	GtkWindow *window;
 	GtkWidget *gl_area;
 	GtkWidget *vram_gl_area;
+	guint keymap[51];
 	struct {
 		GtkWidget *bar;
 		GtkWidget *stop;
 		GtkWidget *vram_display;
 		GtkWidget *fractional_scaling;
+		GtkWidget *frame_blending;
 		struct {
 			GtkWidget *submenu;
 			GtkWidget *state[9];

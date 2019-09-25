@@ -122,6 +122,9 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			break;
 		case GBCC_KEY_BACKGROUND_PLAY:
 			gbc->background_play ^= pressed;
+			if (!pressed) {
+				break;
+			}
 			if (gbc->background_play) {
 				gbcc_window_show_message(gbc, "Background playback enabled", 1, true);
 			} else {

@@ -50,6 +50,7 @@
 	<object class="GtkMenu" id="settings_menu">
 		<property name="can_focus">True</property>
 		<signal name="show" handler="check_running"/>
+		<signal name="show" handler="check_palette"/>
 		<child>
 			<object class="GtkMenuItem" id="shader">
 				<property name="can_focus">False</property>
@@ -64,7 +65,6 @@
 				<property name="label">_Palette</property>
 				<property name="submenu">palette_menu</property>
 				<property name="use-underline">True</property>
-				<signal name="show" handler="check_palette"/>
 			</object>
 		</child>
 		<child>
@@ -81,6 +81,14 @@
 				<property name="label">_Fractional scaling</property>
 				<property name="use-underline">True</property>
 				<signal name="toggled" handler="toggle_fractional_scaling"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkCheckMenuItem" id="frame_blending">
+				<property name="can_focus">False</property>
+				<property name="label">Frame _blending</property>
+				<property name="use-underline">True</property>
+				<signal name="toggled" handler="toggle_frame_blending"/>
 			</object>
 		</child>
 	</object>
@@ -293,5 +301,11 @@
 				</child>
 			</object>
 		</child>
+	</object>
+
+	<object class="GtkWindow" id="mapping_window">
+		<property name="visible">False</property>
+		<property name="can_focus">True</property>
+		<property name="title">Keyboard Bindings</property>
 	</object>
 </interface>
