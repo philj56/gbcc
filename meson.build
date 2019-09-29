@@ -13,6 +13,10 @@ project(
   ],
 )
 
+if get_option('buildtype').startswith('debug')
+  add_project_arguments('-DDEBUG', language : 'c')
+endif
+
 data_location = join_paths(
   get_option('prefix'),
   get_option('datadir'),
@@ -59,7 +63,6 @@ add_project_arguments(
     '-DPRINTER_SOUND_PATH="@0@"'.format(printer_sound_location),
     '-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
     '-DSHADER_PATH="@0@"'.format(shader_location),
-    '-g',
     #'-fprofile-instr-use'
   ],
   language: 'c'
@@ -128,7 +131,6 @@ executable(
   dependencies: [m, sdl, thread],
   install: true,
   link_with: libgbcc,
-  link_args: ['-g']
 )
 
 executable(
@@ -137,7 +139,6 @@ executable(
   dependencies: [m, sdl, gtk, thread],
   install: true,
   link_with: libgbcc,
-  link_args: ['-g']
 )
 
 install_data(
