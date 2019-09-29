@@ -177,8 +177,9 @@ gboolean on_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 		return true;
 	}
 
-	gbc->window.width = gtk_widget_get_allocated_width(GTK_WIDGET(gl_area));
-	gbc->window.height = gtk_widget_get_allocated_height(GTK_WIDGET(gl_area));
+	int scale = gtk_widget_get_scale_factor(GTK_WIDGET(gl_area));
+	gbc->window.width = gtk_widget_get_allocated_width(GTK_WIDGET(gl_area)) * scale;
+	gbc->window.height = gtk_widget_get_allocated_height(GTK_WIDGET(gl_area)) * scale;
 	gbcc_window_update(gbc);
 	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), gbc->window.vram_display);
 	gbcc_gtk_process_input(gtk);
@@ -221,8 +222,9 @@ gboolean on_vram_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 		return true;
 	}
 
-	gbc->vram_window.width = gtk_widget_get_allocated_width(GTK_WIDGET(gl_area));
-	gbc->vram_window.height = gtk_widget_get_allocated_height(GTK_WIDGET(gl_area));
+	int scale = gtk_widget_get_scale_factor(GTK_WIDGET(gl_area));
+	gbc->vram_window.width = gtk_widget_get_allocated_width(GTK_WIDGET(gl_area)) * scale;
+	gbc->vram_window.height = gtk_widget_get_allocated_height(GTK_WIDGET(gl_area)) * scale;
 	gbcc_vram_window_update(gbc);
 
 	return true;
