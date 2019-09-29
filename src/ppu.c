@@ -44,7 +44,7 @@ void gbcc_disable_lcd(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	if (gbc->mode == GBC) {
-		memset(ppu->screen.sdl, 0xFFu, sizeof(ppu->screen.buffer_0));
+		memset(ppu->screen.sdl, 0xFFu, GBC_SCREEN_SIZE * sizeof(*ppu->screen.buffer_0));
 	} else {
 		uint32_t colour = get_palette_colour(gbc, 0, 0, BACKGROUND);
 		for (int y = 0; y < GBC_SCREEN_HEIGHT; y++) {

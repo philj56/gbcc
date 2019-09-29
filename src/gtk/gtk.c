@@ -418,8 +418,9 @@ void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
 		free(gtk->filename);
 	}
 	gbc->quit = false;
-	gtk->filename = malloc(strlen(file) + 1);
-	strncpy(gtk->filename, file, strlen(file) + 1);
+	size_t len = strlen(file) + 1;
+	gtk->filename = malloc(len);
+	strncpy(gtk->filename, file, len);
 	gbcc_initialise(&gbc->core, gtk->filename);
 	pthread_create(&gtk->emulation_thread, NULL, gbcc_emulation_loop, gbc);
 	pthread_setname_np(gtk->emulation_thread, "EmulationThread");
