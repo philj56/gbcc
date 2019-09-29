@@ -4,7 +4,7 @@
 
 	<object class="GtkMenu" id="file_menu">
 		<property name="can_focus">True</property>
-		<signal name="show" handler="check_running"/>
+		<signal name="show" handler="check_file_options"/>
 		<child>
 			<object class="GtkMenuItem" id="load">
 				<property name="can_focus">False</property>
@@ -49,7 +49,8 @@
 
 	<object class="GtkMenu" id="settings_menu">
 		<property name="can_focus">True</property>
-		<signal name="show" handler="check_running"/>
+		<signal name="show" handler="check_settings_options"/>
+		<signal name="show" handler="check_vram_display"/>
 		<signal name="show" handler="check_palette"/>
 		<child>
 			<object class="GtkMenuItem" id="shader">
@@ -68,11 +69,11 @@
 			</object>
 		</child>
 		<child>
-			<object class="GtkCheckMenuItem" id="vram_display">
+			<object class="GtkCheckMenuItem" id="background_playback">
 				<property name="can_focus">False</property>
-				<property name="label">_VRAM display</property>
+				<property name="label">_Background playback</property>
 				<property name="use-underline">True</property>
-				<signal name="toggled" handler="toggle_vram_display"/>
+				<signal name="toggled" handler="toggle_background_playback"/>
 			</object>
 		</child>
 		<child>
@@ -86,9 +87,17 @@
 		<child>
 			<object class="GtkCheckMenuItem" id="frame_blending">
 				<property name="can_focus">False</property>
-				<property name="label">Frame _blending</property>
+				<property name="label">Fra_me blending</property>
 				<property name="use-underline">True</property>
 				<signal name="toggled" handler="toggle_frame_blending"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkCheckMenuItem" id="vram_display">
+				<property name="can_focus">False</property>
+				<property name="label">_VRAM display</property>
+				<property name="use-underline">True</property>
+				<signal name="toggled" handler="toggle_vram_display"/>
 			</object>
 		</child>
 	</object>
