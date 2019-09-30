@@ -22,9 +22,11 @@ void gbcc_emulate_cycle(struct gbcc_core *gbc)
 	gbcc_apu_clock(gbc);
 	gbcc_ppu_clock(gbc);
 	cpu_clock(gbc);
+	clock_div(gbc);
 	gbcc_link_cable_clock(gbc);
 	if (gbc->double_speed) {
 		cpu_clock(gbc);
+		clock_div(gbc);
 		gbcc_link_cable_clock(gbc);
 	}
 }
@@ -32,7 +34,6 @@ void gbcc_emulate_cycle(struct gbcc_core *gbc)
 void cpu_clock(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
-	clock_div(gbc);
 	if (!(cpu->instruction.running) && (cpu->halt.set || cpu->stop)) {
 		return;
 	}
