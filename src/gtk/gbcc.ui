@@ -100,6 +100,14 @@
 				<signal name="toggled" handler="toggle_vram_display"/>
 			</object>
 		</child>
+		<child>
+			<object class="GtkMenuItem" id="turbo_speed">
+				<property name="can_focus">False</property>
+				<property name="label">_Turbo speed</property>
+				<property name="submenu">turbo_menu</property>
+				<property name="use-underline">True</property>
+			</object>
+		</child>
 	</object>
 
 	<object class="GtkMenu" id="shader_menu">
@@ -109,6 +117,56 @@
 
 	<object class="GtkMenu" id="palette_menu">
 		<property name="can_focus">True</property>
+	</object>
+
+	<object class="GtkMenu" id="turbo_menu">
+		<child>
+			<object class="GtkRadioMenuItem" id="turbo_2x">
+				<property name="label">_2x</property>
+				<property name="use-underline">True</property>
+				<signal name="activate" handler="turbo_speed"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkRadioMenuItem" id="turbo_3x">
+				<property name="label">_3x</property>
+				<property name="use-underline">True</property>
+				<property name="group">turbo_2x</property>
+				<signal name="activate" handler="turbo_speed"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkRadioMenuItem" id="turbo_5x">
+				<property name="label">_5x</property>
+				<property name="group">turbo_2x</property>
+				<property name="use-underline">True</property>
+				<signal name="activate" handler="turbo_speed"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkRadioMenuItem" id="turbo_10x">
+				<property name="label">1_0x</property>
+				<property name="group">turbo_2x</property>
+				<property name="use-underline">True</property>
+				<signal name="activate" handler="turbo_speed"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkRadioMenuItem" id="turbo_unlimited">
+				<property name="label">_Unlimited</property>
+				<property name="group">turbo_2x</property>
+				<property name="use-underline">True</property>
+				<signal name="activate" handler="turbo_speed"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkRadioMenuItem" id="turbo_custom">
+				<property name="label">_Custom...</property>
+				<property name="group">turbo_2x</property>
+				<property name="use-underline">True</property>
+				<signal name="activate" handler="show_turbo_dialog"/>
+			</object>
+		</child>
 	</object>
 
 	<object class="GtkMenu" id="save_menu">
@@ -242,6 +300,24 @@
 				<signal name="activate" handler="load_state"/>
 			</object>
 		</child>
+	</object>
+
+	<object class="GtkDialog" id="turbo_dialog">
+		<property name="title">Turbo speed</property>
+		<signal name="show" handler="select_turbo_text"/>
+		<child type="action">
+					<object class="GtkSpinButton" id="turbo_speed_val">
+						<property name="visible">True</property>
+						<property name="can_focus">True</property>
+						<property name="can_default">True</property>
+						<property name="digits">2</property>
+						<property name="numeric">True</property>
+						<signal name="value-changed" handler="custom_turbo_speed"/>
+					</object>
+		</child>
+		<action-widgets>
+			<action-widget response="accept" default="true">turbo_speed_val</action-widget>
+		</action-widgets>
 	</object>
 
 	<object class="GtkWindow" id="window">

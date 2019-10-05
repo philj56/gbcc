@@ -13,6 +13,7 @@ struct gbcc_gtk {
 	SDL_GameController *game_controller;
 	SDL_Haptic *haptic;
 	GtkWindow *window;
+	GtkDialog *turbo_dialog;
 	GtkWidget *gl_area;
 	GtkWidget *vram_gl_area;
 	guint keymap[51];
@@ -23,6 +24,9 @@ struct gbcc_gtk {
 		GtkWidget *fractional_scaling;
 		GtkWidget *frame_blending;
 		GtkWidget *vram_display;
+		GtkWidget *turbo_speed;
+		GtkCheckMenuItem *turbo_custom;
+		GtkSpinButton *custom_turbo_speed;
 		struct {
 			GtkWidget *submenu;
 			GtkWidget *state[9];

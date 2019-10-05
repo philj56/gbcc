@@ -37,6 +37,10 @@ static void toggle_vram_display(GtkCheckMenuItem *widget, void *data);
 static void toggle_background_playback(GtkCheckMenuItem *widget, void *data);
 static void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data);
 static void toggle_frame_blending(GtkCheckMenuItem *widget, void *data);
+static void turbo_speed(GtkCheckMenuItem *widget, void *data);
+static void show_turbo_dialog(GtkWidget *widget, void *data);
+static void select_turbo_text(GtkWidget *widget, void *data);
+static void custom_turbo_speed(GtkSpinButton *widget, void *data);
 static void start_emulation_thread(struct gbcc_gtk *gtk, char *file);
 static void stop_emulation_thread(struct gbcc_gtk *gtk);
 static void gbcc_gtk_process_input(struct gbcc_gtk *gtk);
@@ -86,6 +90,14 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk->menu.palette.menuitem = GTK_WIDGET(gtk_builder_get_object(builder, "palette"));
 	gtk->menu.palette.submenu = GTK_WIDGET(gtk_builder_get_object(builder, "palette_menu"));
 
+	gtk->turbo_dialog = GTK_DIALOG(gtk_builder_get_object(builder, "turbo_dialog"));
+	gtk->menu.turbo_speed = GTK_WIDGET(gtk_builder_get_object(builder, "turbo_speed"));
+	gtk->menu.turbo_custom = GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "turbo_custom"));
+	gtk->menu.custom_turbo_speed = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "turbo_speed_val"));
+	gtk_spin_button_set_range(gtk->menu.custom_turbo_speed, 0, 100);
+	gtk_spin_button_set_increments(gtk->menu.custom_turbo_speed, 0.1, 1);
+	g_signal_connect_swapped(gtk->turbo_dialog, "response", G_CALLBACK(gtk_widget_hide), gtk->turbo_dialog);
+
 	{
 		char name[] = "load_state_n";
 		for (size_t i = 0; i < N_ELEM(gtk->menu.load_state.state); i++) {
@@ -111,9 +123,14 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_builder_add_callback_symbol(builder, "toggle_background_playback", G_CALLBACK(toggle_background_playback));
 	gtk_builder_add_callback_symbol(builder, "toggle_fractional_scaling", G_CALLBACK(toggle_fractional_scaling));
 	gtk_builder_add_callback_symbol(builder, "toggle_frame_blending", G_CALLBACK(toggle_frame_blending));
+	gtk_builder_add_callback_symbol(builder, "turbo_speed", G_CALLBACK(turbo_speed));
+	gtk_builder_add_callback_symbol(builder, "show_turbo_dialog", G_CALLBACK(show_turbo_dialog));
+	gtk_builder_add_callback_symbol(builder, "select_turbo_text", G_CALLBACK(select_turbo_text));
+	gtk_builder_add_callback_symbol(builder, "custom_turbo_speed", G_CALLBACK(custom_turbo_speed));
 	gtk_builder_connect_signals(builder, gtk);
 
 	gtk_widget_show_all(GTK_WIDGET(gtk->window));
+	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), false);
 	gtk_window_set_focus(gtk->window, gtk->gl_area);
 
 	if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0) {
@@ -344,6 +361,7 @@ void check_settings_options(GtkWidget *widget, void *data)
 	gtk_widget_set_sensitive(gtk->menu.vram_display, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.fractional_scaling, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.frame_blending, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.turbo_speed, gbc->core.initialised);
 
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.background_playback), gbc->background_play);
 	if (gbc->core.initialised) {
@@ -432,6 +450,46 @@ void toggle_frame_blending(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	gtk->gbc.window.frame_blending = gtk_check_menu_item_get_active(widget);
+}
+
+void turbo_speed(GtkCheckMenuItem *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	if (!gtk_check_menu_item_get_active(widget)) {
+		return;
+	}
+	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
+	if (!strncmp(name, "_Unlimited", 9)) {
+		gtk->gbc.core.turbo_speed = 0;
+	} else {
+		gtk->gbc.core.turbo_speed = strtod(strstr(name, "_") + 1, NULL);
+		if (gtk->gbc.core.turbo_speed == 0) {
+			gtk->gbc.core.turbo_speed = 10;
+		}
+	}
+}
+
+void show_turbo_dialog(GtkWidget *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	if (!gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(gtk->menu.turbo_custom))) {
+		return;
+	}
+	gtk_dialog_run(gtk->turbo_dialog);
+}
+
+void select_turbo_text(GtkWidget *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk_editable_select_region(GTK_EDITABLE(gtk->menu.custom_turbo_speed), 0, -1);
+}
+
+void custom_turbo_speed(GtkSpinButton *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	double val = 0;
+	g_object_get(widget, "value", &val, NULL);
+	gtk->gbc.core.turbo_speed = val;
 }
 
 void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
