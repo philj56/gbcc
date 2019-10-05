@@ -24,7 +24,7 @@ void gbcc_emulate_cycle(struct gbcc_core *gbc)
 	cpu_clock(gbc);
 	clock_div(gbc);
 	gbcc_link_cable_clock(gbc);
-	if (gbc->double_speed) {
+	if (gbc->cpu.double_speed) {
 		cpu_clock(gbc);
 		clock_div(gbc);
 		gbcc_link_cable_clock(gbc);
@@ -152,7 +152,7 @@ void clock_div(struct gbcc_core *gbc)
 	}
 	if (!gbc->apu.disabled) {
 		/* APU also updates based on falling edge of DIV timer bit */
-		if (gbc->double_speed) {
+		if (gbc->cpu.double_speed) {
 			mask = bit16(13);
 		} else {
 			mask = bit16(12);

@@ -71,6 +71,7 @@ struct cpu {
 	uint8_t opcode;
 	bool ime;
 	bool stop;
+	bool double_speed;
 	bool tac_bit;
 	uint16_t div_timer;
 	uint8_t tima_reload;

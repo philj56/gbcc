@@ -10,7 +10,7 @@ void gbcc_hdma_copy_chunk(struct gbcc_core *gbc)
 		return;
 	}
 	/* In single speed mode, hdma copies twice as much per clock */
-	for (int i = 0; i < 4 * (1 + !gbc->double_speed) && gbc->hdma.to_copy > 0; i++) {
+	for (int i = 0; i < 4 * (1 + !gbc->cpu.double_speed) && gbc->hdma.to_copy > 0; i++) {
 		gbcc_memory_copy(gbc, gbc->hdma.source, gbc->hdma.dest, true);
 		gbc->hdma.source++;
 		gbc->hdma.dest++;

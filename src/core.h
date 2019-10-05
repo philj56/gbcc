@@ -89,7 +89,6 @@ struct gbcc_core {
 	} link_cable;
 
 	/* Settings */
-	bool double_speed;
 	float turbo_speed;
 	bool hide_background;
 	bool hide_window;

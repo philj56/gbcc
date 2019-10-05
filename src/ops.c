@@ -224,8 +224,8 @@ void STOP(struct gbcc_core *gbc)
 {
 	uint8_t key1 = gbcc_memory_read(gbc, KEY1, true);
 	if (gbc->mode == GBC && check_bit(key1, 0)) {
-		gbc->double_speed = !gbc->double_speed;
-		key1 = gbc->double_speed * bit(7);//toggle_bit(key1, 7);
+		gbc->cpu.double_speed = !gbc->cpu.double_speed;
+		key1 = gbc->cpu.double_speed * bit(7);
 		gbcc_memory_write(gbc, KEY1, key1, true);
 	} else {
 		gbc->cpu.stop = true;
