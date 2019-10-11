@@ -3,7 +3,11 @@
 
 #include "constants.h"
 #include "fontmap.h"
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#else
 #include <epoxy/gl.h>
+#endif
 #include <stdint.h>
 #include <time.h>
 

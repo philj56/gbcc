@@ -1,7 +1,11 @@
 #ifndef GBCC_VRAM_WINDOW_H
 #define GBCC_VRAM_WINDOW_H
 
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#else
 #include <epoxy/gl.h>
+#endif
 #include <stdint.h>
 
 #define VRAM_WINDOW_WIDTH_TILES (24)
