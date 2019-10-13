@@ -50,12 +50,13 @@ void gbcc_window_initialise(struct gbcc *gbc)
 			SHADER_PATH "frameblend.frag"
 			);
 
+	/*
 	win->gl.shaders[0].name = "Colour Correct";
 	win->gl.shaders[0].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
 			SHADER_PATH "colour-correct.frag"
 			);
-
+	*/
 	win->gl.shaders[1].name = "Subpixel";
 	win->gl.shaders[1].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
@@ -93,8 +94,9 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	GLint loc = glGetUniformLocation(win->gl.shaders[0].program, "lut");
 	glUseProgram(win->gl.shaders[0].program);
 	glUniform1i(loc, 1);
+	*/
 	glActiveTexture(GL_TEXTURE0);
-	 */
+
 
 
 	/* Create a vertex buffer for a quad filling the screen */
@@ -115,11 +117,11 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glGenVertexArrays(1, &win->gl.vao);
 	glBindVertexArray(win->gl.vao);
 
-	GLint posAttrib = glGetAttribLocation(win->gl.shaders[0].program, "position");
+	GLint posAttrib = glGetAttribLocation(win->gl.base_shader, "position");
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), 0);
 	glEnableVertexAttribArray(posAttrib);
 
-	GLint texAttrib = glGetAttribLocation(win->gl.shaders[0].program, "texcoord");
+	GLint texAttrib = glGetAttribLocation(win->gl.base_shader, "texcoord");
 	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)(2*sizeof(float)));
 	glEnableVertexAttribArray(texAttrib);
 
@@ -174,7 +176,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	 * before post-processing */
 	glGenTextures(1, &win->gl.texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH * 2, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GBC_SCREEN_WIDTH * 2, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
 			GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -220,6 +222,7 @@ void gbcc_window_update(struct gbcc *gbc)
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
+
 	uint32_t *screen = gbc->core.ppu.screen.sdl;
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
@@ -238,6 +241,14 @@ void gbcc_window_update(struct gbcc *gbc)
 		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
 	}
 
+	for (size_t i = 0; i < N_ELEM(win->buffer); i++) {
+		uint32_t tmp = win->buffer[i];
+		win->buffer[i] = (tmp & 0xFFu) << 24u
+				| (tmp & 0xFF00u) << 8u
+				| (tmp & 0xFF0000u) >> 8u
+				| (tmp & 0xFF000000u) >> 24u;
+	}
+
 	if (!win->frame_blending) {
 		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
 	}
@@ -253,6 +264,7 @@ void gbcc_window_update(struct gbcc *gbc)
 	glTexSubImage2D(GL_TEXTURE_2D, 0, GBC_SCREEN_WIDTH, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
 			GL_UNSIGNED_BYTE, (GLvoid *)win->last_buffer);
 	glUseProgram(win->gl.base_shader);
+	glUniform1i( glGetUniformLocation( win->gl.base_shader, "tex"), 0);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	/* Second pass - render the framebuffer to the screen */
@@ -273,6 +285,7 @@ void gbcc_window_update(struct gbcc *gbc)
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
+	glUniform1i( glGetUniformLocation( win->gl.shaders[win->gl.cur_shader].program, "tex"), 0);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	if (screenshot) {

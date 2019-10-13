@@ -5,6 +5,14 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#ifdef __ANDROID__
+#include <android/log.h>
+#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__)
+#define vprintf(...) __android_log_vprint(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__)
+#define fprintf(file, ...) __android_log_print(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__)
+#define vfprintf(file, ...) __android_log_vprint(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__)
+#endif
+
 /* Instruction sizes, in bytes. 0 means invalid instruction */
 static const uint8_t gbcc_op_sizes[0x100] = {
            /* 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
