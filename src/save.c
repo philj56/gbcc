@@ -120,7 +120,7 @@ void gbcc_save_state(struct gbcc *gbc)
 		gbcc_log_error("Error opening %s: %s\n", fname, strerror(errno));
 		return;
 	}
-	fwrite(gbc, sizeof(struct gbcc_core), 1, sav);
+	fwrite(core, sizeof(struct gbcc_core), 1, sav);
 	if (core->cart.ram_size > 0) {
 		fwrite(core->cart.ram, 1, core->cart.ram_size, sav);
 	}
@@ -158,9 +158,11 @@ void gbcc_load_state(struct gbcc *gbc)
 		gbc->load_state = 0;
 		return;
 	}
-	fread(gbc, sizeof(struct gbcc_core), 1, sav);
+	fread(core, sizeof(struct gbcc_core), 1, sav);
 	/* FIXME: Thread-unsafe, screen could try to read from here while the
 	 * pointer is still invalid */
+	core->ppu.screen.buffer_0 = buf0;
+	core->ppu.screen.buffer_1 = buf1;
 	core->ppu.screen.gbc = buf0;
 	core->ppu.screen.sdl = buf1;
 
