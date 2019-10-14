@@ -77,6 +77,9 @@ void gbcc_audio_initialise(struct gbcc *gbc)
 }
 
 void gbcc_audio_destroy(struct gbcc *gbc) {
+	alDeleteSources(1, &gbc->audio.al.source);
+	alDeleteBuffers(N_ELEM(gbc->audio.al.buffers), gbc->audio.al.buffers);
+	alcDestroyContext(gbc->audio.al.context);
 	alcCloseDevice(gbc->audio.al.device);
 }
 
