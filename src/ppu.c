@@ -139,7 +139,7 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 			}
 		}
 	}
-	if (ppu->clock == 80 && get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
+	if (ppu->clock == 81 && get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
 		/* Final value of these variables for the rest of this line */
 		ppu->scy = gbcc_memory_read(gbc, SCY, true);
 		ppu->scx = gbcc_memory_read(gbc, SCX, true);
@@ -156,24 +156,30 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		 * Rendering at the beginning of a scanline pauses if
 		 * SCX % 8 != 0, while the ppu discards offscreen pixels
 		 */
-		ppu->next_dot = 88 + ppu->scx % 8;
+		/*
+		 * TODO: As far as I can tell, the magic number here should be
+		 * 89, as mode 3 begins at 81 dots, with an 8 dot pause while
+		 * the first background tile is fetched. This breaks Mooneye's
+		 * intr_2_mode0 test however, which suggests that mode 3 is not
+		 * taking long enough.
+		 */
+		ppu->next_dot = 94 + ppu->scx % 8;
 		ppu->bg_tile.x = ppu->scx % 8;
 		ppu->window_tile.x = 0;
 	}
 	if (get_video_mode(stat) == GBC_LCD_MODE_OAM_VRAM_READ) {
-		if (ppu->clock == ppu->next_dot) {
-			draw_background_pixel(gbc);
-			draw_window_pixel(gbc);
-			draw_sprite_pixel(gbc);
-			ppu->x++;
-			ppu->next_dot++;
-		}
 		if (ppu->x == 160) {
 			stat = set_video_mode(stat, GBC_LCD_MODE_HBLANK);
 			composite_line(gbc);
 			if (gbc->hdma.hblank && gbc->hdma.length > 0) {
 				gbc->hdma.to_copy = 0x10u;
 			}
+		} else if (ppu->clock == ppu->next_dot) {
+			draw_background_pixel(gbc);
+			draw_window_pixel(gbc);
+			draw_sprite_pixel(gbc);
+			ppu->x++;
+			ppu->next_dot++;
 		}
 	}
 	
