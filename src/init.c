@@ -127,7 +127,7 @@ void parse_header(struct gbcc_core *gbc)
 	gbcc_log_info("Parsing header...\n");
 	/* Check for MMM01, which has its header at the end of the file */
 	gbc->memory.rom0 = gbc->cart.rom + (0x1FEu * 0x4000) % gbc->cart.rom_size;
-	gbc->cart.mbc.rom0_bank = gbc->cart.rom_banks - 1;
+	gbc->cart.mbc.rom0_bank = (gbc->memory.rom0 - gbc->cart.rom) / 0x4000u;
 	if (!verify_cartridge(gbc, false)) {
 		gbc->memory.rom0 = gbc->cart.rom;
 		gbc->cart.mbc.rom0_bank = 0;

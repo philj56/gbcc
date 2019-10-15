@@ -131,7 +131,7 @@ void gbcc_mbc_mbc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 	 * ROMB1 selects either upper 2 bits of ROMX bank number
 	 * or RAM bank number, depending on bit 0 of RAMB.
 	 */
-	if (mbc->ramb) {
+	if (!mbc->ramb) {
 		/* Mode 0 (ROM banking mode) */
 		mbc->romx_bank |= mbc->romb1 << 5u;
 		mbc->sram_bank = 0;
@@ -158,10 +158,13 @@ uint8_t gbcc_mbc_mbc2_read(struct gbcc_core *gbc, uint16_t addr)
 	if (addr >= ROMX_START && addr < ROMX_END) {
 		return gbc->memory.romx[addr - ROMX_START];
 	}
-	/* MBC2 only has 512 4-bit ram locations */
-	if (addr >= SRAM_START && addr < SRAM_START + 0x200u) {
+	/*
+	 * MBC2 only has 512 4-bit ram locations, however this is mirrored
+	 * throughout the full SRAM address space.
+	 */
+	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.mbc.sram_enable) {
-			return gbc->memory.sram[addr - SRAM_START];
+			return gbc->memory.sram[(addr - SRAM_START) & 0x1FFu];
 		}
 		gbcc_log_debug("SRAM not enabled!\n");
 		return 0xFFu;
@@ -177,16 +180,18 @@ void gbcc_mbc_mbc2_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 	/* MBC2 only has 512 4-bit ram locations */
 	if (addr >= SRAM_START && addr < SRAM_START + 0x200u) {
 		if (mbc->sram_enable) {
-			gbc->memory.sram[addr - SRAM_START] = val & 0x0Fu;
+			gbc->memory.sram[addr - SRAM_START] = (val & 0x0Fu) | 0xF0u;
 		} else {
 			gbcc_log_debug("SRAM not enabled!\n");
 		}
-	} else if (addr < 0x2000u && !(addr & bit16(8))) {
-		/* bit 8 of address must be zero to enable/disable ram */
-		mbc->ramg = val;
-	} else if (addr < 0x4000u && (addr & bit16(8))) {
-		/* bit 8 of address must be one to change rom bank */
-		mbc->romb0 = val;
+	} else if (addr < 0x4000u) {
+		if (addr & bit16(8)) {
+			/* bit 8 of address must be set to change rom bank */
+			mbc->romb0 = val;
+		} else {
+			/* bit 8 of address must be cleared to enable/disable ram */
+			mbc->ramg = val;
+		}
 	} else {
 		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
 		return;
