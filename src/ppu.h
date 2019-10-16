@@ -52,10 +52,12 @@ struct ppu {
 	uint8_t lyc;
 	uint8_t wy;
 	uint8_t wx;
+	uint8_t lcdc;
 
 	/* Internal variables */
 	bool last_stat;
 	uint8_t x;
+	uint8_t window_ly;
 	uint16_t next_dot;
 	uint8_t n_sprites;
 	struct sprite sprites[10];
