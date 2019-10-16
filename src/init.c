@@ -57,6 +57,16 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 	init_mmap(gbc);
 	init_ioreg(gbc);
 	gbcc_apu_init(gbc);
+
+	for (size_t i = 0; i < N_ELEM(gbc->memory.wram_bank); i++) {
+		for (size_t j = 0; j < N_ELEM(gbc->memory.wram_bank[i]); j++) {
+			gbc->memory.wram_bank[i][j] = rand();
+		}
+	}
+	for (size_t i = 0; i < N_ELEM(gbc->memory.hram); i++) {
+		gbc->memory.hram[i] = rand();
+	}
+
 	gbc->initialised = true;
 }
 
