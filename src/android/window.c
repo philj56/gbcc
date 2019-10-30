@@ -57,6 +57,12 @@ void gbcc_window_initialise(struct gbcc *gbc)
 			SHADER_PATH "colour-correct.frag"
 			);
 	*/
+	win->gl.shaders[0].name = "Nothing";
+	win->gl.shaders[0].program = gbcc_create_shader_program(
+		SHADER_PATH "vert.vert",
+		SHADER_PATH "nothing.frag"
+	);
+
 	win->gl.shaders[1].name = "Subpixel";
 	win->gl.shaders[1].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
@@ -188,11 +194,14 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	/* Bind the actual bits we'll be using to render */
 	glBindVertexArray(win->gl.vao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
+
+	win->initialised = true;
 }
 
 void gbcc_window_deinitialise(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	win->initialised = false;
 
 	gbcc_fontmap_destroy(&win->font);
 	glDeleteBuffers(1, &win->gl.vbo);
