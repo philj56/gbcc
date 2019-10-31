@@ -7,6 +7,7 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <stdint.h>
+#include <string.h>
 #include <time.h>
 
 #define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F / 0x10u)
@@ -67,6 +68,7 @@ void gbcc_audio_initialise(struct gbcc *gbc)
 	}
 
 	clock_gettime(CLOCK_REALTIME, &audio->start_time);
+	memset(audio->mix_buffer, 0, sizeof(audio->mix_buffer));
 	for (size_t i = 0; i < N_ELEM(audio->al.buffers); i++) {
 		alBufferData(audio->al.buffers[i], AL_FORMAT_STEREO16, audio->mix_buffer, sizeof(audio->mix_buffer), SAMPLE_RATE);
 	}
