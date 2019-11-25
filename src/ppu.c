@@ -110,6 +110,13 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		ppu->lyc = gbcc_memory_read(gbc, LYC, true);
 		ppu->wy = gbcc_memory_read(gbc, WY, true);
 		ppu->wx = gbcc_memory_read(gbc, WX, true);
+		/*
+		 * The ppu doesn't really ignore writes to LCDC during a
+		 * scanline, however the behaviour is not well described
+		 * anywhere, and various games seem to rely on being able to
+		 * enable the window mid-scanline for the next line.
+		 */
+		ppu->lcdc = gbcc_memory_read(gbc, LCDC, true);
 
 		/*
 		 * First off, we enter OAM scanning mode for 80 cycles. As the
@@ -119,8 +126,7 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_READ);
 
 		ppu->n_sprites = 0;
-		uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
-		bool double_size = check_bit(lcdc, 2); /* 8x8 or 8x16 tiles */
+		bool double_size = check_bit(ppu->lcdc, 2); /* 8x8 or 8x16 tiles */
 		for (uint16_t addr = OAM_START; addr < OAM_END; addr += 4) {
 			uint8_t y = gbcc_memory_read(gbc, addr, true);
 			uint8_t x = gbcc_memory_read(gbc, addr + 1, true);
@@ -139,7 +145,7 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 			}
 		}
 	}
-	if (ppu->clock == 80 && get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
+	if (ppu->clock == 81 && get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
 		/* Final value of these variables for the rest of this line */
 		ppu->scy = gbcc_memory_read(gbc, SCY, true);
 		ppu->scx = gbcc_memory_read(gbc, SCX, true);
@@ -147,6 +153,7 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		ppu->lyc = gbcc_memory_read(gbc, LYC, true);
 		ppu->wy = gbcc_memory_read(gbc, WY, true);
 		ppu->wx = gbcc_memory_read(gbc, WX, true);
+		ppu->lcdc = gbcc_memory_read(gbc, LCDC, true);
 
 		/* Start the actual rendering of this line */
 		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_VRAM_READ);
@@ -156,24 +163,30 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		 * Rendering at the beginning of a scanline pauses if
 		 * SCX % 8 != 0, while the ppu discards offscreen pixels
 		 */
-		ppu->next_dot = 88 + ppu->scx % 8;
+		/*
+		 * TODO: As far as I can tell, the magic number here should be
+		 * 89, as mode 3 begins at 81 dots, with an 8 dot pause while
+		 * the first background tile is fetched. This breaks Mooneye's
+		 * intr_2_mode0 test however, which suggests that mode 3 is not
+		 * taking long enough.
+		 */
+		ppu->next_dot = 94 + ppu->scx % 8;
 		ppu->bg_tile.x = ppu->scx % 8;
 		ppu->window_tile.x = 0;
 	}
 	if (get_video_mode(stat) == GBC_LCD_MODE_OAM_VRAM_READ) {
-		if (ppu->clock == ppu->next_dot) {
-			draw_background_pixel(gbc);
-			draw_window_pixel(gbc);
-			draw_sprite_pixel(gbc);
-			ppu->x++;
-			ppu->next_dot++;
-		}
 		if (ppu->x == 160) {
 			stat = set_video_mode(stat, GBC_LCD_MODE_HBLANK);
 			composite_line(gbc);
 			if (gbc->hdma.hblank && gbc->hdma.length > 0) {
 				gbc->hdma.to_copy = 0x10u;
 			}
+		} else if (ppu->clock == ppu->next_dot) {
+			draw_background_pixel(gbc);
+			draw_window_pixel(gbc);
+			draw_sprite_pixel(gbc);
+			ppu->x++;
+			ppu->next_dot++;
 		}
 	}
 	
@@ -213,6 +226,22 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		uint32_t *tmp = ppu->screen.gbc;
 		ppu->screen.gbc = ppu->screen.sdl;
 		ppu->screen.sdl = tmp;
+
+		/*
+		 * Apparently, the window "remembers" how many lines it drew
+		 * during the frame, so e.g. drawing some window at the top of
+		 * the screen, then disabling it, then re-enabling it further
+		 * down without changing WY will resume drawing where it left
+		 * off, **NOT** from where you'd expect from (LY - WY). This
+		 * doesn't seem to be mentioned in any documentation I can
+		 * find, but is emulated correctly in many other emulators.
+		 *
+		 * TODO: Antonio's TCAGBD suggests that there is an entirely
+		 * separate background state machine for the window, which
+		 * would make sense here, and is worth remembering whenever the
+		 * ppu gets rewritten.
+		 */
+		ppu->window_ly = 0xFFu;
 	} 
 	/* Check STAT interrupt */
 	/* 
@@ -268,13 +297,15 @@ void draw_window_pixel(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	struct tile *t = &ppu->window_tile;
-	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 
-	if (ppu->ly < ppu->wy || !check_bit(lcdc, 5) || (gbc->mode == DMG && !check_bit(lcdc, 0))) {
+	if (ppu->ly < ppu->wy || !check_bit(ppu->lcdc, 5) || (gbc->mode == DMG && !check_bit(ppu->lcdc, 0))) {
 		return;
 	}
 	if (ppu->x + 7 < ppu->wx) {
 		return;
+	}
+	if (ppu->x + 7 == ppu->wx) {
+		ppu->window_ly++;
 	}
 	if (t->x == 0) {
 		load_window_tile(gbc);
@@ -302,7 +333,7 @@ void draw_window_pixel(struct gbcc_core *gbc)
 void draw_sprite_pixel(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
-	if (!check_bit(gbcc_memory_read(gbc, LCDC, true), 1)) {
+	if (!check_bit(ppu->lcdc, 1)) {
 		/* Sprites are disabled */
 		return;
 	}
@@ -374,7 +405,7 @@ void composite_line(struct gbcc_core *gbc)
 	 * ob_attr & ATTR_PRIORITY: if set, draw sprites below background
 	 * 			    colours 1-3
 	 * (win|bg)_attr & ATTR_PRIORITY: same as above
-	 * bit(lcdc, 0): TODO: different for DMG & GBC
+	 * bit(ppu->lcdc, 0): TODO: different for DMG & GBC
 	 */
 	struct ppu *ppu = &gbc->ppu;
 	uint8_t ly = ppu->ly;
@@ -478,14 +509,13 @@ uint32_t get_palette_colour(struct gbcc_core *gbc, uint8_t palette, uint8_t n, e
 void load_bg_tile(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
-	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 
 	ppu->bg_tile.x = 0;
 	uint8_t tx = ((ppu->scx + ppu->x) / 8u) % 32u;
 	uint8_t ty = ((ppu->scy + ppu->ly) / 8u) % 32u;
 	uint16_t line_offset = 2 * ((ppu->scy + ppu->ly) % 8u); /* 2 bytes per line */
 	uint16_t map;
-	if (check_bit(lcdc, 3)) {
+	if (check_bit(ppu->lcdc, 3)) {
 		map = BACKGROUND_MAP_BANK_2;
 	} else {
 		map = BACKGROUND_MAP_BANK_1;
@@ -494,7 +524,7 @@ void load_bg_tile(struct gbcc_core *gbc)
 	if (gbc->mode == DMG) {
 		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 		uint16_t tile_addr;
-		if (check_bit(lcdc, 4)) {
+		if (check_bit(ppu->lcdc, 4)) {
 			tile_addr = VRAM_START + 16 * tile;
 		} else {
 			tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
@@ -512,7 +542,7 @@ void load_bg_tile(struct gbcc_core *gbc)
 		} else {
 			vbk = gbc->memory.vram_bank[0];
 		}
-		if (check_bit(lcdc, 4)) {
+		if (check_bit(ppu->lcdc, 4)) {
 			tile_addr = 16 * tile;
 		} else {
 			tile_addr = (uint16_t)(0x1000 + 16 * (int8_t)tile);
@@ -531,14 +561,13 @@ void load_bg_tile(struct gbcc_core *gbc)
 void load_window_tile(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
-	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
 
 	ppu->window_tile.x = 0;
 	uint8_t tx = ((ppu->x - ppu->wx + 7) / 8u) % 32u;
-	uint8_t ty = ((ppu->ly - ppu->wy) / 8u) % 32u;
-	uint16_t line_offset = 2 * ((ppu->ly - ppu->wy) % 8u); /* 2 bytes per line */
+	uint8_t ty = (ppu->window_ly / 8u) % 32u;
+	uint16_t line_offset = 2 * (ppu->window_ly % 8u); /* 2 bytes per line */
 	uint16_t map;
-	if (check_bit(lcdc, 6)) {
+	if (check_bit(ppu->lcdc, 6)) {
 		map = BACKGROUND_MAP_BANK_2;
 	} else {
 		map = BACKGROUND_MAP_BANK_1;
@@ -547,7 +576,7 @@ void load_window_tile(struct gbcc_core *gbc)
 	if (gbc->mode == DMG) {
 		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
 		uint16_t tile_addr;
-		if (check_bit(lcdc, 4)) {
+		if (check_bit(ppu->lcdc, 4)) {
 			tile_addr = VRAM_START + 16 * tile;
 		} else {
 			tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
@@ -565,7 +594,7 @@ void load_window_tile(struct gbcc_core *gbc)
 		} else {
 			vbk = gbc->memory.vram_bank[0];
 		}
-		if (check_bit(lcdc, 4)) {
+		if (check_bit(ppu->lcdc, 4)) {
 			tile_addr = 16 * tile;
 		} else {
 			tile_addr = (uint16_t)(0x1000 + 16 * (int8_t)tile);
@@ -585,8 +614,7 @@ void load_sprite_tile(struct gbcc_core *gbc, int n)
 {
 	struct ppu *ppu = &gbc->ppu;
 	uint8_t ly = gbcc_memory_read(gbc, LY, true);
-	uint8_t lcdc = gbcc_memory_read(gbc, LCDC, true);
-	bool double_size = check_bit(lcdc, 2); /* 1 or 2 8x8 tiles */
+	bool double_size = check_bit(ppu->lcdc, 2); /* 1 or 2 8x8 tiles */
 	struct tile *t = &ppu->sprites[n].tile;
 	/* 
 	 * Together SY & SX define the bottom right corner of the

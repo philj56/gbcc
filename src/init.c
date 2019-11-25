@@ -57,6 +57,16 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 	init_mmap(gbc);
 	init_ioreg(gbc);
 	gbcc_apu_init(gbc);
+
+	for (size_t i = 0; i < N_ELEM(gbc->memory.wram_bank); i++) {
+		for (size_t j = 0; j < N_ELEM(gbc->memory.wram_bank[i]); j++) {
+			gbc->memory.wram_bank[i][j] = rand();
+		}
+	}
+	for (size_t i = 0; i < N_ELEM(gbc->memory.hram); i++) {
+		gbc->memory.hram[i] = rand();
+	}
+
 	gbc->initialised = true;
 }
 
@@ -127,7 +137,7 @@ void parse_header(struct gbcc_core *gbc)
 	gbcc_log_info("Parsing header...\n");
 	/* Check for MMM01, which has its header at the end of the file */
 	gbc->memory.rom0 = gbc->cart.rom + (0x1FEu * 0x4000) % gbc->cart.rom_size;
-	gbc->cart.mbc.rom0_bank = gbc->cart.rom_banks - 1;
+	gbc->cart.mbc.rom0_bank = (gbc->memory.rom0 - gbc->cart.rom) / 0x4000u;
 	if (!verify_cartridge(gbc, false)) {
 		gbc->memory.rom0 = gbc->cart.rom;
 		gbc->cart.mbc.rom0_bank = 0;

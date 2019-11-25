@@ -258,7 +258,9 @@ void echo_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 
 uint8_t oam_read(struct gbcc_core *gbc, uint16_t addr, bool override)
 {
-	if (gbc->cpu.dma.running && !override) {
+	uint8_t stat = gbc->memory.ioreg[STAT - IOREG_START];
+	if ((stat & 0x02u || gbc->cpu.dma.running) && !override) {
+		 /* CPU cannot access oam during dma or STAT modes 2 & 3 */
 		return 0xFFu;
 	}
 	return gbc->memory.oam[addr - OAM_START];
@@ -266,7 +268,9 @@ uint8_t oam_read(struct gbcc_core *gbc, uint16_t addr, bool override)
 
 void oam_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val, bool override)
 {
-	if (gbc->cpu.dma.running && !override) {
+	uint8_t stat = gbc->memory.ioreg[STAT - IOREG_START];
+	if ((stat & 0x02u || gbc->cpu.dma.running) && !override) {
+		 /* CPU cannot access oam during dma or STAT modes 2 & 3 */
 		return;
 	}
 	gbc->memory.oam[addr - OAM_START] = val;
@@ -348,6 +352,7 @@ uint8_t ioreg_read(struct gbcc_core *gbc, uint16_t addr, bool override)
 			ret |= (uint8_t)(gbc->apu.ch2.enabled << 1u);
 			ret |= (uint8_t)(gbc->apu.ch3.enabled << 2u);
 			ret |= (uint8_t)(gbc->apu.ch4.enabled << 3u);
+			ret |= (uint8_t)(!gbc->apu.disabled << 7u);
 			break;
 		case BGPD:
 			ret = gbc->ppu.bgp[gbc->memory.ioreg[BGPI - IOREG_START] & 0x3Fu];

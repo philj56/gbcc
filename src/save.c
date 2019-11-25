@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAX_NAME_LEN 4096
@@ -69,6 +70,9 @@ void gbcc_load(struct gbcc *gbc)
 	}
 	sav = fopen(fname, "rbe");
 	if (sav == NULL) {
+		for (size_t i = 0; i < core->cart.ram_size; i++) {
+			core->cart.ram[i] = rand();
+		}
 		if (core->cart.mbc.type == MBC3) {
 			clock_gettime(CLOCK_REALTIME, &core->cart.mbc.rtc.base_time);
 		}
