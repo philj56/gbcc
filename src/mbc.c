@@ -401,7 +401,9 @@ void gbcc_mbc_mbc5_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 
 	/*
 	 * With the rumble pak, bit 3 of RAMB is repurposed to control the
-	 * rumble
+	 * rumble. From how the rumble strength works, it seems that the
+	 * cartridge has direct control over the rumble motor, and this bit
+	 * controls the position of the motor.
 	 */
 	/* N.B.: this is not confirmed, but it works */
 	if (gbc->cart.rumble) {

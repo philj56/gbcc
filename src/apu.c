@@ -13,11 +13,11 @@
 #define SLEEP_TIME (SECOND / SYNC_FREQ)
 #define SLEEP_DETECT (SECOND / 10)
 
-static const uint8_t duty_table[4][8] = {
-	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, 	/* 00000001b */
-	{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, 	/* 10000001b */
-	{0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01}, 	/* 10000111b */
-	{0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00}  	/* 01111110b */
+static const bool duty_table[4][8] = {
+	{0, 0, 0, 0, 0, 0, 0, 1}, 	/* 00000001b */
+	{1, 0, 0, 0, 0, 0, 0, 1}, 	/* 10000001b */
+	{1, 0, 0, 0, 0, 1, 1, 1}, 	/* 10000111b */
+	{0, 1, 1, 1, 1, 1, 1, 0}  	/* 01111110b */
 };
 
 static void length_counter_clock(struct channel *ch);
