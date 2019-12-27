@@ -20,8 +20,8 @@ struct duty {
 };
 
 struct sweep {
-	uint16_t freq;
 	struct timer timer;
+	uint16_t freq;
 	uint16_t period;
 	uint8_t shift;
 	int8_t dir;
@@ -30,19 +30,19 @@ struct sweep {
 };
 
 struct noise {
+	struct timer timer;
 	uint8_t shift;
 	bool width_mode;
-	struct timer timer;
 	uint16_t lfsr;
 };
 
 struct wave {
 	struct timer timer;
 	uint16_t addr;
+	uint16_t freq;
 	uint8_t buffer;
 	uint8_t position;
 	uint8_t shift;
-	uint16_t freq;
 };
 
 struct envelope {
@@ -54,6 +54,8 @@ struct envelope {
 };
 
 struct channel {
+	struct envelope envelope;
+	struct duty duty;
 	uint16_t counter;
 	bool length_enable;
 	bool state;
@@ -61,8 +63,6 @@ struct channel {
 	bool dac;
 	bool left;
 	bool right;
-	struct envelope envelope;
-	struct duty duty;
 };
 
 struct apu {

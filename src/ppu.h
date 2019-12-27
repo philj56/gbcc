@@ -30,7 +30,7 @@ struct sprite {
 
 struct ppu {
 	uint64_t frame;
-	uint16_t clock;
+	uint32_t clock;
 	bool lcd_disable;
 	uint8_t bgp[64]; 	/* 8 x 8-byte sprites */
 	uint8_t obp[64]; 	/* 8 x 8-byte sprites */

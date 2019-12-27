@@ -194,9 +194,9 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 	//printf("LYC: %u\n", gbcc_memory_read(gbc, LYC, true));
 	//printf("Clock = %u\tMode = %u\n", ppu->clock, get_video_mode(stat));
 	ppu->clock++;
-	ppu->clock %= 456;
-	if (ppu->clock == 0) {
+	if (ppu->clock == 456) {
 		ppu->ly++;
+		ppu->clock = 0;
 	}
 	if (ppu->ly == 153 && ppu->clock == 10) {
 		/*
@@ -212,11 +212,7 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_READ);
 	}
 
-	if (ppu->ly == gbcc_memory_read(gbc, LYC, true)) {
-		stat = set_bit(stat, 2);
-	} else {
-		stat = clear_bit(stat, 2);
-	}
+	stat = cond_bit(stat, 2, ppu->ly == ppu->lyc);
 	
 	/* VBLANK interrupt flag */
 	if (ppu->ly == 144 && ppu->clock == 0) {

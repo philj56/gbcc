@@ -19,7 +19,6 @@ struct gbcc_audio {
 		ALuint buffers[5];
 	} al;
 	uint64_t sample_clock;
-	uint64_t sync_clock;
 	uint64_t clock;
 	size_t index;
 	struct timespec cur_time;
