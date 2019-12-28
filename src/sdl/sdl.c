@@ -9,6 +9,7 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 static const SDL_Scancode keymap[31] = {
 	SDL_SCANCODE_Z,		/* A */
@@ -58,14 +59,25 @@ const SDL_GameControllerButton buttonmap[8] = {
 // Returns key that changed, or -1 for a non-emulated key
 static int process_input(struct gbcc_sdl *sdl, const SDL_Event *e);
 static void process_game_controller(struct gbcc_sdl *sdl);
+static void *init_input(void *_);
 
 void gbcc_sdl_initialise(struct gbcc_sdl *sdl)
 {
-	if (SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0) {
+	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
 	}
 
 	sdl->game_controller = NULL;
+
+	{
+		/*
+		 * SDL_INIT_GAMECONTROLLER is very slow, so we spin it off into
+		 * its own thread here.
+		 */
+		pthread_t init_thread;
+		pthread_create(&init_thread, NULL, init_input, NULL);
+		pthread_detach(init_thread);
+	}
 	
 	/* Main OpenGL settings */
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -408,4 +420,12 @@ void process_game_controller(struct gbcc_sdl *sdl)
 			printf("%s\n", SDL_GetError());
 		}
 	}
+}
+
+void *init_input(void *_)
+{
+	if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0) {
+		gbcc_log_error("Failed to initialize controller support: %s\n", SDL_GetError());
+	}
+	return NULL;
 }

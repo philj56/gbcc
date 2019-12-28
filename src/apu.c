@@ -81,7 +81,7 @@ void gbcc_apu_clock(struct gbcc_core *gbc)
 		apu->wave.addr = WAVE_START + (apu->wave.position / 2);
 		//printf("Wave clocked to %04X\n", apu->wave.addr);
 		apu->wave.buffer = gbcc_memory_read(gbc, apu->wave.addr, true);
-		/* Alternates betwee high & low nibble, high first */
+		/* Alternates between high & low nibble, high first */
 		if (apu->wave.position % 2) {
 			apu->wave.buffer &= 0x0Fu;
 		} else {

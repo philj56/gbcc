@@ -44,6 +44,7 @@ static void custom_turbo_speed(GtkSpinButton *widget, void *data);
 static void start_emulation_thread(struct gbcc_gtk *gtk, char *file);
 static void stop_emulation_thread(struct gbcc_gtk *gtk);
 static void gbcc_gtk_process_input(struct gbcc_gtk *gtk);
+static void *init_input(void *_);
 
 void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 {
@@ -133,8 +134,14 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), false);
 	gtk_window_set_focus(gtk->window, gtk->gl_area);
 
-	if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0) {
-		gbcc_log_error("Failed to initialize SDL: %s\n", SDL_GetError());
+	{
+		/*
+		 * SDL_INIT_GAMECONTROLLER is very slow, so we spin it off into
+		 * its own thread here.
+		 */
+		pthread_t init_thread;
+		pthread_create(&init_thread, NULL, init_input, NULL);
+		pthread_detach(init_thread);
 	}
 	return;
 }
@@ -708,4 +715,12 @@ void process_game_controller(struct gbcc_gtk *gtk)
 			printf("%s\n", SDL_GetError());
 		}
 	}
+}
+
+void *init_input(void *_)
+{
+	if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != 0) {
+		gbcc_log_error("Failed to initialize controller support: %s\n", SDL_GetError());
+	}
+	return NULL;
 }
