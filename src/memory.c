@@ -401,6 +401,16 @@ void ioreg_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val, bool overrid
 	}
 	uint8_t tmp = *dest & (uint8_t)~mask;
 	
+	if (addr >= WAVE_START && addr < WAVE_END) {
+		/*
+		 * When the wave channel is enabled, accessing any wave RAM
+		 * accesses the current byte.
+		 */
+		if (gbc->apu.ch3.enabled) {
+			gbc->memory.ioreg[gbc->apu.wave.addr - IOREG_START] = val;
+		}
+	}
+
 	if (addr >= NR10 && addr <= NR52) {
 		if (addr != NR52 && gbc->apu.disabled) {
 			return;
