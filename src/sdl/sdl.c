@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-static const SDL_Scancode keymap[31] = {
+static const SDL_Scancode keymap[32] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -29,6 +29,7 @@ static const SDL_Scancode keymap[31] = {
 	SDL_SCANCODE_2, 	/* Toggle window */
 	SDL_SCANCODE_3, 	/* Toggle sprites */
 	SDL_SCANCODE_L, 	/* Toggle link cable loop */
+	SDL_SCANCODE_A, 	/* Toggle autosave */
 	SDL_SCANCODE_B, 	/* Toggle background playback */
 	SDL_SCANCODE_KP_2, 	/* MBC7 accelerometer down */
 	SDL_SCANCODE_KP_4, 	/* MBC7 accelerometer left */
@@ -248,37 +249,39 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 				emulator_key = GBCC_KEY_LINK_CABLE;
 				break;
 			case 17:
-				emulator_key = GBCC_KEY_BACKGROUND_PLAY;
+				emulator_key = GBCC_KEY_AUTOSAVE;
 				break;
 			case 18:
+				emulator_key = GBCC_KEY_BACKGROUND_PLAY;
+				break;
+			case 19:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_DOWN;
 				} else {
 					continue;
 				}
 				break;
-			case 19:
+			case 20:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_LEFT;
 				} else {
 					continue;
 				}
 				break;
-			case 20:
+			case 21:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_RIGHT;
 				} else {
 					continue;
 				}
 				break;
-			case 21:
+			case 22:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_UP;
 				} else {
 					continue;
 				}
 				break;
-			case 22:
 			case 23:
 			case 24:
 			case 25:
@@ -287,6 +290,7 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			case 28:
 			case 29:
 			case 30:
+			case 31:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 22);
 				} else {

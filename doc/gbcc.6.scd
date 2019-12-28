@@ -19,6 +19,9 @@ slow).
 *-a, --autoresume*
 	Automatically resume from when gbcc was last closed for this game.
 
+*-A, --autosave*
+	Automatically save SRAM a few seconds after the last write was detected.
+
 *-b, --background*
 	Enable playback while unfocused.
 
@@ -94,6 +97,9 @@ l
 	Connect the link cable port to itself. This makes the GameBoy act as if
 	it is talking to an exact copy of itself, and enables e.g. trading
 	(and battling!) with oneself in Pokémon.
+
+A
+	Toggle autosave
 
 b
 	Toggle background playback

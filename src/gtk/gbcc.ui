@@ -69,6 +69,14 @@
 			</object>
 		</child>
 		<child>
+			<object class="GtkCheckMenuItem" id="autosave">
+				<property name="can_focus">False</property>
+				<property name="label">_Autosave</property>
+				<property name="use-underline">True</property>
+				<signal name="toggled" handler="toggle_autosave"/>
+			</object>
+		</child>
+		<child>
 			<object class="GtkCheckMenuItem" id="background_playback">
 				<property name="can_focus">False</property>
 				<property name="label">_Background playback</property>

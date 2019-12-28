@@ -19,6 +19,7 @@ struct gbcc {
 	int8_t load_state;
 	bool background_play;
 	bool has_focus;
+	bool autosave;
 };
 
 void *gbcc_emulation_loop(void *_gbc);

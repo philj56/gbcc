@@ -164,6 +164,10 @@ uint8_t gbcc_memory_read(struct gbcc_core *gbc, uint16_t addr, bool override)
 void gbcc_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val, bool override)
 {
 	if (addr < ROMX_END || (addr >= SRAM_START && addr < SRAM_END)) {
+		if (addr >= SRAM_START && addr < SRAM_END) {
+			clock_gettime(CLOCK_REALTIME, &gbc->cart.mbc.last_save_time);
+			gbc->cart.mbc.sram_changed = true;
+		}
 		switch (gbc->cart.mbc.type) {
 			case NONE:
 				gbcc_mbc_none_write(gbc, addr, val);

@@ -1,7 +1,7 @@
 #include "input.h"
 #include <gdk/gdk.h>
 
-guint default_keymap[51] = {
+guint default_keymap[52] = {
 	GDK_KEY_z,
 	GDK_KEY_x,
 	GDK_KEY_Return,
@@ -23,6 +23,7 @@ guint default_keymap[51] = {
 	GDK_KEY_2,
 	GDK_KEY_3,
 	GDK_KEY_l,
+	GDK_KEY_A,
 	GDK_KEY_b,
 	GDK_KEY_KP_8,
 	GDK_KEY_KP_2,

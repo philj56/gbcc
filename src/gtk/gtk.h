@@ -20,6 +20,7 @@ struct gbcc_gtk {
 	struct {
 		GtkWidget *bar;
 		GtkWidget *stop;
+		GtkWidget *autosave;
 		GtkWidget *background_playback;
 		GtkWidget *fractional_scaling;
 		GtkWidget *frame_blending;

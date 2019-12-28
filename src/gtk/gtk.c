@@ -34,6 +34,7 @@ static void check_vram_display(GtkWidget *widget, void *data);
 static void change_shader(GtkWidget *widget, void *data);
 static void change_palette(GtkWidget *widget, void *data);
 static void toggle_vram_display(GtkCheckMenuItem *widget, void *data);
+static void toggle_autosave(GtkCheckMenuItem *widget, void *data);
 static void toggle_background_playback(GtkCheckMenuItem *widget, void *data);
 static void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data);
 static void toggle_frame_blending(GtkCheckMenuItem *widget, void *data);
@@ -80,6 +81,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	
 	gtk->menu.bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
 	gtk->menu.stop = GTK_WIDGET(gtk_builder_get_object(builder, "stop"));
+	gtk->menu.autosave = GTK_WIDGET(gtk_builder_get_object(builder, "autosave"));
 	gtk->menu.background_playback = GTK_WIDGET(gtk_builder_get_object(builder, "background_playback"));
 	gtk->menu.fractional_scaling = GTK_WIDGET(gtk_builder_get_object(builder, "fractional_scaling"));
 	gtk->menu.frame_blending = GTK_WIDGET(gtk_builder_get_object(builder, "frame_blending"));
@@ -121,6 +123,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_builder_add_callback_symbol(builder, "check_shader", G_CALLBACK(check_shader));
 	gtk_builder_add_callback_symbol(builder, "check_vram_display", G_CALLBACK(check_vram_display));
 	gtk_builder_add_callback_symbol(builder, "toggle_vram_display", G_CALLBACK(toggle_vram_display));
+	gtk_builder_add_callback_symbol(builder, "toggle_autosave", G_CALLBACK(toggle_autosave));
 	gtk_builder_add_callback_symbol(builder, "toggle_background_playback", G_CALLBACK(toggle_background_playback));
 	gtk_builder_add_callback_symbol(builder, "toggle_fractional_scaling", G_CALLBACK(toggle_fractional_scaling));
 	gtk_builder_add_callback_symbol(builder, "toggle_frame_blending", G_CALLBACK(toggle_frame_blending));
@@ -370,6 +373,7 @@ void check_settings_options(GtkWidget *widget, void *data)
 	gtk_widget_set_sensitive(gtk->menu.frame_blending, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.turbo_speed, gbc->core.initialised);
 
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.autosave), gbc->autosave);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.background_playback), gbc->background_play);
 	if (gbc->core.initialised) {
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.fractional_scaling), gbc->window.fractional_scaling);
@@ -439,6 +443,12 @@ void toggle_vram_display(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	gtk->gbc.window.vram_display = gtk_check_menu_item_get_active(widget);
+}
+
+void toggle_autosave(GtkCheckMenuItem *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk->gbc.autosave = gtk_check_menu_item_get_active(widget);
 }
 
 void toggle_background_playback(GtkCheckMenuItem *widget, void *data)
