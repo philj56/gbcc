@@ -19,9 +19,7 @@ void *gbcc_emulation_loop(void *_gbc)
 			gbcc_save_state(gbc);
 		}
 		if (gbc->autosave && gbc->core.cart.mbc.sram_changed) {
-			struct timespec cur_time;
-			clock_gettime(CLOCK_REALTIME, &cur_time);
-			if (cur_time.tv_sec > 1 + gbc->core.cart.mbc.last_save_time.tv_sec) {
+			if (time(NULL) > gbc->core.cart.mbc.last_save_time) {
 				gbcc_save(gbc);
 				gbc->core.cart.mbc.sram_changed = false;
 			}

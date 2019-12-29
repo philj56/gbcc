@@ -6,7 +6,8 @@ gbcc - Game Boy Color emulator written in C
 
 # SYNOPSIS
 
-*gbcc* [-abfFhivV] [-c _config_file_] [-p _palette_] [-s _shader_] [-t _speed_] rom
+*gbcc* [-aAbfFhivV] [-c _config_file_] [-p _palette_] [-s _shader_]\
+[-t _speed_] rom
 
 # DESCRIPTION
 
@@ -20,7 +21,8 @@ slow).
 	Automatically resume from when gbcc was last closed for this game.
 
 *-A, --autosave*
-	Automatically save SRAM a few seconds after the last write was detected.
+	Automatically save SRAM after the last write was detected. Default is to save
+	on normal program exit.
 
 *-b, --background*
 	Enable playback while unfocused.

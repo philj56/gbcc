@@ -10,7 +10,7 @@ static void usage()
 {
 	printf("Usage: gbcc [-aAbfFhivV] [-c config_file] [-p palette] [-s shader] [-t speed] rom\n"
 	       "  -a, --autoresume      Automatically resume gameplay if possible.\n"
-	       "  -A, --autosave        Automatically save SRAM ~2s after last write.\n"
+	       "  -A, --autosave        Automatically save SRAM after last write.\n"
 	       "  -b, --background      Enable playback while unfocused.\n"
 	       "  -c, --config=PATH     Path to custom config file.\n"
 	       "  -f, --fractional      Enable fractional scaling.\n"

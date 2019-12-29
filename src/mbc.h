@@ -20,7 +20,7 @@ struct gbcc_mbc {
 	bool unlocked;
 	bool sram_enable;
 	bool sram_changed;
-	struct timespec last_save_time;
+	time_t last_save_time;
 	struct gbcc_rtc {
 		struct timespec base_time;
 		uint8_t seconds;
