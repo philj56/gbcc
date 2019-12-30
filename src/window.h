@@ -43,6 +43,7 @@ struct gbcc_window {
 		GLuint fbo_texture;
 		GLuint rbo;
 		GLuint texture;
+		GLuint lut_texture;
 		GLuint base_shader;
 		int cur_shader;
 		struct shader shaders[4];
