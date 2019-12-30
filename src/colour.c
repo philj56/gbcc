@@ -4,7 +4,6 @@
 
 
 static uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b);
-static bool lut_initialised = false;
 
 /*
  * Dimensions are as follows:
@@ -285,22 +284,6 @@ void gbcc_fill_lut(uint32_t *lut)
 	}
 }
 
-uint32_t gbcc_lerp_colour(uint8_t r, uint8_t g, uint8_t b)
-{
-	static uint32_t lut_calc[32][32][32];
-	if (!lut_initialised) {
-		for (uint8_t x = 0; x < 32; x++) {
-			for (uint8_t y = 0; y < 32; y++) {
-				for (uint8_t z = 0; z < 32; z++) {
-					lut_calc[x][y][z] = lerp_colour(x, y, z);
-				}
-			}
-		}
-		lut_initialised = true;
-	}
-	return lut_calc[r][g][b];
-}
-
 /* Trilinearly interpolate from gameboy r,g,b values to hex code */
 uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -349,15 +332,6 @@ uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 	b = (uint8_t)cb;
 
 	return (uint32_t)((uint32_t)(r << 24u) | (uint32_t)(g << 16u)) | (uint32_t)(b << 8u);
-}
-
-uint32_t gbcc_colour_correct(uint32_t hex)
-{
-    uint8_t r = (uint8_t)((hex & 0xFF0000u) >> 19u);
-    uint8_t g = (uint8_t)((hex & 0x00FF00u) >> 11u);
-    uint8_t b = (uint8_t)((hex & 0x0000FFu) >> 3u);
-
-    return gbcc_lerp_colour(r,g,b);
 }
 
 uint32_t gbcc_add_colours(uint32_t c1, uint32_t c2, float t)
