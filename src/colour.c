@@ -333,29 +333,3 @@ uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b)
 
 	return (uint32_t)((uint32_t)(r << 24u) | (uint32_t)(g << 16u)) | (uint32_t)(b << 8u);
 }
-
-uint32_t gbcc_add_colours(uint32_t c1, uint32_t c2, float t)
-{
-	uint8_t c1r = ((c1 >> 16u) & 0xFFu);
-	uint8_t c1g = ((c1 >> 8u) & 0xFFu);
-	uint8_t c1b = ((c1 >> 0u) & 0xFFu);
-
-	uint8_t c2r = ((c2 >> 16u) & 0xFFu);
-	uint8_t c2g = ((c2 >> 8u) & 0xFFu);
-	uint8_t c2b = ((c2 >> 0u) & 0xFFu);
-
-	float c3r = c1r + t * c2r;
-	float c3g = c1g + t * c2g;
-	float c3b = c1b + t * c2b;
-
-	c3r = c3r > 255 ? 255 : c3r;
-	c3g = c3g > 255 ? 255 : c3g;
-	c3b = c3b > 255 ? 255 : c3b;
-
-	uint32_t c3 = 0;
-	c3 |= (uint32_t)((uint8_t)c3r << 16u);
-	c3 |= (uint32_t)((uint8_t)c3g << 8u);
-	c3 |= (uint32_t)((uint8_t)c3b << 0u);
-
-	return c3;
-}
