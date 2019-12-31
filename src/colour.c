@@ -260,17 +260,15 @@ static const uint8_t lut[3][8][8][8] =
 	}
 };
 
-void gbcc_fill_lut(uint32_t *out)
+void gbcc_fill_lut(uint8_t out[8][8][8][4])
 {
-	uint8_t *bytes = (uint8_t *)out;
 	for (uint8_t x = 0; x < 8; x++) {
 		for (uint8_t y = 0; y < 8; y++) {
 			for (uint8_t z = 0; z < 8; z++) {
-				uint32_t idx = 4 * (x * 8 * 8 + y * 8 + z); 
-				bytes[idx + 0] = lut[0][z][y][x];
-				bytes[idx + 1] = lut[1][z][y][x];
-				bytes[idx + 2] = lut[2][z][y][x];
-				bytes[idx + 3] = 0xFFu;
+				out[x][y][z][0] = lut[0][z][y][x];
+				out[x][y][z][1] = lut[1][z][y][x];
+				out[x][y][z][2] = lut[2][z][y][x];
+				out[x][y][z][3] = 0xFFu;
 			}
 		}
 	}

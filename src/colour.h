@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-void gbcc_fill_lut(uint32_t *lut);
+void gbcc_fill_lut(uint8_t out[8][8][8][4]);
 
 #endif /* GBCC_COLOUR_H */

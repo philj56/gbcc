@@ -8,7 +8,12 @@
 #include "screenshot.h"
 #include "time.h"
 #include "window.h"
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#else
 #include <epoxy/gl.h>
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +36,7 @@ static void update_text(struct gbcc *gbc);
 void gbcc_window_initialise(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+
 	GLint read_framebuffer = 0;
 	GLint draw_framebuffer = 0;
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
@@ -88,11 +94,11 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glGenVertexArrays(1, &win->gl.vao);
 	glBindVertexArray(win->gl.vao);
 
-	GLint posAttrib = glGetAttribLocation(win->gl.shaders[0].program, "position");
+	GLint posAttrib = glGetAttribLocation(win->gl.base_shader, "position");
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), 0);
 	glEnableVertexAttribArray(posAttrib);
 
-	GLint texAttrib = glGetAttribLocation(win->gl.shaders[0].program, "texcoord");
+	GLint texAttrib = glGetAttribLocation(win->gl.base_shader, "texcoord");
 	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)(2*sizeof(float)));
 	glEnableVertexAttribArray(texAttrib);
 
@@ -115,8 +121,8 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glGenTextures(1, &win->gl.fbo_texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -145,12 +151,10 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	 * before post-processing */
 	glGenTextures(1, &win->gl.texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH * 2, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
-			GL_UNSIGNED_INT_8_8_8_8, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GBC_SCREEN_WIDTH * 2, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
+			GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -158,7 +162,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	/* This is the 3D texture we use as a lookup-table for colour correction */
 	glGenTextures(1, &win->gl.lut_texture);
 
-	uint32_t *lut_data = malloc(8 * 8 * 8 * sizeof(GLuint));
+	uint8_t (*lut_data)[8][8][4] = malloc(8 * 8 * 8 * 4);
 	gbcc_fill_lut(lut_data);
 
 	glActiveTexture(GL_TEXTURE0 + 1);
@@ -167,7 +171,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 
 	GLint loc = glGetUniformLocation(win->gl.shaders[0].program, "lut");
 	glUniform1i(loc, 1);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB, 8, 8, 8, 0, GL_RGBA,
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, 8, 8, 8, 0, GL_RGBA,
 			GL_UNSIGNED_BYTE, (GLvoid *)lut_data);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -181,11 +185,14 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	/* Bind the actual bits we'll be using to render */
 	glBindVertexArray(win->gl.vao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
+
+	win->initialised = true;
 }
 
 void gbcc_window_deinitialise(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	win->initialised = false;
 
 	gbcc_fontmap_destroy(&win->font);
 	glDeleteBuffers(1, &win->gl.vbo);
@@ -234,6 +241,14 @@ void gbcc_window_update(struct gbcc *gbc)
 		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
 	}
 
+	for (size_t i = 0; i < N_ELEM(win->buffer); i++) {
+		uint32_t tmp = win->buffer[i];
+		win->buffer[i] = (tmp & 0xFFu) << 24u
+				| (tmp & 0xFF00u) << 8u
+				| (tmp & 0xFF0000u) >> 8u
+				| (tmp & 0xFF000000u) >> 24u;
+	}
+
 	if (!win->frame_blending) {
 		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
 	}
@@ -245,10 +260,11 @@ void gbcc_window_update(struct gbcc *gbc)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
-			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->buffer);
+			GL_UNSIGNED_BYTE, (GLvoid *)win->buffer);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, GBC_SCREEN_WIDTH, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
-			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->last_buffer);
+			GL_UNSIGNED_BYTE, (GLvoid *)win->last_buffer);
 	glUseProgram(win->gl.base_shader);
+	glUniform1i( glGetUniformLocation( win->gl.base_shader, "tex"), 0);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	/* Second pass - render the framebuffer to the screen */
@@ -269,6 +285,8 @@ void gbcc_window_update(struct gbcc *gbc)
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
+	glUniform1i( glGetUniformLocation( win->gl.shaders[win->gl.cur_shader].program, "tex"), 0);
+	glUniform1i( glGetUniformLocation( win->gl.shaders[win->gl.cur_shader].program, "lut"), 1);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	if (screenshot) {
@@ -322,7 +340,9 @@ GLuint gbcc_create_shader_program(const char *vert, const char *frag)
 	GLuint shader = glCreateProgram();
 	glAttachShader(shader, vertex_shader);
 	glAttachShader(shader, fragment_shader);
+#ifndef __ANDROID__
 	glBindFragDataLocation(shader, 0, "out_colour");
+#endif
 	glLinkProgram(shader);
 	return shader;
 }

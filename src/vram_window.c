@@ -6,7 +6,12 @@
 #include "nelem.h"
 #include "window.h"
 #include "vram_window.h"
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#else
 #include <epoxy/gl.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,8 +95,8 @@ void gbcc_vram_window_initialise(struct gbcc *gbc)
 	glGenTextures(1, &win->gl.fbo_texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VRAM_WINDOW_WIDTH, VRAM_WINDOW_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -119,11 +124,9 @@ void gbcc_vram_window_initialise(struct gbcc *gbc)
 	glGenTextures(1, &win->gl.texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VRAM_WINDOW_WIDTH, VRAM_WINDOW_HEIGHT, 0, GL_RGBA,
-			GL_UNSIGNED_INT_8_8_8_8, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+			GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -190,6 +193,14 @@ void gbcc_vram_window_update(struct gbcc *gbc)
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
+	for (size_t i = 0; i < N_ELEM(win->buffer); i++) {
+		uint32_t tmp = win->buffer[i];
+		win->buffer[i] = (tmp & 0xFFu) << 24u
+				| (tmp & 0xFF00u) << 8u
+				| (tmp & 0xFF0000u) >> 8u
+				| (tmp & 0xFF000000u) >> 24u;
+	}
+
 
 	/* First pass - render the gbc screen to the framebuffer */
 	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
@@ -198,7 +209,7 @@ void gbcc_vram_window_update(struct gbcc *gbc)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VRAM_WINDOW_WIDTH, VRAM_WINDOW_HEIGHT, GL_RGBA,
-			GL_UNSIGNED_INT_8_8_8_8, (GLvoid *)win->buffer);
+			GL_UNSIGNED_BYTE, (GLvoid *)win->buffer);
 	glUseProgram(win->gl.shader);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
