@@ -49,6 +49,7 @@ struct gbcc_core {
 
 	/* Cartridge data & flags */
 	struct {
+		struct gbcc_mbc mbc;
 		const char *filename;
 		uint8_t *rom;
 		size_t rom_size;
@@ -61,7 +62,6 @@ struct gbcc_core {
 		bool rumble;
 		bool rumble_state;
 		char title[CART_TITLE_SIZE + 1];
-		struct gbcc_mbc mbc;
 	} cart;
 
 	/* IO & peripherals */

@@ -11,7 +11,7 @@
 #include <time.h>
 
 #define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F / 0x10u)
-#define SAMPLE_RATE 65536
+#define SAMPLE_RATE 96000
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
 
 static void ch1_update(struct gbcc *gbc);

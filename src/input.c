@@ -114,10 +114,24 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			break;
 		case GBCC_KEY_LINK_CABLE:
 			gbc->core.link_cable_loop ^= pressed;
+			if (!pressed) {
+				break;
+			}
 			if (gbc->core.link_cable_loop) {
 				gbcc_window_show_message(gbc, "Link cable connected", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Link cable disconnected", 1, true);
+			}
+			break;
+		case GBCC_KEY_AUTOSAVE:
+			gbc->autosave ^= pressed;
+			if (!pressed) {
+				break;
+			}
+			if (gbc->autosave) {
+				gbcc_window_show_message(gbc, "Autosave enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Autosave disabled", 1, true);
 			}
 			break;
 		case GBCC_KEY_BACKGROUND_PLAY:

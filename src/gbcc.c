@@ -1,5 +1,6 @@
 #include "gbcc.h"
 #include "save.h"
+#include "time.h"
 
 void *gbcc_emulation_loop(void *_gbc)
 {
@@ -16,6 +17,12 @@ void *gbcc_emulation_loop(void *_gbc)
 			gbcc_load_state(gbc);
 		} else if (gbc->save_state > 0) {
 			gbcc_save_state(gbc);
+		}
+		if (gbc->autosave && gbc->core.cart.mbc.sram_changed) {
+			if (time(NULL) > gbc->core.cart.mbc.last_save_time) {
+				gbcc_save(gbc);
+				gbc->core.cart.mbc.sram_changed = false;
+			}
 		}
 		while (gbc->pause || !(gbc->has_focus || gbc->background_play)) {
 			const struct timespec time = {.tv_sec = 0, .tv_nsec = 10000000};

@@ -31,6 +31,7 @@ void gbcc_emulate_cycle(struct gbcc_core *gbc)
 	}
 }
 
+__attribute__((always_inline))
 void cpu_clock(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
@@ -84,6 +85,7 @@ void cpu_clock(struct gbcc_core *gbc)
 	}
 }
 
+__attribute__((always_inline))
 void clock_div(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;

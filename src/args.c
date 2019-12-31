@@ -8,8 +8,9 @@
 
 static void usage()
 {
-	printf("Usage: gbcc [-abfFhivV] [-c config_file] [-p palette] [-s shader] [-t speed] rom\n"
+	printf("Usage: gbcc [-aAbfFhivV] [-c config_file] [-p palette] [-s shader] [-t speed] rom\n"
 	       "  -a, --autoresume      Automatically resume gameplay if possible.\n"
+	       "  -A, --autosave        Automatically save SRAM after last write.\n"
 	       "  -b, --background      Enable playback while unfocused.\n"
 	       "  -c, --config=PATH     Path to custom config file.\n"
 	       "  -f, --fractional      Enable fractional scaling.\n"
@@ -31,6 +32,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 
 	struct option long_options[] = {
 		{"autoresume", no_argument, NULL, 'a'},
+		{"autosave", no_argument, NULL, 'A'},
 		{"background", no_argument, NULL, 'b'},
 		{"config", required_argument, NULL, 'c'},
 		{"fractional", no_argument, NULL, 'f'},
@@ -43,7 +45,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "abc:fFhip:s:t:vV";
+	const char *short_options = "aAbc:fFhip:s:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -74,6 +76,9 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		switch (opt) {
 			case 'a':
 				gbcc_load_state(gbc);
+				break;
+			case 'A':
+				gbc->autosave = true;
 				break;
 			case 'b':
 				gbc->background_play = true;

@@ -10,7 +10,6 @@ struct gbcc_core;
 
 struct gbcc_mbc {
 	enum MBC type;
-	bool sram_enable;
 	uint16_t rom0_bank;
 	uint16_t romx_bank;
 	uint8_t sram_bank;
@@ -19,7 +18,11 @@ struct gbcc_mbc {
 	uint8_t romb1;
 	uint8_t ramb;
 	bool unlocked;
+	bool sram_enable;
+	bool sram_changed;
+	time_t last_save_time;
 	struct gbcc_rtc {
+		struct timespec base_time;
 		uint8_t seconds;
 		uint8_t minutes;
 		uint8_t hours;
@@ -27,24 +30,28 @@ struct gbcc_mbc {
 		uint8_t day_high;
 		uint8_t latch;
 		uint8_t cur_reg;
-		struct timespec base_time;
 		bool mapped;
 		bool halt;
 	} rtc;
 	struct gbcc_accelerometer {
 		uint16_t x;
 		uint16_t y;
+		uint16_t real_x;
+		uint16_t real_y;
 		struct {
 			bool up;
 			bool down;
 			bool left;
 			bool right;
 		} tilt;
-		uint16_t real_x;
-		uint16_t real_y;
 		bool latch;
 	} accelerometer;
 	struct gbcc_eeprom {
+		enum EEPROM_COMMAND current_command;
+		uint16_t command;
+		uint8_t command_bit;
+		bool start;
+		bool write_enable;
 		bool DO;
 		bool DI;
 		bool CLK;
@@ -52,11 +59,6 @@ struct gbcc_mbc {
 		bool last_DI;
 		bool last_CLK;
 		bool last_CS;
-		uint16_t command;
-		uint8_t command_bit;
-		bool start;
-		bool write_enable;
-		enum EEPROM_COMMAND current_command;
 		uint8_t value_bit;
 		uint8_t address;
 		uint16_t value;

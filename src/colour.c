@@ -3,9 +3,6 @@
 #include <stdint.h>
 
 
-static uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b);
-static bool lut_initialised = false;
-
 /*
  * Dimensions are as follows:
  * 0 - which of R, G, B are we looking at?
@@ -263,125 +260,18 @@ static const uint8_t lut[3][8][8][8] =
 	}
 };
 
-static float lerp1d(float a, float b, float t)
+void gbcc_fill_lut(uint32_t *out)
 {
-	return a * (1 - t) + b * t;
-}
-
-void gbcc_fill_lut(uint32_t *lut)
-{
-	uint8_t *bytes = (uint8_t *)lut;
-	for (uint8_t x = 0; x < 32; x++) {
-		for (uint8_t y = 0; y < 32; y++) {
-			for (uint8_t z = 0; z < 32; z++) {
-				uint32_t idx = 4 * (x * 32 * 32 + y * 32 + z); 
-				uint32_t col = lerp_colour(x, y, z);
-				bytes[idx + 0] = (col & 0xFF000000u) >> 24u;
-				bytes[idx + 1] = (col & 0x00FF0000u) >> 16u;
-				bytes[idx + 2] = (col & 0x0000FF00u) >> 8u;
-				bytes[idx + 3] = (col & 0x000000FFu) >> 0u;
+	uint8_t *bytes = (uint8_t *)out;
+	for (uint8_t x = 0; x < 8; x++) {
+		for (uint8_t y = 0; y < 8; y++) {
+			for (uint8_t z = 0; z < 8; z++) {
+				uint32_t idx = 4 * (x * 8 * 8 + y * 8 + z); 
+				bytes[idx + 0] = lut[0][z][y][x];
+				bytes[idx + 1] = lut[1][z][y][x];
+				bytes[idx + 2] = lut[2][z][y][x];
+				bytes[idx + 3] = 0xFFu;
 			}
 		}
 	}
-}
-
-uint32_t gbcc_lerp_colour(uint8_t r, uint8_t g, uint8_t b)
-{
-	static uint32_t lut_calc[32][32][32];
-	if (!lut_initialised) {
-		for (uint8_t x = 0; x < 32; x++) {
-			for (uint8_t y = 0; y < 32; y++) {
-				for (uint8_t z = 0; z < 32; z++) {
-					lut_calc[x][y][z] = lerp_colour(x, y, z);
-				}
-			}
-		}
-		lut_initialised = true;
-	}
-	return lut_calc[r][g][b];
-}
-
-/* Trilinearly interpolate from gameboy r,g,b values to hex code */
-uint32_t lerp_colour(uint8_t r, uint8_t g, uint8_t b)
-{
-	uint8_t x0 = (r / 5);
-	uint8_t x1 = x0 + 1;
-	uint8_t y0 = (g / 5);
-	uint8_t y1 = y0 + 1;
-	uint8_t z0 = (b / 5);
-	uint8_t z1 = z0 + 1;
-
-	float xd = (float)r / 5 - x0;
-	float yd = (float)g / 5 - y0;
-	float zd = (float)b / 5 - z0;
-
-	float c00r = lerp1d(lut[0][x0][y0][z0], lut[0][x1][y0][z0], xd);
-	float c01r = lerp1d(lut[0][x0][y0][z1], lut[0][x1][y0][z1], xd);
-	float c10r = lerp1d(lut[0][x0][y1][z0], lut[0][x1][y1][z1], xd);
-	float c11r = lerp1d(lut[0][x0][y1][z1], lut[0][x1][y1][z1], xd);
-
-	float c00g = lerp1d(lut[1][x0][y0][z0], lut[1][x1][y0][z0], xd);
-	float c01g = lerp1d(lut[1][x0][y0][z1], lut[1][x1][y0][z1], xd);
-	float c10g = lerp1d(lut[1][x0][y1][z0], lut[1][x1][y1][z1], xd);
-	float c11g = lerp1d(lut[1][x0][y1][z1], lut[1][x1][y1][z1], xd);
-
-	float c00b = lerp1d(lut[2][x0][y0][z0], lut[2][x1][y0][z0], xd);
-	float c01b = lerp1d(lut[2][x0][y0][z1], lut[2][x1][y0][z1], xd);
-	float c10b = lerp1d(lut[2][x0][y1][z0], lut[2][x1][y1][z1], xd);
-	float c11b = lerp1d(lut[2][x0][y1][z1], lut[2][x1][y1][z1], xd);
-
-	float c0r = lerp1d(c00r, c10r, yd);
-	float c1r = lerp1d(c01r, c11r, yd);
-
-	float c0g = lerp1d(c00g, c10g, yd);
-	float c1g = lerp1d(c01g, c11g, yd);
-
-	float c0b = lerp1d(c00b, c10b, yd);
-	float c1b = lerp1d(c01b, c11b, yd);
-
-	/* Factor on the end is to correct for restricted {x,y,z}0 value range */
-	float cr = lerp1d(c0r, c1r, zd) * (float)(7.0 / (31.0 / 5.0));
-	float cg = lerp1d(c0g, c1g, zd) * (float)(7.0 / (31.0 / 5.0));
-	float cb = lerp1d(c0b, c1b, zd) * (float)(7.0 / (31.0 / 5.0));
-
-	r = (uint8_t)cr;
-	g = (uint8_t)cg;
-	b = (uint8_t)cb;
-
-	return (uint32_t)((uint32_t)(r << 24u) | (uint32_t)(g << 16u)) | (uint32_t)(b << 8u);
-}
-
-uint32_t gbcc_colour_correct(uint32_t hex)
-{
-    uint8_t r = (uint8_t)((hex & 0xFF0000u) >> 19u);
-    uint8_t g = (uint8_t)((hex & 0x00FF00u) >> 11u);
-    uint8_t b = (uint8_t)((hex & 0x0000FFu) >> 3u);
-
-    return gbcc_lerp_colour(r,g,b);
-}
-
-uint32_t gbcc_add_colours(uint32_t c1, uint32_t c2, float t)
-{
-	uint8_t c1r = ((c1 >> 16u) & 0xFFu);
-	uint8_t c1g = ((c1 >> 8u) & 0xFFu);
-	uint8_t c1b = ((c1 >> 0u) & 0xFFu);
-
-	uint8_t c2r = ((c2 >> 16u) & 0xFFu);
-	uint8_t c2g = ((c2 >> 8u) & 0xFFu);
-	uint8_t c2b = ((c2 >> 0u) & 0xFFu);
-
-	float c3r = c1r + t * c2r;
-	float c3g = c1g + t * c2g;
-	float c3b = c1b + t * c2b;
-
-	c3r = c3r > 255 ? 255 : c3r;
-	c3g = c3g > 255 ? 255 : c3g;
-	c3b = c3b > 255 ? 255 : c3b;
-
-	uint32_t c3 = 0;
-	c3 |= (uint32_t)((uint8_t)c3r << 16u);
-	c3 |= (uint32_t)((uint8_t)c3g << 8u);
-	c3 |= (uint32_t)((uint8_t)c3b << 0u);
-
-	return c3;
 }

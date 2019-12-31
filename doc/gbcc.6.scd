@@ -6,7 +6,8 @@ gbcc - Game Boy Color emulator written in C
 
 # SYNOPSIS
 
-*gbcc* [-abfFhivV] [-c _config_file_] [-p _palette_] [-s _shader_] [-t _speed_] rom
+*gbcc* [-aAbfFhivV] [-c _config_file_] [-p _palette_] [-s _shader_]\
+[-t _speed_] rom
 
 # DESCRIPTION
 
@@ -18,6 +19,10 @@ slow).
 
 *-a, --autoresume*
 	Automatically resume from when gbcc was last closed for this game.
+
+*-A, --autosave*
+	Automatically save SRAM after the last write was detected. Default is to save
+	on normal program exit.
 
 *-b, --background*
 	Enable playback while unfocused.
@@ -94,6 +99,9 @@ l
 	Connect the link cable port to itself. This makes the GameBoy act as if
 	it is talking to an exact copy of itself, and enables e.g. trading
 	(and battling!) with oneself in Pokémon.
+
+A
+	Toggle autosave
 
 b
 	Toggle background playback

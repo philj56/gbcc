@@ -63,7 +63,8 @@ add_project_arguments(
     '-DPRINTER_SOUND_PATH="@0@"'.format(printer_sound_location),
     '-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
     '-DSHADER_PATH="@0@"'.format(shader_location),
-    #'-fprofile-instr-use'
+    #'-fprofile-instr-use',
+    #'-fprofile-instr-generate',
   ],
   language: 'c'
 )
@@ -131,6 +132,8 @@ executable(
   dependencies: [m, sdl, thread],
   install: true,
   link_with: libgbcc,
+  #link_args: ['-fprofile-instr-use']
+  #link_args: ['-fprofile-instr-generate']
 )
 
 executable(
@@ -176,8 +179,8 @@ install_data(
 )
 
 scdoc = find_program('scdoc', required: get_option('man-pages'))
-sed = find_program('sed', required: get_option('man-pages'))
 if scdoc.found()
+  sed = find_program('sed')
   sh = find_program('sh')
   mandir = get_option('mandir')
   manpage = 'doc/gbcc.6.scd'

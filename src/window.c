@@ -69,26 +69,6 @@ void gbcc_window_initialise(struct gbcc *gbc)
 			SHADER_PATH "dotmatrix.frag"
 			);
 
-	/* Buffer texture param for colour correction LUT */
-	GLuint tbo;
-	glGenBuffers(1, &tbo);
-	glBindBuffer(GL_TEXTURE_BUFFER, tbo);
-	uint32_t *lut_data = malloc(32 * 32 * 32 * sizeof(GLuint));
-	gbcc_fill_lut(lut_data);
-	glBufferData(GL_TEXTURE_BUFFER, 32 * 32 * 32 * sizeof(GLuint), lut_data, GL_STATIC_DRAW);
-	free(lut_data);
-
-	glActiveTexture(GL_TEXTURE0+1);
-	GLuint lut;
-	glGenTextures(1, &lut);
-	glBindTexture(GL_TEXTURE_BUFFER, lut);
-	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA8, tbo);
-
-	GLint loc = glGetUniformLocation(win->gl.shaders[0].program, "lut");
-	glUseProgram(win->gl.shaders[0].program);
-	glUniform1i(loc, 1);
-	glActiveTexture(GL_TEXTURE0);
-
 
 	/* Create a vertex buffer for a quad filling the screen */
 	float vertices[] = {
@@ -132,10 +112,6 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	/* Framebuffer for post-processing */
-	glGenFramebuffers(1, &win->gl.fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-
 	glGenTextures(1, &win->gl.fbo_texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -145,6 +121,8 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	glGenFramebuffers(1, &win->gl.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, win->gl.fbo_texture, 0);
 
 	/* We don't care about the depth and stencil, so just use a
@@ -177,6 +155,29 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	/* This is the 3D texture we use as a lookup-table for colour correction */
+	glGenTextures(1, &win->gl.lut_texture);
+
+	uint32_t *lut_data = malloc(8 * 8 * 8 * sizeof(GLuint));
+	gbcc_fill_lut(lut_data);
+
+	glActiveTexture(GL_TEXTURE0 + 1);
+	glBindTexture(GL_TEXTURE_3D, win->gl.lut_texture);
+	glUseProgram(win->gl.shaders[0].program);
+
+	GLint loc = glGetUniformLocation(win->gl.shaders[0].program, "lut");
+	glUniform1i(loc, 1);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB, 8, 8, 8, 0, GL_RGBA,
+			GL_UNSIGNED_BYTE, (GLvoid *)lut_data);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glActiveTexture(GL_TEXTURE0);
+	free(lut_data);
+
 	/* Bind the actual bits we'll be using to render */
 	glBindVertexArray(win->gl.vao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
@@ -194,6 +195,7 @@ void gbcc_window_deinitialise(struct gbcc *gbc)
 	glDeleteTextures(1, &win->gl.fbo_texture);
 	glDeleteRenderbuffers(1, &win->gl.rbo);
 	glDeleteTextures(1, &win->gl.texture);
+	glDeleteTextures(1, &win->gl.lut_texture);
 	for (size_t i = 0; i < N_ELEM(win->gl.shaders); i++) {
 		glDeleteProgram(win->gl.shaders[i].program);
 	}

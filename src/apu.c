@@ -13,11 +13,11 @@
 #define SLEEP_TIME (SECOND / SYNC_FREQ)
 #define SLEEP_DETECT (SECOND / 10)
 
-static const uint8_t duty_table[4][8] = {
-	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, 	/* 00000001b */
-	{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, 	/* 10000001b */
-	{0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01}, 	/* 10000111b */
-	{0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00}  	/* 01111110b */
+static const bool duty_table[4][8] = {
+	{0, 0, 0, 0, 0, 0, 0, 1}, 	/* 00000001b */
+	{1, 0, 0, 0, 0, 0, 0, 1}, 	/* 10000001b */
+	{1, 0, 0, 0, 0, 1, 1, 1}, 	/* 10000111b */
+	{0, 1, 1, 1, 1, 1, 1, 0}  	/* 01111110b */
 };
 
 static void length_counter_clock(struct channel *ch);
@@ -41,50 +41,51 @@ void gbcc_apu_init(struct gbcc_core *gbc)
 
 void gbcc_apu_clock(struct gbcc_core *gbc)
 {
-	gbc->apu.sync_clock++;
-	if (gbc->apu.sync_clock == CLOCKS_PER_SYNC) {
-		gbc->apu.sync_clock = 0;
-		gbc->apu.sample++;
+	struct apu *apu = &gbc->apu;
+	apu->sync_clock++;
+	if (apu->sync_clock == CLOCKS_PER_SYNC) {
+		apu->sync_clock = 0;
+		apu->sample++;
 		time_sync(gbc);
 	}
-	if (gbc->apu.disabled) {
+	if (apu->disabled) {
 		return;
 	}
-	/*if (gbc->apu.start_time.tv_sec == 0) {
-		clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
+	/*if (apu->start_time.tv_sec == 0) {
+		clock_gettime(CLOCK_REALTIME, &apu->start_time);
 	}*/
 
 	/* Duty */
-	gbc->apu.ch1.state = duty_clock(&gbc->apu.ch1.duty);
-	gbc->apu.ch2.state = duty_clock(&gbc->apu.ch2.duty);
+	apu->ch1.state = duty_clock(&apu->ch1.duty);
+	apu->ch2.state = duty_clock(&apu->ch2.duty);
 
 	/* Noise */
-	if (gbc->apu.noise.shift < 14 && timer_clock(&gbc->apu.noise.timer)) {
-		uint8_t lfsr_low = gbc->apu.noise.lfsr & 0xFFu;
+	if (apu->noise.shift < 14 && timer_clock(&apu->noise.timer)) {
+		uint8_t lfsr_low = apu->noise.lfsr & 0xFFu;
 		uint8_t tmp = check_bit(lfsr_low, 0) ^ check_bit(lfsr_low, 1);
-		gbc->apu.noise.lfsr >>= 1u;
-		gbc->apu.noise.lfsr &= ~bit16(14);
-		gbc->apu.noise.lfsr |= tmp * bit16(14);
-		if (gbc->apu.noise.width_mode) {
-			gbc->apu.noise.lfsr &= ~bit(6);
-			gbc->apu.noise.lfsr |= tmp * bit(6);
+		apu->noise.lfsr >>= 1u;
+		apu->noise.lfsr &= ~bit16(14);
+		apu->noise.lfsr |= tmp * bit16(14);
+		if (apu->noise.width_mode) {
+			apu->noise.lfsr &= ~bit(6);
+			apu->noise.lfsr |= tmp * bit(6);
 		}
-		gbc->apu.ch4.state = !check_bit(gbc->apu.noise.lfsr, 0);
+		apu->ch4.state = !check_bit(apu->noise.lfsr, 0);
 	}
 
-	//printf("Wave timer: %d\n", gbc->apu.wave.timer.counter);
+	//printf("Wave timer: %d\n", apu->wave.timer.counter);
 	/* Wave */
-	if (timer_clock(&gbc->apu.wave.timer)) {
-		gbc->apu.wave.position++;
-		gbc->apu.wave.position &= 31u;
-		gbc->apu.wave.addr = WAVE_START + (gbc->apu.wave.position / 2);
-		//printf("Wave clocked to %04X\n", gbc->apu.wave.addr);
-		gbc->apu.wave.buffer = gbcc_memory_read(gbc, gbc->apu.wave.addr, true);
-		/* Alternates betwee high & low nibble, high first */
-		if (gbc->apu.wave.position % 2) {
-			gbc->apu.wave.buffer &= 0x0Fu;
+	if (timer_clock(&apu->wave.timer)) {
+		apu->wave.position++;
+		apu->wave.position &= 31u;
+		apu->wave.addr = WAVE_START + (apu->wave.position / 2);
+		//printf("Wave clocked to %04X\n", apu->wave.addr);
+		apu->wave.buffer = gbcc_memory_read(gbc, apu->wave.addr, true);
+		/* Alternates between high & low nibble, high first */
+		if (apu->wave.position % 2) {
+			apu->wave.buffer &= 0x0Fu;
 		} else {
-			gbc->apu.wave.buffer >>= 4u;
+			apu->wave.buffer >>= 4u;
 		}
 	}
 }
