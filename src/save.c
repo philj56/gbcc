@@ -98,8 +98,8 @@ void gbcc_load(struct gbcc *gbc)
 				&core->cart.mbc.rtc.base_time.tv_nsec
 				);
 		if (matched < 9) {
-			gbcc_log_error("Couldn't read rtc data, "
-					"resetting base time to now.\n");
+			gbcc_log_warning("Couldn't read rtc data, "
+					 "resetting base time to now.\n");
 			clock_gettime(CLOCK_REALTIME, &core->cart.mbc.rtc.base_time);
 		}
 	}

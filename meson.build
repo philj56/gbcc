@@ -85,6 +85,7 @@ common_sources = files(
   'src/input.c',
   'src/mbc.c',
   'src/memory.c',
+  'src/menu.c',
   'src/ops.c',
   'src/palettes.c',
   'src/ppu.c',

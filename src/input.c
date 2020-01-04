@@ -5,6 +5,12 @@
 
 void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 {
+	if (gbc->menu.show) {
+		if (pressed) {
+			gbcc_menu_process_key(gbc, key);
+		}
+		return;
+	}
 	switch(key) {
 		case GBCC_KEY_A:
 			gbc->core.keys.a = pressed;
@@ -143,6 +149,12 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 				gbcc_window_show_message(gbc, "Background playback enabled", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Background playback disabled", 1, true);
+			}
+			break;
+		case GBCC_KEY_MENU:
+			gbc->menu.show = pressed;
+			if (pressed) {
+				gbcc_menu_update(gbc);
 			}
 			break;
 		case GBCC_KEY_ACCELEROMETER_UP:

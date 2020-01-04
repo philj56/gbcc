@@ -156,6 +156,7 @@ void on_realise(GtkGLArea *gl_area, void *data)
 	gtk_gl_area_attach_buffers(gl_area);
 
 	gbcc_window_initialise(&gtk->gbc);
+	gbcc_menu_init(&gtk->gbc);
 	
 	for (size_t i = 0; i < N_ELEM(gtk->menu.shader.shader); i++) {
 		GtkWidget *button =  gtk_radio_menu_item_new_with_label(

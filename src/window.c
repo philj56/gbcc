@@ -31,6 +31,7 @@
 
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
+static void render_box(struct gbcc_window *win, uint8_t x, uint8_t y);
 static void update_text(struct gbcc *gbc);
 
 void gbcc_window_initialise(struct gbcc *gbc)
@@ -231,14 +232,22 @@ void gbcc_window_update(struct gbcc *gbc)
 	}
 	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
 
-	update_text(gbc);
-	if (win->fps.show && !screenshot) {
-		char fps_text[16];
-		snprintf(fps_text, 16, " FPS: %.0f ", round(win->fps.fps));
-		render_text(win, fps_text, 0, 0);
-	}
-	if (win->msg.time_left > 0 && !screenshot) {
-		render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
+	if (gbc->menu.show) {
+		uint32_t tw = win->font.tile_width;
+		uint32_t th = win->font.tile_height;
+		render_text(win, gbc->menu.text, 0, 0);
+		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 2 + 1);
+		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 3 + 1);
+	} else {
+		update_text(gbc);
+		if (win->fps.show && !screenshot) {
+			char fps_text[16];
+			snprintf(fps_text, 16, " FPS: %.0f ", round(win->fps.fps));
+			render_text(win, fps_text, 0, 0);
+		}
+		if (win->msg.time_left > 0 && !screenshot) {
+			render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
+		}
 	}
 
 	for (size_t i = 0; i < N_ELEM(win->buffer); i++) {
@@ -421,6 +430,20 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 	}
 }
 
+void render_box(struct gbcc_window *win, uint8_t x, uint8_t y)
+{
+	uint8_t width = win->font.tile_width * 2 - 3;
+	uint8_t height = win->font.tile_height - 3;
+	for (int i = x; i <= x + width; i++) {
+		win->buffer[y * GBC_SCREEN_WIDTH + i] = 0xFFFFFFFFu;
+		win->buffer[(y + height) * GBC_SCREEN_WIDTH + i] = 0xFFFFFFFFu;
+	}
+	for (int i = y; i <= y + height; i++) {
+		win->buffer[i * GBC_SCREEN_WIDTH + x] = 0xFFFFFFFFu;
+		win->buffer[i * GBC_SCREEN_WIDTH + x + width] = 0xFFFFFFFFu;
+	}
+}
+
 void update_text(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
@@ -432,7 +455,7 @@ void update_text(struct gbcc *gbc)
 	/* Update FPS counter */
 	fps->last_time = cur_time;
 	float df = gbc->core.ppu.frame - fps->last_frame;
-	uint8_t ly = gbcc_memory_read(&gbc->core, LY, false);
+	uint8_t ly = gbcc_memory_read(&gbc->core, LY, true);
 	uint8_t tmp = ly;
 	if (ly < fps->last_ly) {
 		df -= 1;
@@ -445,12 +468,12 @@ void update_text(struct gbcc *gbc)
 	fps->last_ly = tmp;
 	fps->previous[fps->idx] = df / (dt / 1e9);
 	fps->idx++;
-	fps->idx %= 5;
+	fps->idx %= N_ELEM(fps->previous);
 	float avg = 0;
-	for (int i = 0; i < 5; i++) {
+	for (size_t i = 0; i < N_ELEM(fps->previous); i++) {
 		avg += fps->previous[i];
 	}
-	fps->fps = avg / 5;
+	fps->fps = avg / N_ELEM(fps->previous);
 
 	/* Update message timer */
 	if (win->msg.time_left > 0) {

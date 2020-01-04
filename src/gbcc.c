@@ -24,7 +24,7 @@ void *gbcc_emulation_loop(void *_gbc)
 				gbc->core.cart.mbc.sram_changed = false;
 			}
 		}
-		while (gbc->pause || !(gbc->has_focus || gbc->background_play)) {
+		while (gbc->pause || gbc->menu.show || !(gbc->has_focus || gbc->background_play)) {
 			const struct timespec time = {.tv_sec = 0, .tv_nsec = 10000000};
 			nanosleep(&time, NULL);
 			if (gbc->quit) {

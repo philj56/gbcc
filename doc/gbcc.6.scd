@@ -80,6 +80,9 @@ x
 <Right Shift>
 	Turbo mode (toggle)
 
+<Escape>
+	Toggle settings menu
+
 s
 	Filtered & scaled screenshot
 

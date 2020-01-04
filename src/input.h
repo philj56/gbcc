@@ -1,7 +1,10 @@
 #ifndef GBCC_INPUT_H
 #define GBCC_INPUT_H
 
-#include "gbcc.h"
+#include <stdbool.h>
+
+struct gbcc;
+struct gbcc_accelerometer;
 
 enum gbcc_key {
 	GBCC_KEY_A,
@@ -27,6 +30,7 @@ enum gbcc_key {
 	GBCC_KEY_LINK_CABLE,
 	GBCC_KEY_AUTOSAVE,
 	GBCC_KEY_BACKGROUND_PLAY,
+	GBCC_KEY_MENU,
 	GBCC_KEY_ACCELEROMETER_UP,
 	GBCC_KEY_ACCELEROMETER_DOWN,
 	GBCC_KEY_ACCELEROMETER_LEFT,

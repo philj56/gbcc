@@ -3,6 +3,6 @@
 
 #include <gdk/gdk.h>
 
-extern guint default_keymap[52];
+extern guint default_keymap[53];
 
 #endif /* GBCC_GTK_INPUT_H */

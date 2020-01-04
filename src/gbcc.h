@@ -3,6 +3,7 @@
 
 #include "audio.h"
 #include "core.h"
+#include "menu.h"
 #include "window.h"
 #include "vram_window.h"
 
@@ -11,6 +12,7 @@ struct gbcc {
 	struct gbcc_window window;
 	struct gbcc_vram_window vram_window;
 	struct gbcc_audio audio;
+	struct gbcc_menu menu;
 	
 	bool quit;
 	bool pause;
