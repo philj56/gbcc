@@ -319,6 +319,9 @@ void gbcc_log_append_warning(const char *const fmt, ...)
 
 void gbcc_log_append_debug(const char *const fmt, ...)
 {
+#ifndef DEBUG
+	return;
+#endif
 	va_list args;
 	va_start(args, fmt);
 	vprintf(fmt, args);
