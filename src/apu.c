@@ -3,7 +3,7 @@
 #include "bit_utils.h"
 #include "debug.h"
 #include "memory.h"
-#include "time.h"
+#include "time_diff.h"
 #include <stdint.h>
 #include <time.h>
 

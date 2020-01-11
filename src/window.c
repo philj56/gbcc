@@ -6,7 +6,7 @@
 #include "memory.h"
 #include "nelem.h"
 #include "screenshot.h"
-#include "time.h"
+#include "time_diff.h"
 #include "window.h"
 #ifdef __ANDROID__
 #include <GLES3/gl3.h>

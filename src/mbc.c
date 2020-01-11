@@ -2,7 +2,7 @@
 #include "bit_utils.h"
 #include "debug.h"
 #include "mbc.h"
-#include "time.h"
+#include "time_diff.h"
 #include <stdio.h>
 #include <string.h>
 #include <time.h>

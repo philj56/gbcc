@@ -92,7 +92,7 @@ common_sources = files(
   'src/printer.c',
   'src/save.c',
   'src/screenshot.c',
-  'src/time.c',
+  'src/time_diff.c',
   'src/wav.c',
   'src/window.c',
   'src/vram_window.c'

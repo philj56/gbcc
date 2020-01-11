@@ -1,6 +1,5 @@
 #include "gbcc.h"
 #include "save.h"
-#include "time.h"
 
 void *gbcc_emulation_loop(void *_gbc)
 {

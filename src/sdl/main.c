@@ -8,7 +8,7 @@
 #include "../memory.h"
 #include "../palettes.h"
 #include "../save.h"
-#include "../time.h"
+#include "../time_diff.h"
 #include "sdl.h"
 #include "vram_window.h"
 #include <signal.h>

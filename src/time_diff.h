@@ -1,5 +1,5 @@
-#ifndef GBCC_TIME_H
-#define GBCC_TIME_H
+#ifndef GBCC_TIME_DIFF_H
+#define GBCC_TIME_DIFF_H
 
 #include <stdint.h>
 #include <time.h>
@@ -11,4 +11,4 @@
 
 uint64_t gbcc_time_diff(const struct timespec *cur, const struct timespec *old);
 
-#endif /* GBCC_TIME_H */
+#endif /* GBCC_TIME_DIFF_H */
