@@ -111,7 +111,6 @@ gtk_sources = files(
 )
 
 cc = meson.get_compiler('c')
-m = cc.find_library('m', required: false)
 sdl = dependency('sdl2')
 png = dependency('libpng')
 gl = dependency('gl')
@@ -123,14 +122,14 @@ gtk = dependency('gtk+-3.0')
 libgbcc = static_library(
   'gbcc',
   common_sources,
-  dependencies: [m, sdl, png, gl, epoxy, openal, thread],
+  dependencies: [png, gl, epoxy, openal, thread],
   install: false
 )
 
 executable(
   'gbcc',
   sdl_sources,
-  dependencies: [m, sdl, thread],
+  dependencies: [sdl, thread],
   install: true,
   link_with: libgbcc,
   #link_args: ['-fprofile-instr-use']
@@ -140,9 +139,11 @@ executable(
 executable(
   'gbcc-gtk',
   gtk_sources,
-  dependencies: [m, sdl, gtk, thread],
+  dependencies: [sdl, gtk, thread],
   install: true,
   link_with: libgbcc,
+  #link_args: ['-fprofile-instr-use']
+  #link_args: ['-fprofile-instr-generate']
 )
 
 install_data(

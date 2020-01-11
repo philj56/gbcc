@@ -242,7 +242,7 @@ void gbcc_window_update(struct gbcc *gbc)
 		update_text(gbc);
 		if (win->fps.show && !screenshot) {
 			char fps_text[16];
-			snprintf(fps_text, 16, " FPS: %.0f ", round(win->fps.fps));
+			snprintf(fps_text, 16, " FPS: %.0f ", win->fps.fps);
 			render_text(win, fps_text, 0, 0);
 		}
 		if (win->msg.time_left > 0 && !screenshot) {
@@ -418,9 +418,9 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 			uint8_t g = (win->buffer[dst_px] >> 16u) & 0xFFu;
 			uint8_t b = (win->buffer[dst_px] >> 8u) & 0xFFu;
 			uint32_t res = 0;
-			r = (uint8_t)round(r / 4.0);
-			g = (uint8_t)round(g / 4.0);
-			b = (uint8_t)round(b / 4.0);
+			r /= 4;
+			g /= 4;
+			b /= 4;
 			res |= (uint32_t)(r << 24u);
 			res |= (uint32_t)(g << 16u);
 			res |= (uint32_t)(b << 8u);
