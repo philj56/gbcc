@@ -102,6 +102,8 @@ void gbcc_audio_update(struct gbcc *gbc)
 			ALint processed = 0;
 			while (!processed) {
 				alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
+				const struct timespec time = {.tv_sec = 0, .tv_nsec = 100000};
+				nanosleep(&time, NULL);
 			}
 			ALuint buffer;
 			alSourceUnqueueBuffers(audio->al.source, 1, &buffer);
