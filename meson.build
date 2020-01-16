@@ -117,7 +117,7 @@ gl = dependency('gl')
 epoxy = dependency('epoxy')
 openal = dependency('openal')
 thread = dependency('threads')
-gtk = dependency('gtk+-3.0')
+gtk = dependency('gtk+-3.0', required: get_option('gtk'))
 
 libgbcc = static_library(
   'gbcc',
@@ -136,15 +136,22 @@ executable(
   #link_args: ['-fprofile-instr-generate']
 )
 
-executable(
-  'gbcc-gtk',
-  gtk_sources,
-  dependencies: [sdl, gtk, thread],
-  install: true,
-  link_with: libgbcc,
-  #link_args: ['-fprofile-instr-use']
-  #link_args: ['-fprofile-instr-generate']
-)
+if gtk.found()
+  executable(
+    'gbcc-gtk',
+    gtk_sources,
+    dependencies: [sdl, gtk, thread],
+    install: true,
+    link_with: libgbcc,
+    #link_args: ['-fprofile-instr-use']
+    #link_args: ['-fprofile-instr-generate']
+  )
+
+  install_data(
+    'src/gtk/gbcc.ui',
+    rename: 'gbcc.ui'
+  )
+endif
 
 install_data(
   'tileset.png'
@@ -152,11 +159,6 @@ install_data(
 
 install_data(
   'print.wav'
-)
-
-install_data(
-  'src/gtk/gbcc.ui',
-  rename: 'gbcc.ui'
 )
 
 install_subdir(
