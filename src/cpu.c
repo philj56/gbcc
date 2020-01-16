@@ -11,9 +11,9 @@
 #include <sys/time.h>
 #include <time.h>
 
-static void clock_div(struct gbcc_core *gbc);
+static inline void clock_div(struct gbcc_core *gbc);
 static void check_interrupts(struct gbcc_core *gbc);
-static void cpu_clock(struct gbcc_core *gbc);
+static inline void cpu_clock(struct gbcc_core *gbc);
 
 /* TODO: Check order of all of these */
 void gbcc_emulate_cycle(struct gbcc_core *gbc)
