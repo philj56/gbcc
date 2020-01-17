@@ -13,7 +13,9 @@ project(
   ],
 )
 
-if get_option('buildtype').startswith('debug')
+debug = get_option('buildtype').startswith('debug')
+
+if debug
   add_project_arguments('-DDEBUG', language : 'c')
 endif
 
@@ -24,22 +26,22 @@ data_location = join_paths(
 )
 
 tileset_location = join_paths(
-  data_location,
+  debug ? '' : data_location,
   'tileset.png'
 )
 
 printer_sound_location = join_paths(
-  data_location,
+  debug ? '' : data_location,
   'print.wav'
 )
 
 gtk_ui_location = join_paths(
-  data_location,
+  debug ? 'src/gtk' : data_location,
   'gbcc.ui'
 )
 
 shader_location = join_paths(
-  data_location,
+  debug ? '' : data_location,
   'shaders',
   ''
 )
