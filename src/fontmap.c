@@ -13,13 +13,18 @@ void gbcc_fontmap_load(struct gbcc_fontmap *fontmap, const char *filename)
 	FILE *fp = fopen(filename, "rb");
 	uint8_t header[HEADER_BYTES];
 	if (!fp) {
-		printf("BAD\n");
 		gbcc_log_error("Couldn't open %s: %s\n", filename, strerror(errno));
+		fclose(fp);
 		return;
 	}
-	fread(header, 1, HEADER_BYTES, fp);
+	if (fread(header, 1, HEADER_BYTES, fp) == 0) {
+		gbcc_log_error("Failed to read fontmap data: %s\n", filename);
+		fclose(fp);
+		return;
+	}
 	if (png_sig_cmp(header, 0, HEADER_BYTES)) {
 		gbcc_log_error("Not a PNG file: %s\n", filename);
+		fclose(fp);
 		return;
 	}
 
@@ -28,6 +33,7 @@ void gbcc_fontmap_load(struct gbcc_fontmap *fontmap, const char *filename)
 			NULL, NULL, NULL);
 	if (!png_ptr) {
 		gbcc_log_error("Couldn't create PNG read struct.\n");
+		fclose(fp);
 		return;
 	}
 

@@ -332,15 +332,21 @@ void *print(void *printer)
 	struct wav_header header;
 	wav_parse_header(&header, wav);
 	if (header.AudioFormat != 1) {
-		gbcc_log_error("Only PCM files supported.\n");
+		gbcc_log_error("Only PCM files are supported.\n");
+		fclose(wav);
 		goto CLEANUP;
 	}
 	uint8_t *data = malloc(header.Subchunk2Size);
 	if (!data) {
 		gbcc_log_error("Failed to allocate audio data buffer.\n");
+		fclose(wav);
 		goto CLEANUP;
 	}
-	fread(data, 1, header.Subchunk2Size, wav);
+	if (fread(data, 1, header.Subchunk2Size, wav) == 0) {
+		gbcc_log_error("Failed to read print audio data.\n");
+		fclose(wav);
+		goto CLEANUP;
+	}
 	fclose(wav);
 
 	alBufferData(buffer, AL_FORMAT_MONO8, data, header.Subchunk2Size, header.SampleRate);

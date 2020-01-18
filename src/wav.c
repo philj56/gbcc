@@ -1,22 +1,60 @@
+#include "debug.h"
 #include "wav.h"
 
 void wav_parse_header(struct wav_header *header, FILE *wav)
 {
-	fread(header->ChunkID, 1, 4, wav);
-	fread(&header->ChunkSize, 4, 1, wav);
-	fread(header->Format, 1, 4, wav);
-	
-	fread(header->Subchunk1ID, 1, 4, wav);
-	fread(&header->Subchunk1Size, 4, 1, wav);
-	fread(&header->AudioFormat, 2, 1, wav);
-	fread(&header->NumChannels, 2, 1, wav);
-	fread(&header->SampleRate, 4, 1, wav);
-	fread(&header->ByteRate, 4, 1, wav);
-	fread(&header->BlockAlign, 2, 1, wav);
-	fread(&header->BitsPerSample, 2, 1, wav);
-
-	fread(header->Subchunk2ID, 1, 4, wav);
-	fread(&header->Subchunk2Size, 4, 1, wav);
+	if (fread(header->ChunkID, 1, 4, wav) == 0) {
+		gbcc_log_error("Failed to read wav ChunkID.\n");
+		return;
+	}
+	if (fread(&header->ChunkSize, 4, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav ChunkSize.\n");
+		return;
+	}
+	if (fread(header->Format, 1, 4, wav) == 0) {
+		gbcc_log_error("Failed to read wav Format.\n");
+		return;
+	}
+	if (fread(header->Subchunk1ID, 1, 4, wav) == 0) {
+		gbcc_log_error("Failed to read wav Subchunk1ID.\n");
+		return;
+	}
+	if (fread(&header->Subchunk1Size, 4, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav Subchunk1Size.\n");
+		return;
+	}
+	if (fread(&header->AudioFormat, 2, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav AudioFormat.\n");
+		return;
+	}
+	if (fread(&header->NumChannels, 2, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav NumChannels.\n");
+		return;
+	}
+	if (fread(&header->SampleRate, 4, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav SampleRate.\n");
+		return;
+	}
+	if (fread(&header->ByteRate, 4, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav ByteRate.\n");
+		return;
+	}
+	if (fread(&header->BlockAlign, 2, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav BlockAlign.\n");
+		return;
+	}
+	if (fread(&header->BitsPerSample, 2, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav BitsPerSample.\n");
+		return;
+	}
+	if (fread(header->Subchunk2ID, 1, 4, wav) == 0) {
+		gbcc_log_error("Failed to read wav Subchunk2ID.\n");
+		return;
+	}
+	if (fread(&header->Subchunk2Size, 4, 1, wav) == 0) {
+		gbcc_log_error("Failed to read wav Subchunk2Size.\n");
+		return;
+	}
 }
 
 void wav_print_header(struct wav_header *header)

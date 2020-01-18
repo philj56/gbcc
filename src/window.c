@@ -314,7 +314,11 @@ void gbcc_load_shader(GLuint shader, const char *filename)
 	int size = ftell(fp);
 	GLchar *source = malloc(size);
 	rewind(fp);
-	fread(source, 1, size, fp);
+	if (fread(source, 1, size, fp) == 0) {
+		gbcc_log_error("Error loading shader: %s\n", filename);
+		fclose(fp);
+		exit(EXIT_FAILURE);
+	}
 	fclose(fp);
 	glShaderSource(shader, 1, (const GLchar *const *)&source, &size);
 	free(source);
