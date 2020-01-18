@@ -25,6 +25,13 @@ data_location = join_paths(
   'gbcc'
 )
 
+if host_machine.system() == 'windows'
+  data_location = '.'
+  windows = import('windows')
+else
+  windows = false
+endif
+
 tileset_location = join_paths(
   debug ? '' : data_location,
   'tileset.png'
@@ -112,6 +119,11 @@ gtk_sources = files(
   'src/gtk/input.c',
 )
 
+if windows
+  win_icon = windows.compile_resources('windows/icon.rc')
+  sdl_sources += win_icon
+endif
+
 cc = meson.get_compiler('c')
 sdl = dependency('sdl2')
 png = dependency('libpng')
@@ -134,6 +146,7 @@ executable(
   dependencies: [sdl, thread],
   install: true,
   link_with: libgbcc,
+  link_args: [windows ? '-static': '']
   #link_args: ['-fprofile-instr-use']
   #link_args: ['-fprofile-instr-generate']
 )

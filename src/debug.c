@@ -251,6 +251,12 @@ void gbcc_print_op(struct gbcc_core *gbc)
 	}
 }
 
+#ifdef _WIN32
+#define RED   ""
+#define YEL   ""
+#define BLU   ""
+#define RESET ""
+#else
 /* TODO: Clean this up */
 #define RED   "\x1B[31m"
 //#define GRN   "\x1B[32m"
@@ -260,6 +266,7 @@ void gbcc_print_op(struct gbcc_core *gbc)
 //#define CYN   "\x1B[36m"
 //#define WHT   "\x1B[37m"
 #define RESET "\x1B[0m"
+#endif
 
 
 void gbcc_log_error(const char *const fmt, ...)

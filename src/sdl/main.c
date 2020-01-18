@@ -34,11 +34,15 @@ void quit(int sig)
 
 int main(int argc, char **argv)
 {
+#ifdef _WIN32
+	signal(SIGINT, quit);
+#else
 	struct sigaction act = {
 		.sa_handler = quit
 	};
 	sigfillset(&act.sa_mask);
 	sigaction(SIGINT, &act, NULL);
+#endif
 
 	struct gbcc_sdl sdl = {0};
 	struct gbcc *gbc = &sdl.gbc;
