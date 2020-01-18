@@ -63,6 +63,7 @@ add_project_arguments(
   [
     '-march=native',
     '-mtune=native',
+    '-pedantic',
     '-Wno-unused-parameter',
     '-Wno-missing-braces',
     '-D_POSIX_C_SOURCE=200809L',
@@ -146,7 +147,7 @@ executable(
   dependencies: [sdl, thread],
   install: true,
   link_with: libgbcc,
-  link_args: [is_win ? '-static': '']
+  link_args: is_win ? ['-static'] : []
   #link_args: ['-fprofile-instr-use']
   #link_args: ['-fprofile-instr-generate']
 )
