@@ -170,7 +170,13 @@ void gbcc_load_state(struct gbcc *gbc)
 		gbc->load_state = 0;
 		return;
 	}
-	fread(core, sizeof(struct gbcc_core), 1, sav);
+	if (fread(core, sizeof(struct gbcc_core), 1, sav) == 0) {
+		gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
+		gbc->save_state = 0;
+		gbc->load_state = 0;
+		fclose(sav);
+		return;
+	}
 	/* FIXME: Thread-unsafe, screen could try to read from here while the
 	 * pointer is still invalid */
 	core->ppu.screen.buffer_0 = buf0;
@@ -183,7 +189,13 @@ void gbcc_load_state(struct gbcc *gbc)
 	core->cart.filename = name;
 	
 	if (core->cart.ram_size > 0) {
-		fread(core->cart.ram, 1, core->cart.ram_size, sav);
+		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) == 0) {
+			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
+			gbc->save_state = 0;
+			gbc->load_state = 0;
+			fclose(sav);
+			return;
+		}
 	}
 	fclose(sav);
 
