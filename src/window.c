@@ -305,7 +305,7 @@ void gbcc_window_update(struct gbcc *gbc)
 
 void gbcc_load_shader(GLuint shader, const char *filename)
 {
-	FILE *fp = fopen(filename, "rbe");
+	FILE *fp = fopen(filename, "rb");
 	if (!fp) {
 		gbcc_log_error("Failed to load shader %s.\n", filename);
 		exit(EXIT_FAILURE);

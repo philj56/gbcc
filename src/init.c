@@ -88,7 +88,7 @@ void load_rom(struct gbcc_core *gbc, const char *filename)
 	gbcc_log_info("Loading %s...\n", filename);
 	size_t read;
 
-	FILE *rom = fopen(filename, "rbe");
+	FILE *rom = fopen(filename, "rb");
 	if (rom == NULL)
 	{
 		gbcc_log_error("Error opening file: %s\n", filename);

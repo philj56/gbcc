@@ -324,7 +324,7 @@ void *print(void *printer)
 		goto CLEANUP;
 	}
 
-	FILE *wav = fopen(PRINTER_SOUND_PATH, "rbe");
+	FILE *wav = fopen(PRINTER_SOUND_PATH, "rb");
 	if (!wav) {
 		gbcc_log_error("Failed to open print sound file.\n");
 		goto CLEANUP;

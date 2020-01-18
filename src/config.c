@@ -22,7 +22,7 @@ void gbcc_load_config(struct gbcc *gbc, char *filename)
 	}
 	char *config;
 	int size;
-	FILE *fp = fopen(filename, "rbe");
+	FILE *fp = fopen(filename, "rb");
 	if (!fp) {
 		if (errno == ENOENT) {
 			if (default_filename) {

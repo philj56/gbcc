@@ -29,7 +29,7 @@ void gbcc_save(struct gbcc *gbc)
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
 	gbcc_log_info("Saving %s...\n", fname);
-	sav = fopen(fname, "wbe");
+	sav = fopen(fname, "wb");
 	if (sav == NULL) {
 		gbcc_log_error("Can't open save file %s\n", fname);
 		return;
@@ -68,7 +68,7 @@ void gbcc_load(struct gbcc *gbc)
 	if (snprintf(fname, MAX_NAME_LEN, "%s.sav", tmp) >= MAX_NAME_LEN) {
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
-	sav = fopen(fname, "rbe");
+	sav = fopen(fname, "rb");
 	if (sav == NULL) {
 		for (size_t i = 0; i < core->cart.ram_size; i++) {
 			core->cart.ram[i] = rand();
@@ -119,7 +119,7 @@ void gbcc_save_state(struct gbcc *gbc)
 	if (snprintf(fname, MAX_NAME_LEN, "%s.s%d", tmp, gbc->save_state) >= MAX_NAME_LEN) {
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
-	sav = fopen(fname, "wbe");
+	sav = fopen(fname, "wb");
 	if (!sav) {
 		gbcc_log_error("Error opening %s: %s\n", fname, strerror(errno));
 		return;
@@ -155,7 +155,7 @@ void gbcc_load_state(struct gbcc *gbc)
 	if (snprintf(fname, MAX_NAME_LEN, "%s.s%d", tmp, gbc->load_state) >= MAX_NAME_LEN) {
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
-	sav = fopen(fname, "rbe");
+	sav = fopen(fname, "rb");
 	if (!sav) {
 		gbcc_log_error("Error opening %s: %s\n", fname, strerror(errno));
 		gbc->save_state = 0;
@@ -218,7 +218,7 @@ bool gbcc_check_savestate(struct gbcc *gbc, int state)
 	if (snprintf(fname, MAX_NAME_LEN, "%s.s%d", tmp, state) >= MAX_NAME_LEN) {
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
-	sav = fopen(fname, "rbe");
+	sav = fopen(fname, "rb");
 	if (!sav) {
 		return false;
 	}

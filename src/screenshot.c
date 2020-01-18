@@ -32,7 +32,7 @@ void gbcc_screenshot(struct gbcc *gbc)
 	time_info = gmtime(&raw_time);
 	strftime(fname + strlen(dir), MAX_NAME_LEN - strlen(dir), "/%G-%m-%dT%H%M%SZ-gbcc.png", time_info);
 
-	FILE *fp = fopen(fname, "wbe");
+	FILE *fp = fopen(fname, "wb");
 	if (!fp) {
 		gbcc_log_error("Couldn't open %s: %s\n", fname, strerror(errno));
 		return;

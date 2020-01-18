@@ -338,7 +338,7 @@ void gbcc_log_append_info(const char *const fmt, ...)
 
 void gbcc_vram_dump(struct gbcc_core *gbc, const char *filename)
 {
-	FILE *fp = fopen(filename, "wbe");
+	FILE *fp = fopen(filename, "wb");
 	if (!fp) {
 		return;
 	}
@@ -352,7 +352,7 @@ void gbcc_vram_dump(struct gbcc_core *gbc, const char *filename)
 
 void gbcc_sram_dump(struct gbcc_core *gbc, const char* filename)
 {
-	FILE *fp = fopen(filename, "wbe");
+	FILE *fp = fopen(filename, "wb");
 	fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, fp);
 	fclose(fp);
 }
