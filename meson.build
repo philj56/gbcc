@@ -25,11 +25,10 @@ data_location = join_paths(
   'gbcc'
 )
 
-if host_machine.system() == 'windows'
+is_win = host_machine.system() == 'windows'
+
+if is_win
   data_location = '.'
-  windows = import('windows')
-else
-  windows = false
 endif
 
 tileset_location = join_paths(
@@ -119,7 +118,8 @@ gtk_sources = files(
   'src/gtk/input.c',
 )
 
-if windows
+if is_win
+  windows = import('windows')
   win_icon = windows.compile_resources('windows/icon.rc')
   sdl_sources += win_icon
 endif
@@ -146,7 +146,7 @@ executable(
   dependencies: [sdl, thread],
   install: true,
   link_with: libgbcc,
-  link_args: [windows ? '-static': '']
+  link_args: [is_win ? '-static': '']
   #link_args: ['-fprofile-instr-use']
   #link_args: ['-fprofile-instr-generate']
 )
