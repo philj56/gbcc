@@ -1,0 +1,44 @@
+name: Build packages
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  ubuntu:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout gbcc-debian-tools repo
+        uses: actions/checkout@v2
+        with:
+          repository: philj56/gbcc-debian-tools
+
+      - name: Checkout main repo
+        uses: actions/checkout@v2
+        with:
+          path: gbcc
+          fetch-depth: 0
+
+      - name: Setup apt to pull future dependencies
+        run: ./future_deps.sh
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install llvm clang devscripts debhelper meson/eoan scdoc \
+          libsdl2-dev libpng-dev libepoxy-dev libopenal-dev libgtk-3-dev
+
+      - name: Set clang as default compiler
+        run: sudo update-alternatives --set cc $(which clang)
+
+      - name: Build package
+        run: ./gendeb.sh
+
+      - name: Upload package
+        uses: actions/upload-artifact@v1
+        with:
+          name: gbcc-debian
+          path: gbcc-debian
