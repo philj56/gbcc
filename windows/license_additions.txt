@@ -6,4 +6,5 @@ zlib: zlib license, https://www.zlib.net/zlib_license.html
 SDL2: zlib license, https://www.libsdl.org/license.php
 libepoxy: MIT license, https://github.com/anholt/libepoxy/blob/master/COPYING
 libpng: PNG Reference Library License version 2, http://www.libpng.org/pub/png/src/libpng-LICENSE.txt
+libwinpthreads: BSD 3-clause, https://sourceforge.net/p/mingw-w64/code/HEAD/tree/trunk/mingw-w64-libraries/winpthreads/COPYING
 OpenAL-Soft: GNU LGPLv2, https://github.com/kcat/openal-soft/blob/master/COPYING
