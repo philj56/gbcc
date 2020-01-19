@@ -61,8 +61,6 @@ completion_location = join_paths(
 
 add_project_arguments(
   [
-    '-march=native',
-    '-mtune=native',
     '-pedantic',
     '-Wno-unused-parameter',
     '-Wno-missing-braces',
