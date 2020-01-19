@@ -1,6 +1,9 @@
 name: Build packages
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   ubuntu:
@@ -39,9 +42,3 @@ jobs:
         with:
           name: gbcc-debian
           path: gbcc-debian
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Hello
-        run: echo "Hello"
