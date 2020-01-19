@@ -16,7 +16,7 @@ jobs:
                 libepoxy-dev libopenal-dev libgtk-3-dev
       - name: Install scdoc
         run: |
-                git clone https://git.sr.ht/~sircmpwn/scdoc -depth 1
+                git clone https://git.sr.ht/~sircmpwn/scdoc --depth 1
                 cd scdoc
                 make
                 sudo make install
