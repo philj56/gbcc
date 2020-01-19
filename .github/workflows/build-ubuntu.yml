@@ -1,0 +1,23 @@
+name: Ubuntu package
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt-get install clang meson libsdl2-dev libpng-dev libepoxy-dev libopenal-dev libgtk-3-dev
+      - name: Install scdoc
+        run: |
+                git clone https://git.sr.ht/~sircmpwn/scdoc -depth 1
+                cd scdoc
+                make
+                sudo make install
+      - name: Meson build
+        run: CC=clang LDSHARED="clang -shared" meson build
+      - name: Ninja
+        run: ninja -C build
