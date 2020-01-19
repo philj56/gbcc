@@ -82,5 +82,6 @@ for f in ${files[@]}; do
 done
 
 cat license_additions.txt >> dist/LICENSE
+mv dist/LICENSE{,.txt}
 
 echo "\nBuild complete, files are in ./dist"
