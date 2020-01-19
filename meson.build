@@ -145,7 +145,6 @@ executable(
   dependencies: [sdl, thread],
   install: true,
   link_with: libgbcc,
-  link_args: is_win ? ['-static'] : []
   #link_args: ['-fprofile-instr-use']
   #link_args: ['-fprofile-instr-generate']
 )

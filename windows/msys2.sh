@@ -81,4 +81,7 @@ for f in ${files[@]}; do
 	cp -r $f dist
 done
 
-echo "Build complete, files are in ./dist"
+cat license_additions.txt >> dist/LICENSE
+mv dist/LICENSE{,.txt}
+
+echo "\nBuild complete, files are in ./dist"
