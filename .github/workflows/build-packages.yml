@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install MSYS2
-        uses: eine/setup-msys2
+        uses: eine/setup-msys2@ab779db
         with:
           update: true
 
