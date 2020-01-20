@@ -83,7 +83,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 		gbcc_log_error("Error loading icons: %s\n", error->message);
 	}
 
-	gtk_window_set_icon_list(gtk->window, gtk->icons);
+	gtk_window_set_default_icon_list(gtk->icons);
 
 	gtk->gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "gl_area"));
 	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK);
@@ -306,15 +306,14 @@ void on_window_state_change(GtkWidget *window, GdkEvent *event, void *data)
 void load_rom(GtkWidget *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	GtkWidget *dialog;
+	GtkFileChooserNative *dialog;
 	gint res;
 
-	dialog = gtk_file_chooser_dialog_new("Load ROM",
-                                      NULL,
-                                      GTK_FILE_CHOOSER_ACTION_SAVE,
-                                      "Cancel", GTK_RESPONSE_CANCEL,
-                                      "Open", GTK_RESPONSE_ACCEPT,
-                                      NULL);
+	dialog = gtk_file_chooser_native_new("Load ROM",
+                                      gtk->window,
+                                      GTK_FILE_CHOOSER_ACTION_OPEN,
+                                      "_Open",
+                                      "_Cancel");
 	{
 		GtkFileFilter *filter = gtk_file_filter_new();
 		gtk_file_filter_set_name(filter, "GameBoy ROM (*.gb/*.gbc)");
@@ -326,13 +325,14 @@ void load_rom(GtkWidget *widget, void *data)
 		gtk_file_filter_add_pattern(filter, "*");
 		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
 	}
-	res = gtk_dialog_run(GTK_DIALOG(dialog));
+	res = gtk_native_dialog_run(GTK_NATIVE_DIALOG(dialog));
 	if (res == GTK_RESPONSE_ACCEPT) {
 		char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 		start_emulation_thread(gtk, filename);
 		g_free(filename);
 	}
-	gtk_widget_destroy(dialog);
+
+	g_object_unref(dialog);
 }
 
 void stop(GtkWidget *widget, void *data)
