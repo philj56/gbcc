@@ -13,7 +13,7 @@ or the [manpage](https://philj56.github.io/gbcc/manpage.html) for details.
   * [Android](#android)
 
 ## Install
-### Prebuilt packages
+### Prebuilt packages ![](https://github.com/philj56/gbcc/workflows/Build%20packages/badge.svg)
 Packages for Windows and Ubuntu 18.04 are generated on each commit. To download
 them, navigate to the [actions](https://github.com/philj56/gbcc/actions) tab
 (you'll need to be logged in to GitHub to do this). Select the latest "Build
