@@ -52,6 +52,12 @@ shader_location = join_paths(
   ''
 )
 
+icon_location = join_paths(
+  debug ? '' : data_location,
+  'icons',
+  ''
+)
+
 completion_location = join_paths(
   get_option('prefix'),
   get_option('datadir'),
@@ -70,6 +76,7 @@ add_project_arguments(
     '-DPRINTER_SOUND_PATH="@0@"'.format(printer_sound_location),
     '-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
     '-DSHADER_PATH="@0@"'.format(shader_location),
+    '-DICON_PATH="@0@"'.format(icon_location),
     #'-fprofile-instr-use',
     #'-fprofile-instr-generate',
   ],
@@ -179,6 +186,11 @@ install_subdir(
   install_dir: data_location
 )
 
+install_subdir(
+  'icons',
+  install_dir: data_location
+)
+
 license_dir = join_paths(
   get_option('datadir'),
   'licenses',
@@ -207,7 +219,7 @@ if scdoc.found()
     input: manpage,
     output: output,
     command: [
-      sh, '-c', '@0@ < @INPUT@ | sed "s|TILESET_PATH|@1@|g; s|SHADER_PATH|@2@|g; s|PRINTER_SOUND_PATH|@3@|g;" > @4@'.format(scdoc.path(), tileset_location, shader_location, printer_sound_location, output)
+      sh, '-c', '@0@ < @INPUT@ | sed "s|TILESET_PATH|@1@|g; s|SHADER_PATH|@2@|g; s|PRINTER_SOUND_PATH|@3@|g; s|ICON_PATH|@4@|g;" > @5@'.format(scdoc.path(), tileset_location, shader_location, printer_sound_location, icon_location, output)
     ],
     install: true,
     install_dir: '@0@/man6'.format(mandir)

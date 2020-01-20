@@ -13,6 +13,10 @@
 #define GTK_UI_PATH "gbcc.ui"
 #endif
 
+#ifndef ICON_PATH
+#define ICON_PATH "icons"
+#endif
+
 static void on_realise(GtkGLArea *gl_area, void *data);
 static gboolean on_render(GtkGLArea *gl_area, GdkGLContext *context, void *data);
 static void on_vram_realise(GtkGLArea *gl_area, void *data);
@@ -65,6 +69,21 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	g_signal_connect(G_OBJECT(gtk->window), "destroy", G_CALLBACK(on_destroy), gtk);
 	g_signal_connect(G_OBJECT(gtk->window), "destroy", gtk_main_quit, NULL);
 	g_signal_connect(G_OBJECT(gtk->window), "window-state-event", G_CALLBACK(on_window_state_change), gtk);
+
+	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-16x16.png", &error));
+	if (!gtk->icons) {
+		gbcc_log_error("Error loading icons: %s\n", error->message);
+	}
+	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-32x32.png", &error));
+	if (!gtk->icons) {
+		gbcc_log_error("Error loading icons: %s\n", error->message);
+	}
+	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-48x48.png", &error));
+	if (!gtk->icons) {
+		gbcc_log_error("Error loading icons: %s\n", error->message);
+	}
+
+	gtk_window_set_icon_list(gtk->window, gtk->icons);
 
 	gtk->gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "gl_area"));
 	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK);

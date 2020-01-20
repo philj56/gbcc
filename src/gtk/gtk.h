@@ -16,6 +16,7 @@ struct gbcc_gtk {
 	GtkDialog *turbo_dialog;
 	GtkWidget *gl_area;
 	GtkWidget *vram_gl_area;
+	GList *icons;
 	guint keymap[51];
 	struct {
 		GtkWidget *bar;

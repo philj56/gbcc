@@ -149,6 +149,9 @@ _PRINTER_SOUND_PATH_
 _SHADER_PATH_
 	Folder containing all GLSL shaders used for rendering.
 
+_ICON_PATH_
+	Folder containing application icons.
+
 _$XDG_CONFIG_HOME/gbcc/config_
 	Config file. Available options are the same as command line options
 	(where possible), defined with syntax:
