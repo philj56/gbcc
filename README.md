@@ -4,13 +4,13 @@ with a focus on accuracy. See the [website](https://philj56.github.io/gbcc/)
 or the [manpage](https://philj56.github.io/gbcc/manpage.html) for details.
 
 ## Table of Contents
-* [Install](#Install)
-  * [Prebuilt packages](#Prebuilt%20packages)
-  * [Linux](#Linux)
-    * [Arch](#Arch)
-  * [macOS](#macOS)
-  * [Windows](#Windows)
-  * [Android](#Android)
+* [Install](#install)
+  * [Prebuilt packages](#prebuilt-packages)
+  * [Linux](#linux)
+    * [Arch](#arch)
+  * [macOS](#macos)
+  * [Windows](#windows)
+  * [Android](#android)
 
 ## Install
 ### Prebuilt packages
