@@ -5,7 +5,7 @@ or the [manpage](https://philj56.github.io/gbcc/manpage.html) for details.
 
 ## Table of Contents
 * [Install](#Install)
-  * [Prebuilt packages](#Prebuild%20packages)
+  * [Prebuilt packages](#Prebuilt%20packages)
   * [Linux](#Linux)
     * [Arch](#Arch)
   * [macOS](#macOS)
