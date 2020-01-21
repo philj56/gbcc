@@ -53,22 +53,11 @@ static void *init_input(void *_);
 
 void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 {
+	GError *error = NULL;
+
 	gtk_init(argc, argv);
 
 	memcpy(gtk->keymap, default_keymap, sizeof(gtk->keymap));
-
-	GError *error = NULL;
-	GtkBuilder *builder = gtk_builder_new();
-	if (gtk_builder_add_from_file(builder, GTK_UI_PATH, &error) == 0) {
-		gbcc_log_error("Error loading UI description: %s\n", error->message);
-		g_clear_error(&error);
-		exit(EXIT_FAILURE);
-	}
-
-	gtk->window = GTK_WINDOW(gtk_builder_get_object(builder, "window"));
-	g_signal_connect(G_OBJECT(gtk->window), "destroy", G_CALLBACK(on_destroy), gtk);
-	g_signal_connect(G_OBJECT(gtk->window), "destroy", gtk_main_quit, NULL);
-	g_signal_connect(G_OBJECT(gtk->window), "window-state-event", G_CALLBACK(on_window_state_change), gtk);
 
 	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-16x16.png", &error));
 	if (!gtk->icons) {
@@ -82,8 +71,28 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	if (!gtk->icons) {
 		gbcc_log_error("Error loading icons: %s\n", error->message);
 	}
+	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-64x64.png", &error));
+	if (!gtk->icons) {
+		gbcc_log_error("Error loading icons: %s\n", error->message);
+	}
+	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-128x128.png", &error));
+	if (!gtk->icons) {
+		gbcc_log_error("Error loading icons: %s\n", error->message);
+	}
 
 	gtk_window_set_default_icon_list(gtk->icons);
+	
+	GtkBuilder *builder = gtk_builder_new();
+	if (gtk_builder_add_from_file(builder, GTK_UI_PATH, &error) == 0) {
+		gbcc_log_error("Error loading UI description: %s\n", error->message);
+		g_clear_error(&error);
+		exit(EXIT_FAILURE);
+	}
+
+	gtk->window = GTK_WINDOW(gtk_builder_get_object(builder, "window"));
+	g_signal_connect(G_OBJECT(gtk->window), "destroy", G_CALLBACK(on_destroy), gtk);
+	g_signal_connect(G_OBJECT(gtk->window), "destroy", gtk_main_quit, NULL);
+	g_signal_connect(G_OBJECT(gtk->window), "window-state-event", G_CALLBACK(on_window_state_change), gtk);
 
 	gtk->gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "gl_area"));
 	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK);
