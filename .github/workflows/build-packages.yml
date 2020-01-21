@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install MSYS2
-        uses: numworks/setup-msys2@v1
+        uses: philj56/setup-msys2@49cba27
         with:
           update: true
 
