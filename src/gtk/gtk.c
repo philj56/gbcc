@@ -60,24 +60,29 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	memcpy(gtk->keymap, default_keymap, sizeof(gtk->keymap));
 
 	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-16x16.png", &error));
-	if (!gtk->icons) {
+	if (error) {
 		gbcc_log_error("Error loading icons: %s\n", error->message);
+		g_clear_error(&error);
 	}
 	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-32x32.png", &error));
-	if (!gtk->icons) {
+	if (error) {
 		gbcc_log_error("Error loading icons: %s\n", error->message);
+		g_clear_error(&error);
 	}
 	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-48x48.png", &error));
-	if (!gtk->icons) {
+	if (error) {
 		gbcc_log_error("Error loading icons: %s\n", error->message);
+		g_clear_error(&error);
 	}
 	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-64x64.png", &error));
-	if (!gtk->icons) {
+	if (error) {
 		gbcc_log_error("Error loading icons: %s\n", error->message);
+		g_clear_error(&error);
 	}
 	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-128x128.png", &error));
-	if (!gtk->icons) {
+	if (error) {
 		gbcc_log_error("Error loading icons: %s\n", error->message);
+		g_clear_error(&error);
 	}
 
 	gtk_window_set_default_icon_list(gtk->icons);
