@@ -7,6 +7,7 @@
 #include "../debug.h"
 #include "../memory.h"
 #include "../palettes.h"
+#include "../paths.h"
 #include "../save.h"
 #include "../time_diff.h"
 #include "sdl.h"
@@ -35,6 +36,7 @@ void quit(int sig)
 int main(int argc, char **argv)
 {
 #ifdef _WIN32
+	gbcc_fix_windows_path();
 	signal(SIGINT, quit);
 #else
 	struct sigaction act = {

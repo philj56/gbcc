@@ -102,6 +102,7 @@ common_sources = files(
   'src/menu.c',
   'src/ops.c',
   'src/palettes.c',
+  'src/paths.c',
   'src/ppu.c',
   'src/printer.c',
   'src/save.c',
@@ -128,6 +129,7 @@ if is_win
   windows = import('windows')
   win_icon = windows.compile_resources('windows/icon.rc')
   sdl_sources += win_icon
+  gtk_sources += win_icon
 endif
 
 cc = meson.get_compiler('c')

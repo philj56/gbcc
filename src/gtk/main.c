@@ -1,6 +1,7 @@
 #include "../gbcc.h"
 #include "../args.h"
 #include "../audio.h"
+#include "../paths.h"
 #include "../save.h"
 #include "gtk.h"
 #include <gtk/gtk.h>
@@ -20,11 +21,16 @@ void quit(int sig)
 
 int main(int argc, char **argv)
 {
+#ifdef _WIN32
+	gbcc_fix_windows_path();
+	signal(SIGINT, quit);
+#else
 	struct sigaction act = {
 		.sa_handler = quit
 	};
 	sigfillset(&act.sa_mask);
 	sigaction(SIGINT, &act, NULL);
+#endif
 
 	struct gbcc_gtk gtk = {0};
 	struct gbcc *gbc = &gtk.gbc;
