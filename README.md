@@ -5,7 +5,7 @@ or the [manpage](https://philj56.github.io/gbcc/manpage.html) for details.
 
 ## Table of Contents
 * [Install](#install)
-  * [Prebuilt packages](#prebuilt-packages)
+  * [Prebuilt packages](#prebuilt-packages-)
   * [Linux](#linux)
     * [Arch](#arch)
   * [macOS](#macos)
@@ -104,7 +104,7 @@ cd gbcc/windows
 This will place the SDL2 build & necessary .DLLs in a folder called `dist`,
 which you can then copy wherever you like. As with macOS, the GTK3 GUI is
 disabled by default, although not for performance reasons (see [Prebuilt
-packages](#prebuilt-packages)). It can be enabled by passing `--with-gtk` to
+packages](#prebuilt-packages-)). It can be enabled by passing `--with-gtk` to
 the `msys2.sh` script mentioned above.
 
 ### Android
