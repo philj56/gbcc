@@ -84,6 +84,11 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 		gbcc_log_error("Error loading icons: %s\n", error->message);
 		g_clear_error(&error);
 	}
+	gtk->icons = g_list_append(gtk->icons, gdk_pixbuf_new_from_file(ICON_PATH "icon-256x256.png", &error));
+	if (error) {
+		gbcc_log_error("Error loading icons: %s\n", error->message);
+		g_clear_error(&error);
+	}
 
 	gtk_window_set_default_icon_list(gtk->icons);
 	
