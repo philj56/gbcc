@@ -5,11 +5,18 @@
 #include "../window.h"
 #include "sdl.h"
 #include "vram_window.h"
+#include <errno.h>
 #include <math.h>
+#include <png.h>
+#include <pthread.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
+#include <string.h>
+
+#ifndef ICON_PATH
+#define ICON_PATH "icons"
+#endif
 
 static const SDL_Scancode keymap[33] = {
 	SDL_SCANCODE_Z,		/* A */
@@ -62,6 +69,7 @@ const SDL_GameControllerButton buttonmap[8] = {
 static int process_input(struct gbcc_sdl *sdl, const SDL_Event *e);
 static void process_game_controller(struct gbcc_sdl *sdl);
 static void *init_input(void *_);
+static void set_icon(SDL_Window *win, const char *filename);
 
 void gbcc_sdl_initialise(struct gbcc_sdl *sdl)
 {
@@ -102,6 +110,8 @@ void gbcc_sdl_initialise(struct gbcc_sdl *sdl)
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
+
+	set_icon(sdl->window, ICON_PATH "icon-32x32.png");
 
 	sdl->context = SDL_GL_CreateContext(sdl->window);
 	SDL_GL_MakeCurrent(sdl->window, sdl->context);
@@ -437,4 +447,94 @@ void *init_input(void *_)
 		gbcc_log_error("Failed to initialize controller support: %s\n", SDL_GetError());
 	}
 	return NULL;
+}
+
+void set_icon(SDL_Window *win, const char *filename)
+{
+	const int HEADER_BYTES = 8;
+	FILE *fp = fopen(filename, "rb");
+	uint8_t header[HEADER_BYTES];
+	if (!fp) {
+		gbcc_log_error("Couldn't open %s: %s\n", filename, strerror(errno));
+		return;
+	}
+	if (fread(header, 1, HEADER_BYTES, fp) == 0) {
+		gbcc_log_error("Failed to read fontmap data: %s\n", filename);
+		fclose(fp);
+		return;
+	}
+	if (png_sig_cmp(header, 0, HEADER_BYTES)) {
+		gbcc_log_error("Not a PNG file: %s\n", filename);
+		fclose(fp);
+		return;
+	}
+
+	png_structp png_ptr = png_create_read_struct(
+			PNG_LIBPNG_VER_STRING,
+			NULL, NULL, NULL);
+	if (!png_ptr) {
+		gbcc_log_error("Couldn't create PNG read struct.\n");
+		fclose(fp);
+		return;
+	}
+
+	png_infop info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr) {
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
+		fclose(fp);
+		gbcc_log_error("Couldn't create PNG info struct.\n");
+		return;
+	}
+
+	if (setjmp(png_jmpbuf(png_ptr)) != 0) {
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+		gbcc_log_error("Couldn't setjmp for libpng.\n");
+		return;
+	}
+
+	png_init_io(png_ptr, fp);
+	png_set_sig_bytes(png_ptr, HEADER_BYTES);
+	png_read_info(png_ptr, info_ptr);
+
+	uint32_t width = png_get_image_width(png_ptr, info_ptr);
+	uint32_t height = png_get_image_height(png_ptr, info_ptr);
+	png_get_channels(png_ptr, info_ptr);
+
+	uint32_t *bitmap = calloc(width * height, sizeof(*bitmap));
+
+	png_bytepp row_pointers = calloc(height, sizeof(png_bytep));
+	for (uint32_t y = 0; y < height; y++) {
+		row_pointers[y] = (uint8_t *)&bitmap[y * width];
+	}
+
+	if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_PALETTE) {
+		png_set_expand(png_ptr);
+	}
+	png_read_image(png_ptr, row_pointers);
+	png_read_end(png_ptr, NULL);
+
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+	free(row_pointers);
+	fclose(fp);
+
+	SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormatFrom(
+			bitmap,
+			width,
+			height,
+			32,
+			width * 4,
+			SDL_PIXELFORMAT_RGBA32);
+
+	if (surface == NULL) {
+		gbcc_log_error("Failed to create surface: %s\n", SDL_GetError());
+		free(bitmap);
+		return;
+	}
+
+	SDL_SetWindowIcon(win, surface);
+
+	SDL_free(surface);
+	free(bitmap);
+	return;
 }
