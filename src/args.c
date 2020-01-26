@@ -1,3 +1,4 @@
+#include "args.h"
 #include "config.h"
 #include "debug.h"
 #include "gbcc.h"

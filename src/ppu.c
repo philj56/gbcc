@@ -13,7 +13,6 @@
 
 #define BACKGROUND_MAP_BANK_1 0x9800u
 #define BACKGROUND_MAP_BANK_2 0x9C00u
-#define NUM_SPRITES 40
 
 /* 
  * Guide to line buffer attribute bits:

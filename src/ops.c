@@ -119,7 +119,7 @@ void INTERRUPT(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->halt.no_interrupt) {
 		if (cpu->instruction.step < 20) {
-			YIELD;
+			YIELD
 		}
 		cpu->halt.no_interrupt = false;
 		cpu->halt.set = false;
@@ -151,12 +151,12 @@ void INTERRUPT(struct gbcc_core *gbc)
 		case 0:
 			cpu->ime = false;
 			cpu->interrupt.running = true;
-			YIELD;
+			YIELD
 		case 1:
-			YIELD;
+			YIELD
 		case 2:
 			gbcc_memory_write(gbc, --cpu->reg.sp, high_byte(cpu->reg.pc), false);
-			YIELD;
+			YIELD
 		case 3:
 			gbcc_memory_write(gbc, --cpu->reg.sp, low_byte(cpu->reg.pc), false);
 			/* 
@@ -175,10 +175,10 @@ void INTERRUPT(struct gbcc_core *gbc)
 			} else if (check_bit(interrupt, 4)) {
 				cpu->interrupt.addr = INT_JOYPAD;
 			}
-			YIELD;
+			YIELD
 		case 4:
 			if (cpu->halt.set) {
-				YIELD;
+				YIELD
 			}
 	}
 	switch (cpu->interrupt.addr) {
@@ -352,7 +352,7 @@ void LD_REG_HL(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
 			WRITE_OPERAND_DIV(gbc, 0x40u, cpu->instruction.op1);
@@ -365,11 +365,11 @@ void LD_d8(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			if (div_is_hl(cpu, 0x00u)) {
-				YIELD;
+				YIELD
 			}
 			/* Fall through */
 		case 2:
@@ -383,10 +383,10 @@ void LD_d16(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
 	}
@@ -432,7 +432,7 @@ void LD_A(struct gbcc_core *gbc)
 				gbcc_log_error("Impossible case in LD_A\n");
 				return;
 		}
-		YIELD;
+		YIELD
 	}
 	switch((cpu->opcode % 0x10u) / 0x08u) {
 		case 0:
@@ -453,13 +453,13 @@ void LD_a16(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 	}
 	uint16_t addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 	switch ((cpu->opcode - 0xE0u) / 0x10u) {
@@ -481,10 +481,10 @@ void LDH_a8(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.addr = 0xFF00u + gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 	}
 	switch ((cpu->opcode - 0xE0u) / 0x10u) {
 		case 0:
@@ -505,7 +505,7 @@ void LDH_C(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
 		cpu->instruction.addr = 0xFF00u + cpu->reg.c;
-		YIELD;
+		YIELD
 	}
 
 	switch ((cpu->opcode - 0xE0u) / 0x10u) {
@@ -527,17 +527,17 @@ void STORE_SP(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 3:
 			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 			gbcc_memory_write(gbc, cpu->instruction.addr, low_byte(cpu->reg.sp), false);
-			YIELD;
+			YIELD
 		case 4:
 			gbcc_memory_write(gbc, cpu->instruction.addr+1, high_byte(cpu->reg.sp), false);
 	}
@@ -549,10 +549,10 @@ void LD_HL_SP(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 	}
 	uint16_t tmp = cpu->reg.sp;
 	uint16_t tmp2 = (uint16_t)(cpu->reg.sp + (int8_t)cpu->instruction.op1);
@@ -568,7 +568,7 @@ void LD_SP_HL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
-		YIELD;
+		YIELD
 	}
 	cpu->reg.sp = cpu->reg.hl;
 	done(cpu);
@@ -579,10 +579,10 @@ void POP(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
 	}
@@ -635,12 +635,12 @@ void PUSH(struct gbcc_core *gbc)
 					gbcc_log_error("Impossible case in PUSH_POP\n");
 					return;
 			}
-			YIELD;
+			YIELD
 		case 1:
-			YIELD;
+			YIELD
 		case 2:
 			gbcc_memory_write(gbc, --(cpu->reg.sp), cpu->instruction.op1, false);
-			YIELD;
+			YIELD
 		case 3:
 			gbcc_memory_write(gbc, --(cpu->reg.sp), cpu->instruction.op2, false);
 	}
@@ -658,7 +658,7 @@ void ALU_OP(struct gbcc_core *gbc)
 	uint8_t offset;
 	
 	if (cpu->instruction.step == 0 && mod_is_hl(cpu)) {
-		YIELD;
+		YIELD
 	}
 
 	if (cpu->opcode < 0xC0u) {
@@ -812,10 +812,10 @@ void INC_DEC_HL(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.hl, false);
-			YIELD;
+			YIELD
 	}
 	uint8_t op = cpu->instruction.op1;
 	switch ((cpu->opcode % 0x08u) / 0x05u) {
@@ -841,7 +841,7 @@ void INC_DEC_16_BIT(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
-		YIELD;
+		YIELD
 	}
 	uint16_t *op;
 	switch (cpu->opcode / 0x10u) {
@@ -879,7 +879,7 @@ void ADD_HL(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 0) {
-		YIELD;
+		YIELD
 	}
 	uint16_t op;
 	uint16_t tmp;
@@ -913,12 +913,12 @@ void ADD_SP(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
-			YIELD;
+			YIELD
 	}
 	uint16_t tmp = cpu->reg.sp;
 	cpu->reg.sp += (int8_t)cpu->instruction.op1;
@@ -971,13 +971,13 @@ void JP(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 	}
 	cpu->reg.pc = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 	done(cpu);
@@ -996,10 +996,10 @@ void JP_COND(struct gbcc_core *gbc)
 	bool jp = false;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
 			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
@@ -1019,7 +1019,7 @@ void JP_COND(struct gbcc_core *gbc)
 			}
 			if (jp) {
 				cpu->reg.pc = cpu->instruction.addr;
-				YIELD;
+				YIELD
 			} else {
 				break;
 			}
@@ -1032,10 +1032,10 @@ void JR(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->reg.pc += (int8_t)cpu->instruction.op1;
 	}
@@ -1047,7 +1047,7 @@ void JR_COND(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
 			break;
@@ -1059,25 +1059,25 @@ void JR_COND(struct gbcc_core *gbc)
 		case 0:	/* JR NZ */
 			if (!get_flag(cpu, ZF)) {
 				cpu->reg.pc += (int8_t)cpu->instruction.op1;
-				YIELD;
+				YIELD
 			}
 			break;
 		case 1:	/* JR Z */
 			if (get_flag(cpu, ZF)) {
 				cpu->reg.pc += (int8_t)cpu->instruction.op1;
-				YIELD;
+				YIELD
 			}
 			break;
 		case 2:	/* JR NC */
 			if (!get_flag(cpu, CF)) {
 				cpu->reg.pc += (int8_t)cpu->instruction.op1;
-				YIELD;
+				YIELD
 			}
 			break;
 		case 3:	/* JR C */
 			if (get_flag(cpu, CF)) {
 				cpu->reg.pc += (int8_t)cpu->instruction.op1;
-				YIELD;
+				YIELD
 			}
 			break;
 		default:
@@ -1094,19 +1094,19 @@ void CALL(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 3:
 			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
-			YIELD;
+			YIELD
 		case 4:
 			gbcc_memory_write(gbc, --(cpu->reg.sp), high_byte(cpu->reg.pc), false);
-			YIELD;
+			YIELD
 		case 5:
 			gbcc_memory_write(gbc, --(cpu->reg.sp), low_byte(cpu->reg.pc), false);
 	}
@@ -1119,41 +1119,41 @@ void CALL_COND(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_fetch_instruction(gbc);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_fetch_instruction(gbc);
 			switch ((cpu->opcode - 0xC0u) / 0x08u) {
 				case 0:	/* CALL NZ */
 					if (!get_flag(cpu, ZF)) {
-						YIELD;
+						YIELD
 					}
 					break;
 				case 1:	/* CALL Z */
 					if (get_flag(cpu, ZF)) {
-						YIELD;
+						YIELD
 					}
 					break;
 				case 2:	/* CALL NC */
 					if (!get_flag(cpu, CF)) {
-						YIELD;
+						YIELD
 					}
 					break;
 				case 3:	/* CALL C */
 					if (get_flag(cpu, CF)) {
-						YIELD;
+						YIELD
 					}
 					break;
 			}
 			break;
 		case 3:
 			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
-			YIELD;
+			YIELD
 		case 4:
 			gbcc_memory_write(gbc, --(cpu->reg.sp), high_byte(cpu->reg.pc), false);
-			YIELD;
+			YIELD
 		case 5:
 			gbcc_memory_write(gbc, --(cpu->reg.sp), low_byte(cpu->reg.pc), false);
 			cpu->reg.pc = cpu->instruction.addr;
@@ -1166,13 +1166,13 @@ void RET(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
-			YIELD;
+			YIELD
 		case 2:
 			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
-			YIELD;
+			YIELD
 		case 3:
 			cpu->reg.pc = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 	}
@@ -1195,7 +1195,7 @@ void RET_COND(struct gbcc_core *gbc)
 	bool ret = false;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			switch ((cpu->opcode - 0xC0u) / 0x08u) {
 				case 0:	/* RET NZ */
@@ -1212,16 +1212,16 @@ void RET_COND(struct gbcc_core *gbc)
 					break;
 			}
 			if (ret) {
-				YIELD;
+				YIELD
 			} else {
 				break;
 			}
 		case 2:
 			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
-			YIELD;
+			YIELD
 		case 3:
 			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
-			YIELD;
+			YIELD
 		case 4:
 			cpu->reg.pc = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 	}
@@ -1233,12 +1233,12 @@ void RST(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
-			YIELD;
+			YIELD
 		case 2:
 			gbcc_memory_write(gbc, --cpu->reg.sp, high_byte(cpu->reg.pc), false);
-			YIELD;
+			YIELD
 		case 3:
 			gbcc_memory_write(gbc, --cpu->reg.sp, low_byte(cpu->reg.pc), false);
 	}
@@ -1254,7 +1254,7 @@ void PREFIX_CB(struct gbcc_core *gbc)
 	cpu->instruction.prefix_cb = true;
 	switch (cpu->instruction.step) {
 		case 0:
-			YIELD;
+			YIELD
 		case 1:
 			cpu->opcode = gbcc_fetch_instruction(gbc);
 			break;
@@ -1281,10 +1281,10 @@ void CB_SHIFT_OP(struct gbcc_core *gbc)
 	if (mod_is_hl(cpu)) {
 		switch (cpu->instruction.step) {
 			case 1:
-				YIELD;
+				YIELD
 			case 2:
 				cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
-				YIELD;
+				YIELD
 		}
 	} else {
 		cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
@@ -1343,7 +1343,7 @@ void CB_BIT(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	if (cpu->instruction.step == 1 && mod_is_hl(cpu)) {
-		YIELD;
+		YIELD
 	}
 	uint8_t op = READ_OPERAND_MOD(gbc);
 	uint8_t b = (cpu->opcode - 0x40u) / 0x08u;
@@ -1360,10 +1360,10 @@ void CB_RES(struct gbcc_core *gbc)
 	if (mod_is_hl(cpu)) {
 		switch (cpu->instruction.step) {
 			case 1:
-				YIELD;
+				YIELD
 			case 2:
 				cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
-				YIELD;
+				YIELD
 		}
 	} else {
 		cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
@@ -1380,10 +1380,10 @@ void CB_SET(struct gbcc_core *gbc)
 	if (mod_is_hl(cpu)) {
 		switch (cpu->instruction.step) {
 			case 1:
-				YIELD;
+				YIELD
 			case 2:
 				cpu->instruction.op1 = READ_OPERAND_MOD(gbc);
-				YIELD;
+				YIELD
 		}
 	} else {
 		cpu->instruction.op1 = READ_OPERAND_MOD(gbc);

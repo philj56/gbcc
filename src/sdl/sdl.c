@@ -18,6 +18,8 @@
 #define ICON_PATH "icons"
 #endif
 
+#define HEADER_BYTES 8
+
 static const SDL_Scancode keymap[33] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
@@ -54,7 +56,7 @@ static const SDL_Scancode keymap[33] = {
 	SDL_SCANCODE_F9
 };
 
-const SDL_GameControllerButton buttonmap[8] = {
+static const SDL_GameControllerButton buttonmap[8] = {
 	SDL_CONTROLLER_BUTTON_B,
 	SDL_CONTROLLER_BUTTON_A,
 	SDL_CONTROLLER_BUTTON_START,
@@ -451,7 +453,6 @@ void *init_input(void *_)
 
 void set_icon(SDL_Window *win, const char *filename)
 {
-	const int HEADER_BYTES = 8;
 	FILE *fp = fopen(filename, "rb");
 	uint8_t header[HEADER_BYTES];
 	if (!fp) {

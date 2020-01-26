@@ -1,3 +1,5 @@
+#include "paths.h"
+
 #ifdef __WIN32
 #include <direct.h>
 #include <windows.h>
@@ -19,4 +21,4 @@ void gbcc_fix_windows_path()
 }
 #else
 void gbcc_fix_windows_path() {}
-#endif
+#endif /* __WIN32 */

@@ -771,7 +771,7 @@ void gbcc_mbc_mmm01_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 		 * Bits 2-5: Write mask for bits 1-4 in 0x2000 - 0x3FFF block
 		 * Bit 6: Multiplexer, switches 0x2000 bits 5-6 with 0x6000 bits 0-1
 		 */
-		uint8_t mask = (mbc->romb1 & 0x40u) >> 6u;;
+		uint8_t mask = (mbc->romb1 & 0x40u) >> 6u;
 		if (mbc->unlocked) {
 			mask |= 0xFEu;
 		}
@@ -911,7 +911,7 @@ void eeprom_write(struct gbcc_core *gbc, uint8_t val)
 		} else if ((eeprom->command & 0x300u) == 0x100u) {
 			/* WRITE */
 			eeprom->address = eeprom->command & 0x7Fu;
-			eeprom->current_command = GBCC_EEPROM_WRITE;;
+			eeprom->current_command = GBCC_EEPROM_WRITE;
 		} else if ((eeprom->command & 0x300u) == 0x300u) {
 			/* ERASE */
 			eeprom->data[eeprom->command & 0x7Fu] = 0xFFFFu;

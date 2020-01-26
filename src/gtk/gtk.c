@@ -612,7 +612,7 @@ void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
 	}
 }
 
-const SDL_GameControllerButton buttonmap[8] = {
+static const SDL_GameControllerButton buttonmap[8] = {
 	SDL_CONTROLLER_BUTTON_B,
 	SDL_CONTROLLER_BUTTON_A,
 	SDL_CONTROLLER_BUTTON_START,

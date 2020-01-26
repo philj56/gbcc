@@ -11,7 +11,7 @@
 
 static char *strip(const char *str);
 static void parse_option(struct gbcc *gbc, const char *option, const char *value);
-static char *get_config_path();
+static char *get_config_path(void);
 
 void gbcc_load_config(struct gbcc *gbc, char *filename)
 {

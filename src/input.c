@@ -217,8 +217,6 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			}
 			gbc->load_state = (int8_t)(key - GBCC_KEY_LOAD_STATE_1 + 1);
 			break;
-		default:
-			break;
 	}
 }
 
