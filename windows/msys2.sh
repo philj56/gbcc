@@ -51,12 +51,14 @@ if $INSTALL_DEPS; then
 		mingw-w64-x86_64-openal
 fi
 
+if $USE_CLANG; then
+	export CC=clang LD=lld LDSHARED="clang -shared"
+fi
+
 if [ ! -d "build" ]; then
-	if $USE_CLANG; then
-		CC=clang LD=lld LDSHARED="clang -shared" meson .. build
-	else
-		meson .. build
-	fi
+	meson .. build
+	# -fPIE isn't supported on windows
+	# (clang complains, and gcc generates an executable that silently fails)
 	meson configure build -Db_pie=false
 fi
 
