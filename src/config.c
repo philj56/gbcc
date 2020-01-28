@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "core.h"
 #include "config.h"
 #include "debug.h"
@@ -11,7 +21,7 @@
 
 static char *strip(const char *str);
 static void parse_option(struct gbcc *gbc, const char *option, const char *value);
-static char *get_config_path();
+static char *get_config_path(void);
 
 void gbcc_load_config(struct gbcc *gbc, char *filename)
 {

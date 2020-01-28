@@ -86,10 +86,23 @@ uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 			break;
 		case DATA:
 			if (p->packet.data_byte < p->packet.data_length) {
-				if (p->packet.command == START_PRINTING) {
-					parse_print_args(p, byte);
-				} else if (p->packet.command == FILL_BUFFER) {
-					fill_buffer(p, byte);
+				switch (p->packet.command) {
+					case INITALISE:
+						/*
+						 * INITIALISE has unknown
+						 * function, but seems to have
+						 * no effect
+						 */
+						break;
+					case START_PRINTING:
+						parse_print_args(p, byte);
+						break;
+					case FILL_BUFFER:
+						fill_buffer(p, byte);
+						break;
+					case READ_STATUS:
+						/* READ_STATUS is a no-op */
+						break;
 				}
 				p->packet.data_byte++;
 				p->packet.printer_checksum += byte;
@@ -214,7 +227,7 @@ bool print_strip(struct printer *p)
 	if (p->print_byte == p->image_buffer.length) {
 		return 1;
 	}
-	int line;
+	unsigned int line;
 	for (line = 0; (line < PRINTER_STRIP_HEIGHT) && (p->print_byte < p->image_buffer.length); line++) {
 		uint8_t ty = (line + p->print_line) / 8;
 		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {

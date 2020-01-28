@@ -69,7 +69,7 @@ struct gbcc_window {
 void gbcc_window_initialise(struct gbcc *gbc);
 void gbcc_window_deinitialise(struct gbcc *gbc);
 void gbcc_window_update(struct gbcc *gbc);
-void gbcc_window_clear();
+void gbcc_window_clear(void);
 void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bool pad);
 void gbcc_window_use_shader(struct gbcc *gbc, const char *name);
 void gbcc_load_shader(GLuint shader, const char *filename);

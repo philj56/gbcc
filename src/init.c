@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "core.h"
 #include "apu.h"
 #include "bit_utils.h"
@@ -363,11 +373,9 @@ void get_cartridge_hardware(struct gbcc_core *gbc)
 		case 0xFCu: 	/* Pocket Camera */
 			gbcc_log_error("Pocket Camera not yet supported.\n");
 			exit(EXIT_FAILURE);
-			break;
 		case 0xFDu: 	/* Bandai TAMA5 */
 			gbcc_log_error("Bandai TAMA5 not yet supported.\n");
 			exit(EXIT_FAILURE);
-			break;
 		case 0xFEu: 	/* HuC3 */
 			gbc->cart.mbc.type = HUC3;
 			gbcc_log_info("\tHardware: HuC3\n");

@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "gbcc.h"
 #include "input.h"
 #include "memory.h"
@@ -216,8 +226,6 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 				break;
 			}
 			gbc->load_state = (int8_t)(key - GBCC_KEY_LOAD_STATE_1 + 1);
-			break;
-		default:
 			break;
 	}
 }

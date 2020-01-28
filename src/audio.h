@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #ifndef GBCC_AUDIO_H
 #define GBCC_AUDIO_H
 

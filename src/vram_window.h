@@ -40,6 +40,6 @@ struct gbcc_vram_window {
 void gbcc_vram_window_initialise(struct gbcc *gbc);
 void gbcc_vram_window_deinitialise(struct gbcc *gbc);
 void gbcc_vram_window_update(struct gbcc *gbc);
-void gbcc_vram_window_clear();
+void gbcc_vram_window_clear(void);
 
 #endif /* GBCC_VRAM_WINDOW_H */

@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #ifndef GBCC_GTK_H
 #define GBCC_GTK_H
 
@@ -16,6 +26,7 @@ struct gbcc_gtk {
 	GtkDialog *turbo_dialog;
 	GtkWidget *gl_area;
 	GtkWidget *vram_gl_area;
+	GList *icons;
 	guint keymap[51];
 	struct {
 		GtkWidget *bar;

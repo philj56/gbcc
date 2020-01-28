@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "debug.h"
 #include "fontmap.h"
 #include <errno.h>
@@ -14,7 +24,6 @@ void gbcc_fontmap_load(struct gbcc_fontmap *fontmap, const char *filename)
 	uint8_t header[HEADER_BYTES];
 	if (!fp) {
 		gbcc_log_error("Couldn't open %s: %s\n", filename, strerror(errno));
-		fclose(fp);
 		return;
 	}
 	if (fread(header, 1, HEADER_BYTES, fp) == 0) {

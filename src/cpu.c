@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "core.h"
 #include "apu.h"
 #include "bit_utils.h"
@@ -91,7 +101,7 @@ void clock_div(struct gbcc_core *gbc)
 	struct cpu *cpu = &gbc->cpu;
 	cpu->div_timer++;
 	uint8_t tac = gbcc_memory_read(gbc, TAC, false);
-	uint16_t mask;
+	uint16_t mask = 0;
 	switch (tac & 0x03u) {
 		/* 
 		 * TIMA register detects the falling edge of a bit in
