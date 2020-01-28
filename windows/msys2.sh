@@ -52,7 +52,7 @@ if $INSTALL_DEPS; then
 fi
 
 if $USE_CLANG; then
-	export CC=clang LD=lld LDSHARED="clang -shared"
+	export CC=clang LD=lld LDSHARED="clang -shared -fuse-ld=lld"
 fi
 
 if [ ! -d "build" ]; then
