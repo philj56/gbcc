@@ -543,6 +543,10 @@ uint8_t gbcc_mbc_huc1_read(struct gbcc_core *gbc, uint16_t addr)
 	}
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (gbc->cart.mbc.sram_enable) {
+			if (gbc->cart.ram_size == 0) {
+				gbcc_log_debug("Trying to read SRAM when there isn't any!\n");
+				return 0xFFu;
+			}
 			return gbc->memory.sram[addr - SRAM_START];
 		}
 		/* TODO: Implement IR receiver */
@@ -558,6 +562,10 @@ void gbcc_mbc_huc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 
 	if (addr >= SRAM_START && addr < SRAM_END) {
 		if (mbc->sram_enable) {
+			if (gbc->cart.ram_size == 0) {
+				gbcc_log_debug("Trying to write to SRAM when there isn't any!\n");
+				return;
+			}
 			gbc->memory.sram[addr - SRAM_START] = val;
 		} else {
 			/* TODO: Implement IR transmitter */

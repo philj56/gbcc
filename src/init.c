@@ -117,7 +117,13 @@ void load_rom(struct gbcc_core *gbc, const char *filename)
 	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
 	gbcc_log_info("\tCartridge size: 0x%zX bytes (%zu banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
 
-	gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
+	if (gbc->cart.rom_banks < 2) {
+		gbcc_log_warning("ROM smaller than minimum size of 2 banks\n");
+		gbc->cart.rom = (uint8_t *) calloc(ROMX_END, 1);
+		gbc->cart.rom_banks = 2;
+	} else {
+		gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
+	}
 	if (gbc->cart.rom == NULL) {
 		gbcc_log_error("Error allocating ROM.\n");
 		fclose(rom);
@@ -422,7 +428,17 @@ void init_ram(struct gbcc_core *gbc)
 	if (gbc->cart.ram_size > 0) {
 		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;
 		gbcc_log_info("\tCartridge RAM: 0x%0zX bytes (%zu banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
-		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
+		if (gbc->cart.ram_banks < 1) {
+			/* 
+			 * Allocate a minimum of 1 ram bank, to prevent
+			 * crashing if invalid ram size is specified
+			 */
+			gbc->cart.ram = (uint8_t *) calloc(SRAM_SIZE, 1);
+			gbc->cart.ram_banks = 1;
+		} else {
+			gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
+		}
+
 		if (gbc->cart.ram == NULL) {
 			gbcc_log_error("Error allocating RAM.\n");
 			exit(EXIT_FAILURE);
