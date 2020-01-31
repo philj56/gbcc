@@ -596,6 +596,14 @@ void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
 	if (event->type == GDK_KEY_PRESS) {
 		val = true;
 	}
+	if (val && event->keyval == GDK_KEY_F11) {
+		gtk->fullscreen = !gtk->fullscreen;
+		if (gtk->fullscreen) {
+			gtk_window_fullscreen(gtk->window);
+		} else {
+			gtk_window_unfullscreen(gtk->window);
+		}
+	}
 	for (size_t i = 0; i < N_ELEM(gtk->keymap); i++) {
 		if (event->keyval == gtk->keymap[i]) {
 			if (!(event->state & GDK_SHIFT_MASK)) {

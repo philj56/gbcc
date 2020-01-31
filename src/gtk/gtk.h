@@ -16,9 +16,11 @@
 #include <gtk/gtk.h>
 #include <pthread.h>
 #include <SDL2/SDL.h>
+#include <stdbool.h>
 
 struct gbcc_gtk {
 	struct gbcc gbc;
+	bool fullscreen;
 	pthread_t emulation_thread;
 	SDL_GameController *game_controller;
 	SDL_Haptic *haptic;

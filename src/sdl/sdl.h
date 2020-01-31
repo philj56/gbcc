@@ -13,9 +13,11 @@
 
 #include "../gbcc.h"
 #include <SDL2/SDL.h>
+#include <stdbool.h>
 
 struct gbcc_sdl {
 	struct gbcc gbc;
+	bool fullscreen;
 	SDL_Window *window;
 	SDL_Window *vram_window;
 	SDL_GLContext context;

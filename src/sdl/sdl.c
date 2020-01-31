@@ -201,6 +201,14 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 		} else {
 			continue;
 		}
+		if (val && e.key.keysym.scancode == SDL_SCANCODE_F11) {
+			sdl->fullscreen = !sdl->fullscreen;
+			if (sdl->fullscreen) {
+				SDL_SetWindowFullscreen(sdl->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			} else {
+				SDL_SetWindowFullscreen(sdl->window, 0);
+			}
+		}
 
 		switch(key) {
 			case -2:
