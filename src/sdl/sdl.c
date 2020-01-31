@@ -114,7 +114,7 @@ void gbcc_sdl_initialise(struct gbcc_sdl *sdl)
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
 			GBC_SCREEN_WIDTH,      // width, in pixels
 			GBC_SCREEN_HEIGHT,     // height, in pixels
-			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
+			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI// flags
 			);
 
 	if (sdl->window == NULL) {
