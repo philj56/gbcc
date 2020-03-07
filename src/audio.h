@@ -21,7 +21,8 @@
 #include <stdint.h>
 #include <time.h>
 
-#define GBCC_AUDIO_BUFSIZE (1024*2) /* samples * channels */
+#define GBCC_AUDIO_BUFSIZE_SAMPLES 4096
+#define GBCC_AUDIO_BUFSIZE (GBCC_AUDIO_BUFSIZE_SAMPLES*2) /* samples * channels */
 #define GBCC_AUDIO_FMT uint16_t
 
 struct gbcc;
@@ -32,6 +33,7 @@ struct gbcc_audio {
 		ALCcontext *context;
 		ALuint source;
 		ALuint buffers[5];
+		ALuint vsync_buffers[5];
 	} al;
 	uint64_t sample_clock;
 	uint64_t clock;
@@ -39,6 +41,7 @@ struct gbcc_audio {
 	struct timespec cur_time;
 	struct timespec start_time;
 	GBCC_AUDIO_FMT mix_buffer[GBCC_AUDIO_BUFSIZE];
+	struct timespec t_buffer[GBCC_AUDIO_BUFSIZE_SAMPLES];
 };
 
 void gbcc_audio_initialise(struct gbcc *gbc);

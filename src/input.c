@@ -85,11 +85,15 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 				gbcc_window_show_message(gbc, "Frame blending disabled", 1, true);
 			}
 			break;
-		case GBCC_KEY_SHADER:
-			if (pressed) {
-				gbc->window.gl.cur_shader++;
-				gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);
-				gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
+		case GBCC_KEY_VSYNC:
+			gbc->core.sync_to_video ^= pressed;
+			if (!pressed) {
+				break;
+			}
+			if (gbc->core.sync_to_video) {
+				gbcc_window_show_message(gbc, "Vsync enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Vsync disabled", 1, true);
 			}
 			break;
 		case GBCC_KEY_VRAM:
@@ -165,6 +169,24 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			gbc->menu.show = pressed;
 			if (pressed) {
 				gbcc_menu_update(gbc);
+			}
+			break;
+		case GBCC_KEY_INTERLACE:
+			gbc->core.interlace ^= pressed;
+			if (!pressed) {
+				break;
+			}
+			if (gbc->core.interlace) {
+				gbcc_window_show_message(gbc, "Interlacing enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Interlacing disabled", 1, true);
+			}
+			break;
+		case GBCC_KEY_SHADER:
+			if (pressed) {
+				gbc->window.gl.cur_shader++;
+				gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);
+				gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
 			}
 			break;
 		case GBCC_KEY_ACCELEROMETER_UP:

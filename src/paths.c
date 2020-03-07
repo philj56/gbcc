@@ -18,6 +18,7 @@ void gbcc_fix_windows_path()
 		*c = '\0';
 	}
 	_chdir(path);
+	free(path);
 }
 #else
 void gbcc_fix_windows_path() {}

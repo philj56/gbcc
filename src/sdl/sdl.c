@@ -30,7 +30,7 @@
 
 #define HEADER_BYTES 8
 
-static const SDL_Scancode keymap[33] = {
+static const SDL_Scancode keymap[35] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -42,8 +42,8 @@ static const SDL_Scancode keymap[33] = {
 	SDL_SCANCODE_RSHIFT, 	/* Turbo */
 	SDL_SCANCODE_S, 	/* Screenshot */
 	SDL_SCANCODE_P, 	/* Pause */
-	SDL_SCANCODE_F, 	/* FPS Counter */
-	SDL_SCANCODE_V, 	/* Switch shader */
+	SDL_SCANCODE_F, 	/* FPS Counter / frame blending */
+	SDL_SCANCODE_V, 	/* Vsync / VRAM display */
 	SDL_SCANCODE_1, 	/* Toggle background */
 	SDL_SCANCODE_2, 	/* Toggle window */
 	SDL_SCANCODE_3, 	/* Toggle sprites */
@@ -51,6 +51,8 @@ static const SDL_Scancode keymap[33] = {
 	SDL_SCANCODE_A, 	/* Toggle autosave */
 	SDL_SCANCODE_B, 	/* Toggle background playback */
 	SDL_SCANCODE_ESCAPE, 	/* Toggle menu */
+	SDL_SCANCODE_I,         /* Toggle interlacing */
+	SDL_SCANCODE_O,         /* Cycle through shaders */
 	SDL_SCANCODE_KP_2, 	/* MBC7 accelerometer down */
 	SDL_SCANCODE_KP_4, 	/* MBC7 accelerometer left */
 	SDL_SCANCODE_KP_6, 	/* MBC7 accelerometer right */
@@ -127,6 +129,8 @@ void gbcc_sdl_initialise(struct gbcc_sdl *sdl)
 
 	sdl->context = SDL_GL_CreateContext(sdl->window);
 	SDL_GL_MakeCurrent(sdl->window, sdl->context);
+
+	SDL_GL_SetSwapInterval(1);
 
 	gbcc_window_initialise(&sdl->gbc);
 	gbcc_menu_init(&sdl->gbc);
@@ -212,6 +216,8 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 
 		switch(key) {
 			case -2:
+				gbc->quit = true;
+				gbcc_sdl_destroy(sdl);
 				return;
 			case 0:
 				emulator_key = GBCC_KEY_A;
@@ -265,7 +271,7 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_VRAM;
 				} else {
-					emulator_key = GBCC_KEY_SHADER;
+					emulator_key = GBCC_KEY_VSYNC;
 				}
 				break;
 			case 13:
@@ -290,35 +296,39 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 				emulator_key = GBCC_KEY_MENU;
 				break;
 			case 20:
+				emulator_key = GBCC_KEY_INTERLACE;
+				break;
+			case 21:
+				emulator_key = GBCC_KEY_SHADER;
+				break;
+			case 22:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_DOWN;
 				} else {
 					continue;
 				}
 				break;
-			case 21:
+			case 23:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_LEFT;
 				} else {
 					continue;
 				}
 				break;
-			case 22:
+			case 24:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_RIGHT;
 				} else {
 					continue;
 				}
 				break;
-			case 23:
+			case 25:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_UP;
 				} else {
 					continue;
 				}
 				break;
-			case 24:
-			case 25:
 			case 26:
 			case 27:
 			case 28:
@@ -326,6 +336,8 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			case 30:
 			case 31:
 			case 32:
+			case 33:
+			case 34:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 24);
 				} else {
@@ -380,8 +392,6 @@ int process_input(struct gbcc_sdl *sdl, const SDL_Event *e)
 		if (e->window.event == SDL_WINDOWEVENT_CLOSE) {
 			uint32_t id = e->window.windowID;
 			if (id == SDL_GetWindowID(sdl->window)) {
-				gbc->quit = true;
-				gbcc_sdl_destroy(sdl);
 				return -2;
 			} else if (id == SDL_GetWindowID(sdl->vram_window)) {
 				gbc->window.vram_display = false;

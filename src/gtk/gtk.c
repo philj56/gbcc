@@ -581,6 +581,7 @@ void stop_emulation_thread(struct gbcc_gtk *gtk)
 		return;
 	}
 	gbc->quit = true;
+	sem_post(&gbc->core.ppu.vsync_semaphore);
 	pthread_join(gtk->emulation_thread, NULL);
 	gbc->save_state = 0;
 	gbcc_save_state(gbc);

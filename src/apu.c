@@ -13,6 +13,7 @@
 #include "bit_utils.h"
 #include "debug.h"
 #include "memory.h"
+#include "nelem.h"
 #include "time_diff.h"
 #include <stdint.h>
 #include <time.h>
@@ -228,6 +229,9 @@ void time_sync(struct gbcc_core *gbc)
 	if (mult == 0) {
 		gbc->apu.start_time = gbc->apu.cur_time;
 		gbc->apu.sample = 0;
+		return;
+	}
+	if (gbc->sync_to_video) {
 		return;
 	}
 	while (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult)) {

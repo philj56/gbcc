@@ -14,6 +14,7 @@
 #include "debug.h"
 #include "memory.h"
 #include "nelem.h"
+#include "time_diff.h"
 
 #ifdef __APPLE__
 #include <OpenAL/al.h>
@@ -27,9 +28,11 @@
 #include <time.h>
 
 #define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F / 0x10u)
-#define SAMPLE_RATE 96000
+#define SAMPLE_RATE 44100
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
+#define BUFFER_LENGTH_NS (SECOND * GBCC_AUDIO_BUFSIZE_SAMPLES / SAMPLE_RATE)
 
+static void audio_vsync_update(struct gbcc *gbc);
 static void ch1_update(struct gbcc *gbc);
 static void ch2_update(struct gbcc *gbc);
 static void ch3_update(struct gbcc *gbc);
@@ -83,6 +86,11 @@ void gbcc_audio_initialise(struct gbcc *gbc)
 		exit(EXIT_FAILURE);
 	}
 
+	alGenBuffers(N_ELEM(audio->al.vsync_buffers), audio->al.vsync_buffers);
+	if (gbcc_check_openal_error("Failed to create vsync buffers.\n")) {
+		exit(EXIT_FAILURE);
+	}
+
 	clock_gettime(CLOCK_REALTIME, &audio->start_time);
 	memset(audio->mix_buffer, 0, sizeof(audio->mix_buffer));
 	for (size_t i = 0; i < N_ELEM(audio->al.buffers); i++) {
@@ -97,6 +105,7 @@ void gbcc_audio_initialise(struct gbcc *gbc)
 void gbcc_audio_destroy(struct gbcc *gbc) {
 	alDeleteSources(1, &gbc->audio.al.source);
 	alDeleteBuffers(N_ELEM(gbc->audio.al.buffers), gbc->audio.al.buffers);
+	alDeleteBuffers(N_ELEM(gbc->audio.al.vsync_buffers), gbc->audio.al.vsync_buffers);
 	alcDestroyContext(gbc->audio.al.context);
 	alcCloseDevice(gbc->audio.al.device);
 }
@@ -113,13 +122,18 @@ void gbcc_audio_update(struct gbcc *gbc)
 		}
 	}
 	audio->clock++;
+	if (gbc->core.sync_to_video) {
+		audio_vsync_update(gbc);
+		return;
+	}
 	if (audio->clock - audio->sample_clock >= CLOCKS_PER_SAMPLE * mult) {
 		if (audio->index == GBCC_AUDIO_BUFSIZE) {
 			ALint processed = 0;
+			alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
 			while (!processed) {
-				alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
 				const struct timespec time = {.tv_sec = 0, .tv_nsec = 100000};
 				nanosleep(&time, NULL);
+				alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
 			}
 			ALuint buffer;
 			alSourceUnqueueBuffers(audio->al.source, 1, &buffer);
@@ -149,6 +163,50 @@ void gbcc_audio_update(struct gbcc *gbc)
 		audio->mix_buffer[audio->index] *= (1 + gbc->core.apu.left_vol);
 		audio->mix_buffer[audio->index + 1] *= (1 + gbc->core.apu.right_vol);
 		audio->index += 2;
+	}
+}
+
+void audio_vsync_update(struct gbcc *gbc)
+{
+	struct gbcc_audio *audio = &gbc->audio;
+	clock_gettime(CLOCK_REALTIME, &audio->cur_time);
+	if (audio->clock - audio->sample_clock >= CLOCKS_PER_SAMPLE && audio->index < GBCC_AUDIO_BUFSIZE) {
+		audio->sample_clock = audio->clock;
+		clock_gettime(CLOCK_REALTIME, &audio->t_buffer[audio->index / 2]);
+		audio->mix_buffer[audio->index] = 0;
+		audio->mix_buffer[audio->index + 1] = 0;
+		ch1_update(gbc);
+		ch2_update(gbc);
+		ch3_update(gbc);
+		ch4_update(gbc);
+		audio->mix_buffer[audio->index] *= (1 + gbc->core.apu.left_vol);
+		audio->mix_buffer[audio->index + 1] *= (1 + gbc->core.apu.right_vol);
+		audio->index += 2;
+	}
+	if (audio->index > GBCC_AUDIO_BUFSIZE * 0.9) {
+		ALint processed = 0;
+		alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
+		if (!processed) {
+			return;
+		}
+		ALuint buffer;
+		alSourceUnqueueBuffers(audio->al.source, 1, &buffer);
+		gbcc_check_openal_error("Failed to unqueue buffer.\n");
+		alBufferData(buffer, AL_FORMAT_STEREO16, audio->mix_buffer, audio->index * sizeof(audio->mix_buffer[0]), SAMPLE_RATE);
+		gbcc_check_openal_error("Failed to fill buffer.\n");
+		alSourceQueueBuffers(audio->al.source, 1, &buffer);
+		gbcc_check_openal_error("Failed to queue buffer.\n");
+		audio->index = 0;
+		ALint state;
+		alGetSourcei(audio->al.source, AL_SOURCE_STATE, &state);
+		gbcc_check_openal_error("Failed to get source state.\n");
+		if (state == AL_STOPPED) {
+			clock_gettime(CLOCK_REALTIME, &gbc->core.apu.start_time);
+			gbc->core.apu.sample = 0;
+			alSourcePlay(audio->al.source);
+			gbcc_check_openal_error("Failed to resume audio playback.\n");
+		}
+		audio->start_time = audio->cur_time;
 	}
 }
 

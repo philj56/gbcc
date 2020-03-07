@@ -224,13 +224,19 @@ void gbcc_window_update(struct gbcc *gbc)
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
-	uint32_t *screen = gbc->core.ppu.screen.sdl;
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
 	if (win->frame_blending) {
-		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
+		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
 	}
-	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
+	memcpy(win->buffer, gbc->core.ppu.screen.sdl, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
+	{
+		int val = 0;
+		sem_getvalue(&gbc->core.ppu.vsync_semaphore, &val);
+		if (!val) {
+			sem_post(&gbc->core.ppu.vsync_semaphore);
+		}
+	}
 
 	if (gbc->menu.show) {
 		uint32_t tw = win->font.tile_width;
@@ -259,7 +265,7 @@ void gbcc_window_update(struct gbcc *gbc)
 	}
 
 	if (!win->frame_blending) {
-		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
+		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
 	}
 
 	/* First pass - render the gbc screen to the framebuffer */

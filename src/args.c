@@ -106,7 +106,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				usage();
 				return false;
 			case 'i':
-				gbc->interlace = true;
+				gbc->core.interlace = true;
 				break;
 			case 'p':
 				gbc->core.ppu.palette = gbcc_get_palette(optarg);
@@ -120,7 +120,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbc->core.turbo_speed = strtod(optarg, NULL);
 				break;
 			case 'v':
-				/* TODO */
+				gbc->core.sync_to_video = true;
 				break;
 			case 'V':
 				gbc->window.vram_display = true;

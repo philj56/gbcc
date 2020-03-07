@@ -167,6 +167,8 @@
 #define GBC_SCREEN_WIDTH 160	/* Screen width in pixels */
 #define GBC_SCREEN_HEIGHT 144	/* Screen height in pixels */
 #define GBC_SCREEN_SIZE (GBC_SCREEN_WIDTH * GBC_SCREEN_HEIGHT)	/* Total number of pixels */
+#define GBC_FRAME_CLOCKS 70224	/* CPU clocks per frame */
+#define GBC_FRAME_PERIOD 16742706	/* Frame period in ns */
 
 /* Miscellaneous */
 #define GBC_LCD_MODE_PERIOD 76 /* How long one "state unit" is in clocks */
