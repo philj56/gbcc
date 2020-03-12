@@ -21,7 +21,13 @@
 #include <stdint.h>
 #include <time.h>
 
+#ifdef __ANDROID__
+#define GBCC_SAMPLE_RATE 44100
+#define GBCC_AUDIO_BUFSIZE_SAMPLES 1024
+#else
+#define GBCC_SAMPLE_RATE 96000
 #define GBCC_AUDIO_BUFSIZE_SAMPLES 2048
+#endif
 #define GBCC_AUDIO_BUFSIZE (GBCC_AUDIO_BUFSIZE_SAMPLES*2) /* samples * channels */
 #define GBCC_AUDIO_FMT uint16_t
 

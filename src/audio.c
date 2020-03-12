@@ -28,8 +28,7 @@
 #include <time.h>
 
 #define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F / 0x10u)
-#define SAMPLE_RATE 96000
-#define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
+#define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / GBCC_SAMPLE_RATE)
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -90,7 +89,7 @@ void gbcc_audio_initialise(struct gbcc *gbc)
 	clock_gettime(CLOCK_REALTIME, &audio->start_time);
 	memset(audio->mix_buffer, 0, sizeof(audio->mix_buffer));
 	for (size_t i = 0; i < N_ELEM(audio->al.buffers); i++) {
-		alBufferData(audio->al.buffers[i], AL_FORMAT_STEREO16, audio->mix_buffer, sizeof(audio->mix_buffer), SAMPLE_RATE);
+		alBufferData(audio->al.buffers[i], AL_FORMAT_STEREO16, audio->mix_buffer, sizeof(audio->mix_buffer), GBCC_SAMPLE_RATE);
 	}
 	alSourceQueueBuffers(audio->al.source, N_ELEM(audio->al.buffers), audio->al.buffers);
 	gbcc_check_openal_error("Failed to queue buffers.\n");
@@ -132,7 +131,7 @@ void gbcc_audio_update(struct gbcc *gbc)
 			ALuint buffer;
 			alSourceUnqueueBuffers(audio->al.source, 1, &buffer);
 			gbcc_check_openal_error("Failed to unqueue buffer.\n");
-			alBufferData(buffer, AL_FORMAT_STEREO16, audio->mix_buffer, audio->index * sizeof(audio->mix_buffer[0]), SAMPLE_RATE);
+			alBufferData(buffer, AL_FORMAT_STEREO16, audio->mix_buffer, audio->index * sizeof(audio->mix_buffer[0]), GBCC_SAMPLE_RATE);
 			gbcc_check_openal_error("Failed to fill buffer.\n");
 			alSourceQueueBuffers(audio->al.source, 1, &buffer);
 			gbcc_check_openal_error("Failed to queue buffer.\n");
@@ -141,6 +140,8 @@ void gbcc_audio_update(struct gbcc *gbc)
 			alGetSourcei(audio->al.source, AL_SOURCE_STATE, &state);
 			gbcc_check_openal_error("Failed to get source state.\n");
 			if (state == AL_STOPPED) {
+				clock_gettime(CLOCK_REALTIME, &gbc->core.apu.start_time);
+				gbc->core.apu.sample = 0;
 				alSourcePlay(audio->al.source);
 				gbcc_check_openal_error("Failed to resume audio playback.\n");
 			}

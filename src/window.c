@@ -218,6 +218,9 @@ void gbcc_window_clear()
 void gbcc_window_update(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!gbc->menu.show) {
+		update_timers(gbc);
+	}
 	GLint read_framebuffer = 0;
 	GLint draw_framebuffer = 0;
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
@@ -244,7 +247,6 @@ void gbcc_window_update(struct gbcc *gbc)
 		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 2 + 1);
 		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 3 + 1);
 	} else {
-		update_timers(gbc);
 		if (win->fps.show && !screenshot) {
 			char fps_text[16];
 			snprintf(fps_text, 16, " FPS: %.0f ", win->fps.fps);
@@ -460,11 +462,10 @@ void update_timers(struct gbcc *gbc)
 	struct timespec cur_time;
 	clock_gettime(CLOCK_REALTIME, &cur_time);
 	double dt = gbcc_time_diff(&cur_time, &fps->last_time);
+	dt /= GBC_FRAME_PERIOD;
 	const double alpha = 0.001;
-	if (dt < 1.1 * GBC_FRAME_PERIOD && dt > 0.9 * GBC_FRAME_PERIOD) {
-		gbc->audio.scale =
-			alpha * (double)dt / (double)(GBC_FRAME_PERIOD)
-			+ (1 - alpha) * gbc->audio.scale;
+	if (dt < 1.1 && dt > 0.9) {
+		gbc->audio.scale = alpha * dt + (1 - alpha) * gbc->audio.scale;
 	}
 
 	/* Update FPS counter */
