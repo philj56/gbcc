@@ -14,7 +14,6 @@
 #else
 #include <epoxy/gl.h>
 #endif
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,7 +31,7 @@
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
 static void render_box(struct gbcc_window *win, uint8_t x, uint8_t y);
-static void update_text(struct gbcc *gbc);
+static void update_timers(struct gbcc *gbc);
 
 void gbcc_window_initialise(struct gbcc *gbc)
 {
@@ -224,13 +223,19 @@ void gbcc_window_update(struct gbcc *gbc)
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
-	uint32_t *screen = gbc->core.ppu.screen.sdl;
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
 	if (win->frame_blending) {
-		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
+		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
 	}
-	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
+	memcpy(win->buffer, gbc->core.ppu.screen.sdl, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
+	{
+		int val = 0;
+		sem_getvalue(&gbc->core.ppu.vsync_semaphore, &val);
+		if (!val) {
+			sem_post(&gbc->core.ppu.vsync_semaphore);
+		}
+	}
 
 	if (gbc->menu.show) {
 		uint32_t tw = win->font.tile_width;
@@ -239,7 +244,7 @@ void gbcc_window_update(struct gbcc *gbc)
 		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 2 + 1);
 		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 3 + 1);
 	} else {
-		update_text(gbc);
+		update_timers(gbc);
 		if (win->fps.show && !screenshot) {
 			char fps_text[16];
 			snprintf(fps_text, 16, " FPS: %.0f ", win->fps.fps);
@@ -259,7 +264,7 @@ void gbcc_window_update(struct gbcc *gbc)
 	}
 
 	if (!win->frame_blending) {
-		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
+		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
 	}
 
 	/* First pass - render the gbc screen to the framebuffer */
@@ -448,13 +453,19 @@ void render_box(struct gbcc_window *win, uint8_t x, uint8_t y)
 	}
 }
 
-void update_text(struct gbcc *gbc)
+void update_timers(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
 	struct fps_counter *fps = &win->fps;
 	struct timespec cur_time;
 	clock_gettime(CLOCK_REALTIME, &cur_time);
 	double dt = gbcc_time_diff(&cur_time, &fps->last_time);
+	const double alpha = 0.001;
+	if (dt < 1.1 * GBC_FRAME_PERIOD && dt > 0.9 * GBC_FRAME_PERIOD) {
+		gbc->audio.scale =
+			alpha * (double)dt / (double)(GBC_FRAME_PERIOD)
+			+ (1 - alpha) * gbc->audio.scale;
+	}
 
 	/* Update FPS counter */
 	fps->last_time = cur_time;

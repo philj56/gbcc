@@ -3,6 +3,7 @@
 
 #include "constants.h"
 #include "palettes.h"
+#include <semaphore.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -44,6 +45,7 @@ struct ppu {
 		uint32_t *gbc;
 		uint32_t *sdl;
 	} screen;
+	sem_t vsync_semaphore;
 
 	/* Copies of IOREG data */
 	uint8_t scy;

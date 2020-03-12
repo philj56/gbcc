@@ -17,6 +17,7 @@
 #include "nelem.h"
 #include "palettes.h"
 #include "save.h"
+#include <semaphore.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,6 +63,7 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 	gbc->ppu.screen.buffer_1 = calloc(GBC_SCREEN_SIZE, sizeof(uint32_t));
 	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
 	gbc->ppu.screen.sdl = gbc->ppu.screen.buffer_1;
+	sem_init(&gbc->ppu.vsync_semaphore, 0, 0);
 	load_rom(gbc, filename);
 	parse_header(gbc);
 	init_mmap(gbc);
@@ -85,6 +87,7 @@ void gbcc_free(struct gbcc_core *gbc)
 	if (!gbc->initialised) {
 		return;
 	}
+	sem_destroy(&gbc->ppu.vsync_semaphore);
 	free(gbc->cart.rom);
 	if (gbc->cart.ram_size > 0) {
 		free(gbc->cart.ram);

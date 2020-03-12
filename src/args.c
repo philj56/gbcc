@@ -27,12 +27,12 @@ static void usage()
 	       "  -f, --fractional      Enable fractional scaling.\n"
 	       "  -F, --frame-blending  Enable simple frame blending.\n"
 	       "  -h, --help            Print this message and exit.\n"
-	       "  -i, --interlace       Enable interlacing (experimental).\n"
+	       "  -i, --interlace       Enable interlacing.\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
 	       "  -s, --shader=NAME     Select the initial shader to use.\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
 	       "                        (0 = unlimited).\n"
-	       "  -v, --vsync           Enable VSync (currently ineffective).\n"
+	       "  -v, --vsync           Enable VSync (experimental).\n"
 	       "  -V, --vram-window     Display a window with all vram tile data.\n"
 	      );
 }
@@ -106,7 +106,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				usage();
 				return false;
 			case 'i':
-				gbc->interlace = true;
+				gbc->core.interlace = true;
 				break;
 			case 'p':
 				gbc->core.ppu.palette = gbcc_get_palette(optarg);
@@ -120,7 +120,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbc->core.turbo_speed = strtod(optarg, NULL);
 				break;
 			case 'v':
-				/* TODO */
+				gbc->core.sync_to_video = true;
 				break;
 			case 'V':
 				gbc->window.vram_display = true;

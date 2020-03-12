@@ -55,8 +55,8 @@ void gbcc_menu_update(struct gbcc *gbc)
 			"%cLink cable:  %-18s"
 			"%cShader:      %-18s"
 			"%cTurbo mult:  %-18s"
-			"                                "
-			"                                "
+			"%cVsync:       %-18s"
+			"%cInterlacing: %-18s"
 			"                                ",
 			selected(menu, GBCC_MENU_ENTRY_SAVE_STATE),
 			selected(menu, GBCC_MENU_ENTRY_LOAD_STATE),
@@ -69,7 +69,11 @@ void gbcc_menu_update(struct gbcc *gbc)
 			selected(menu, GBCC_MENU_ENTRY_SHADER),
 			gbc->window.gl.shaders[gbc->window.gl.cur_shader].name,
 			selected(menu, GBCC_MENU_ENTRY_TURBO_MULT),
-			turbo_text
+			turbo_text,
+			selected(menu, GBCC_MENU_ENTRY_VSYNC),
+			bool2str(gbc->core.sync_to_video),
+			selected(menu, GBCC_MENU_ENTRY_INTERLACING),
+			bool2str(gbc->core.interlace)
 	);
 }
 
@@ -80,11 +84,13 @@ void gbcc_menu_process_key(struct gbcc *gbc, enum gbcc_key key)
 	switch (key) {
 		case GBCC_KEY_UP:
 			menu->selection--;
-			menu->selection = modulo(menu->selection, 7);
+			menu->selection = modulo(menu->selection,
+					GBCC_MENU_ENTRY_NUM_ENTRIES);
 			break;
 		case GBCC_KEY_DOWN:
 			menu->selection++;
-			menu->selection = modulo(menu->selection, 7);
+			menu->selection = modulo(menu->selection,
+					GBCC_MENU_ENTRY_NUM_ENTRIES);
 			break;
 		case GBCC_KEY_LEFT:
 		case GBCC_KEY_RIGHT:
@@ -160,6 +166,15 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			} else {
 				turbo_index(gbc, true);
 			}
+			break;
+		case GBCC_MENU_ENTRY_VSYNC:
+			gbc->core.sync_to_video ^= 1;
+			break;
+		case GBCC_MENU_ENTRY_INTERLACING:
+			gbc->core.interlace ^= 1;
+			break;
+		case GBCC_MENU_ENTRY_NUM_ENTRIES:
+		default:
 			break;
 	}
 }

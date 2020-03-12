@@ -14,6 +14,7 @@
 #include "debug.h"
 #include "memory.h"
 #include "nelem.h"
+#include "time_diff.h"
 
 #ifdef __APPLE__
 #include <OpenAL/al.h>
@@ -30,6 +31,8 @@
 #define SAMPLE_RATE 96000
 #define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / SAMPLE_RATE)
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 static void ch1_update(struct gbcc *gbc);
 static void ch2_update(struct gbcc *gbc);
 static void ch3_update(struct gbcc *gbc);
@@ -38,6 +41,7 @@ static void ch4_update(struct gbcc *gbc);
 void gbcc_audio_initialise(struct gbcc *gbc)
 {
 	struct gbcc_audio *audio = &gbc->audio;
+	audio->scale = 0.9955;
 	audio->al.device = alcOpenDevice(NULL);
 	if (!audio->al.device) {
 		gbcc_log_error("Failed to open audio device.\n");
@@ -113,13 +117,17 @@ void gbcc_audio_update(struct gbcc *gbc)
 		}
 	}
 	audio->clock++;
+	if (gbc->core.sync_to_video) {
+		mult /= audio->scale;
+	}
 	if (audio->clock - audio->sample_clock >= CLOCKS_PER_SAMPLE * mult) {
-		if (audio->index == GBCC_AUDIO_BUFSIZE) {
+		if (audio->index >= GBCC_AUDIO_BUFSIZE) {
 			ALint processed = 0;
+			alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
 			while (!processed) {
-				alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
 				const struct timespec time = {.tv_sec = 0, .tv_nsec = 100000};
 				nanosleep(&time, NULL);
+				alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
 			}
 			ALuint buffer;
 			alSourceUnqueueBuffers(audio->al.source, 1, &buffer);
@@ -133,8 +141,6 @@ void gbcc_audio_update(struct gbcc *gbc)
 			alGetSourcei(audio->al.source, AL_SOURCE_STATE, &state);
 			gbcc_check_openal_error("Failed to get source state.\n");
 			if (state == AL_STOPPED) {
-				clock_gettime(CLOCK_REALTIME, &gbc->core.apu.start_time);
-				gbc->core.apu.sample = 0;
 				alSourcePlay(audio->al.source);
 				gbcc_check_openal_error("Failed to resume audio playback.\n");
 			}

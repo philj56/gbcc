@@ -39,6 +39,8 @@ struct gbcc_gtk {
 		GtkWidget *frame_blending;
 		GtkWidget *vram_display;
 		GtkWidget *turbo_speed;
+		GtkWidget *vsync;
+		GtkWidget *interlacing;
 		GtkCheckMenuItem *turbo_custom;
 		GtkSpinButton *custom_turbo_speed;
 		struct {

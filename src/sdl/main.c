@@ -22,11 +22,12 @@
 #include "../time_diff.h"
 #include "sdl.h"
 #include "vram_window.h"
+#include <pthread.h>
+#include <semaphore.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -70,19 +71,11 @@ int main(int argc, char **argv)
 	pthread_create(&emu_thread, NULL, gbcc_emulation_loop, gbc);
 	pthread_setname_np(emu_thread, "EmulationThread");
 
-	struct timespec t1;
-	struct timespec t2;
-	int time_to_sleep;
 	while (!gbc->quit && !force_quit) {
-		clock_gettime(CLOCK_REALTIME, &t2);
 		gbcc_sdl_update(&sdl);
 		gbcc_sdl_process_input(&sdl);
-		clock_gettime(CLOCK_REALTIME, &t1);
-		time_to_sleep = 8 - (int)(gbcc_time_diff(&t1, &t2) / 1e6);
-		if (time_to_sleep > 0 && time_to_sleep < 16) {
-			SDL_Delay(time_to_sleep);
-		}
 	}
+	sem_post(&gbc->core.ppu.vsync_semaphore);
 	if (force_quit) {
 		gbcc_audio_destroy(gbc);
 		exit(EXIT_FAILURE);

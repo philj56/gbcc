@@ -141,7 +141,7 @@ void parse_option(struct gbcc *gbc, const char *option, const char *value)
 	} else if (strcmp(opt, "fractional") == 0) {
 		gbc->window.fractional_scaling = strtol(val, NULL, 0);
 	} else if (strcmp(opt, "interlace") == 0) {
-		gbc->interlace = strtol(val, NULL, 0);
+		gbc->core.interlace = strtol(val, NULL, 0);
 	} else if (strcmp(opt, "palette") == 0) {
 		gbc->core.ppu.palette = gbcc_get_palette(val);
 	} else if (strcmp(opt, "shader") == 0) {

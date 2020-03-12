@@ -13,6 +13,7 @@
 #include "bit_utils.h"
 #include "debug.h"
 #include "memory.h"
+#include "nelem.h"
 #include "time_diff.h"
 #include <stdint.h>
 #include <time.h>
@@ -36,7 +37,6 @@ static bool timer_clock(struct timer *timer);
 static void timer_reset(struct timer *timer);
 static bool duty_clock(struct duty *duty);
 static void envelope_clock(struct envelope *envelope);
-static void time_sync(struct gbcc_core *gbc);
 static void ch1_trigger(struct gbcc_core *gbc);
 static void ch2_trigger(struct gbcc_core *gbc);
 static void ch3_trigger(struct gbcc_core *gbc);
@@ -46,18 +46,11 @@ void gbcc_apu_init(struct gbcc_core *gbc)
 {
 	gbc->apu = (struct apu){0};
 	gbc->apu.wave.addr = WAVE_START;
-	clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 }
 
 void gbcc_apu_clock(struct gbcc_core *gbc)
 {
 	struct apu *apu = &gbc->apu;
-	apu->sync_clock++;
-	if (apu->sync_clock == CLOCKS_PER_SYNC) {
-		apu->sync_clock = 0;
-		apu->sample++;
-		time_sync(gbc);
-	}
 	if (apu->disabled) {
 		return;
 	}
@@ -210,36 +203,6 @@ void gbcc_apu_sequencer_clock(struct gbcc_core *gbc)
 
 	gbc->apu.sequencer_counter++;
 	gbc->apu.sequencer_counter &= 0x7u;
-}
-
-void time_sync(struct gbcc_core *gbc)
-{
-	clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
-	uint64_t diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
-	if (diff > SLEEP_DETECT + (SECOND * gbc->apu.sample) / SYNC_FREQ) {
-		gbc->apu.start_time = gbc->apu.cur_time;
-		gbc->apu.sample = 0;
-		return;
-	}
-	double mult = 1;
-	if (gbc->keys.turbo) {
-		mult = gbc->turbo_speed;
-	}
-	if (mult == 0) {
-		gbc->apu.start_time = gbc->apu.cur_time;
-		gbc->apu.sample = 0;
-		return;
-	}
-	while (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult)) {
-		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
-		nanosleep(&time, NULL);
-		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
-		diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
-	}
-	if (gbc->apu.sample > SYNC_RESET_CLOCKS) {
-		gbc->apu.sample = 0;
-		gbc->apu.start_time = gbc->apu.cur_time;
-	}
 }
 
 void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)

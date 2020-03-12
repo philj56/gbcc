@@ -11,9 +11,9 @@ gbcc - Game Boy Color emulator written in C
 
 # DESCRIPTION
 
-gbcc is a Game Boy Color emulator, created mostly as an exercise in emulator
-development and writing a large project in C. Development is ongoing (though
-slow).
+gbcc is a Game Boy & Game Boy Color emulator, created mostly as an exercise in
+emulator development and writing a large project in C. Development is ongoing
+(though slow).
 
 # OPTIONS
 
@@ -40,7 +40,9 @@ slow).
 	Show help message and exit.
 
 *-i, --interlace*
-	Enable interlaced mode (experimental).
+	Enable interlaced mode. The Game Boy draws every other line darker, leading
+	to interesting visual effects in some games. This will only take effect if
+	Vsync is also enabled, and use without frame-blending *will* look terrible.
 
 *-p, --palette*=_palette_
 	Select the color palette for use in DMG mode.
@@ -49,10 +51,16 @@ slow).
 	Select the shader to use on startup.
 
 *-t, --turbo*=_speed_
-	Set a fractional speed limit for turbo mode. Defaults to 0 (unlimited).
+	Set a fractional speed limit for turbo mode. Defaults to 0 (unlimited). Audio
+	will be disabled while turboing, unless a speed limit is set.
 
 *-v, --vsync*
-	Enable VSync.
+	Enable Vsync, experimental. By default, gbcc will sync to audio, playing back
+	at real Game Boy speed. This leads to slight visual flickering, which is only
+	noticeable if playing a game that makes use of transparency. Enabling Vsync
+	will cause gbcc to sync to video instead, playing back slightly faster than a
+	real Game Boy (by about 0.5%) and eliminating visual flickering. Required in
+	order to enable interlacing.
 
 *-V, --vram-window*
 	Display a window containing VRAM tile data.
@@ -86,34 +94,40 @@ x
 s
 	Filtered & scaled screenshot
 
-S
+<Left Shift> + S
 	Raw screenshot
 
 p
 	Pause emulation
 
-P
-	Connect the Gameboy Printer, printing to stdout.
+<Left Shift> + P
+	Connect the Gameboy Printer, printing to stdout
 
 f
 	Toggle FPS counter
+
+<Left Shift> + F
+	Toggle frame blending
 
 l
 	Connect the link cable port to itself. This makes the GameBoy act as if
 	it is talking to an exact copy of itself, and enables e.g. trading
 	(and battling!) with oneself in Pokémon.
 
-A
+<Left Shift> + A
 	Toggle autosave
 
 b
 	Toggle background playback
 
 v
-	Cycle through available shaders
+	Toggle Vsync
 
-V
+<Left Shift> + V
 	Toggle VRAM window display
+
+o
+	Cycle through available shaders
 
 1
 	Toggle background display
@@ -127,13 +141,13 @@ V
 <F1-9>
 	Load savestate 1-9
 
-<Left Shift + F1-9>
+<Left Shift> + <F1-9>
 	Save savestate 1-9
 
 <Numpad 2,4,6,8>
 	Accelerometer control (MBC7 games only)
 
-<Left Shift + Numpad 2,4,6,8>
+<Left Shift> + <Numpad 2,4,6,8>
 	Strong accelerometer control (MBC7 games only)
 
 # FILES

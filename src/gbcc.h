@@ -26,7 +26,6 @@ struct gbcc {
 	
 	bool quit;
 	bool pause;
-	bool interlace;
 	int8_t save_state;
 	int8_t load_state;
 	bool background_play;

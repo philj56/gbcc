@@ -15,7 +15,6 @@
 #include "../vram_window.h"
 #include "sdl.h"
 #include "vram_window.h"
-#include <math.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>

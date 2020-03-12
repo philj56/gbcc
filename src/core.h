@@ -100,10 +100,12 @@ struct gbcc_core {
 
 	/* Settings */
 	float turbo_speed;
+	bool sync_to_video;
 	bool hide_background;
 	bool hide_window;
 	bool hide_sprites;
 	bool link_cable_loop;
+	bool interlace;
 	bool initialised;
 };
 

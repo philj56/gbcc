@@ -116,6 +116,22 @@
 				<property name="use-underline">True</property>
 			</object>
 		</child>
+		<child>
+			<object class="GtkCheckMenuItem" id="vsync">
+				<property name="can_focus">False</property>
+				<property name="label">_Vsync</property>
+				<property name="use-underline">True</property>
+				<signal name="toggled" handler="toggle_vsync"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkCheckMenuItem" id="interlacing">
+				<property name="can_focus">False</property>
+				<property name="label">_Interlacing</property>
+				<property name="use-underline">True</property>
+				<signal name="toggled" handler="toggle_interlacing"/>
+			</object>
+		</child>
 	</object>
 
 	<object class="GtkMenu" id="shader_menu">

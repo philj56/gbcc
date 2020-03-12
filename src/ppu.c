@@ -5,7 +5,6 @@
 #include "memory.h"
 #include "palettes.h"
 #include "ppu.h"
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -206,7 +205,6 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		ppu->ly = 0;
 	}
 	if (ppu->ly == 1 && get_video_mode(stat) == GBC_LCD_MODE_VBLANK) {
-		ppu->frame++;
 		ppu->ly = 0;
 		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_READ);
 	}
@@ -218,9 +216,15 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		gbcc_memory_set_bit(gbc, IF, 0, true);
 		stat = set_video_mode(stat, GBC_LCD_MODE_VBLANK);
 
+		if (gbc->sync_to_video && !gbc->keys.turbo) {
+			sem_wait(&ppu->vsync_semaphore);
+		}
+
 		uint32_t *tmp = ppu->screen.gbc;
 		ppu->screen.gbc = ppu->screen.sdl;
 		ppu->screen.sdl = tmp;
+
+		ppu->frame++;
 
 		/*
 		 * Apparently, the window "remembers" how many lines it drew
@@ -444,6 +448,34 @@ void composite_line(struct gbcc_core *gbc)
 				continue;
 			}
 			line[x] = ppu->sprite_line.colour[x];
+		}
+	}
+	if (gbc->interlace && gbc->sync_to_video) {
+		if (!gbc->keys.turbo && ly % 2 == ppu->frame % 2) {
+			for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
+				uint32_t px = line[x];
+				uint8_t r = (px & 0xFF000000u) >> 25u;
+				uint8_t g = (px & 0x00FF0000u) >> 17u;
+				uint8_t b = (px & 0x0000FF00u) >> 9u;
+				line[x] = (r << 24u) | (g << 16u) | (b << 8u) | 0xFFu;
+			}
+		} else if (gbc->keys.turbo) {
+			/*
+			 * Interlacing necessarily darkens the screen by about
+			 * 25%. To stop the brightness changing when turboing
+			 * with interlacing enabled, here we darken the entire
+			 * screen to match that when not turboing.
+			 */
+			for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
+				uint32_t px = line[x];
+				uint8_t r = (px & 0xFF000000u) >> 25u;
+				uint8_t g = (px & 0x00FF0000u) >> 17u;
+				uint8_t b = (px & 0x0000FF00u) >> 9u;
+				r += r / 2;
+				g += g / 2;
+				b += b / 2;
+				line[x] = (r << 24u) | (g << 16u) | (b << 8u) | 0xFFu;
+			}
 		}
 	}
 }

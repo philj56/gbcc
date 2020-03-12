@@ -52,6 +52,8 @@ static void toggle_autosave(GtkCheckMenuItem *widget, void *data);
 static void toggle_background_playback(GtkCheckMenuItem *widget, void *data);
 static void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data);
 static void toggle_frame_blending(GtkCheckMenuItem *widget, void *data);
+static void toggle_vsync(GtkCheckMenuItem *widget, void *data);
+static void toggle_interlacing(GtkCheckMenuItem *widget, void *data);
 static void turbo_speed(GtkCheckMenuItem *widget, void *data);
 static void show_turbo_dialog(GtkWidget *widget, void *data);
 static void select_turbo_text(GtkWidget *widget, void *data);
@@ -145,6 +147,8 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk->menu.turbo_speed = GTK_WIDGET(gtk_builder_get_object(builder, "turbo_speed"));
 	gtk->menu.turbo_custom = GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "turbo_custom"));
 	gtk->menu.custom_turbo_speed = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "turbo_speed_val"));
+	gtk->menu.vsync = GTK_WIDGET(gtk_builder_get_object(builder, "vsync"));
+	gtk->menu.interlacing = GTK_WIDGET(gtk_builder_get_object(builder, "interlacing"));
 	gtk_spin_button_set_range(gtk->menu.custom_turbo_speed, 0, 100);
 	gtk_spin_button_set_increments(gtk->menu.custom_turbo_speed, 0.1, 1);
 	g_signal_connect_swapped(gtk->turbo_dialog, "response", G_CALLBACK(gtk_widget_hide), gtk->turbo_dialog);
@@ -175,6 +179,8 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_builder_add_callback_symbol(builder, "toggle_background_playback", G_CALLBACK(toggle_background_playback));
 	gtk_builder_add_callback_symbol(builder, "toggle_fractional_scaling", G_CALLBACK(toggle_fractional_scaling));
 	gtk_builder_add_callback_symbol(builder, "toggle_frame_blending", G_CALLBACK(toggle_frame_blending));
+	gtk_builder_add_callback_symbol(builder, "toggle_vsync", G_CALLBACK(toggle_vsync));
+	gtk_builder_add_callback_symbol(builder, "toggle_interlacing", G_CALLBACK(toggle_interlacing));
 	gtk_builder_add_callback_symbol(builder, "turbo_speed", G_CALLBACK(turbo_speed));
 	gtk_builder_add_callback_symbol(builder, "show_turbo_dialog", G_CALLBACK(show_turbo_dialog));
 	gtk_builder_add_callback_symbol(builder, "select_turbo_text", G_CALLBACK(select_turbo_text));
@@ -421,12 +427,16 @@ void check_settings_options(GtkWidget *widget, void *data)
 	gtk_widget_set_sensitive(gtk->menu.fractional_scaling, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.frame_blending, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.turbo_speed, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.vsync, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.interlacing, gbc->core.initialised);
 
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.autosave), gbc->autosave);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.background_playback), gbc->background_play);
 	if (gbc->core.initialised) {
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.fractional_scaling), gbc->window.fractional_scaling);
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.frame_blending), gbc->window.frame_blending);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.vsync), gbc->core.sync_to_video);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.interlacing), gbc->core.interlace);
 	}
 }
 
@@ -518,6 +528,18 @@ void toggle_frame_blending(GtkCheckMenuItem *widget, void *data)
 	gtk->gbc.window.frame_blending = gtk_check_menu_item_get_active(widget);
 }
 
+void toggle_vsync(GtkCheckMenuItem *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk->gbc.core.sync_to_video = gtk_check_menu_item_get_active(widget);
+}
+
+void toggle_interlacing(GtkCheckMenuItem *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk->gbc.core.interlace = gtk_check_menu_item_get_active(widget);
+}
+
 void turbo_speed(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
@@ -581,6 +603,7 @@ void stop_emulation_thread(struct gbcc_gtk *gtk)
 		return;
 	}
 	gbc->quit = true;
+	sem_post(&gbc->core.ppu.vsync_semaphore);
 	pthread_join(gtk->emulation_thread, NULL);
 	gbc->save_state = 0;
 	gbcc_save_state(gbc);
