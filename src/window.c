@@ -482,7 +482,7 @@ void update_timers(struct gbcc *gbc)
 	df += ly / 154.0;
 	fps->last_frame = gbc->core.ppu.frame;
 	fps->last_ly = tmp;
-	fps->previous[fps->idx] = df / (dt / 1e9);
+	fps->previous[fps->idx] = df / (dt * GBC_FRAME_PERIOD / 1e9);
 	fps->idx++;
 	fps->idx %= N_ELEM(fps->previous);
 	float avg = 0;
