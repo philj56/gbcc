@@ -303,7 +303,8 @@ void draw_window_pixel(struct gbcc_core *gbc)
 	if (ppu->x + 7 < ppu->wx) {
 		return;
 	}
-	if (ppu->x + 7 == ppu->wx) {
+	/* Should only be true the first window pixel of each line */
+	if (ppu->x + MIN(7, ppu->wx) == ppu->wx) {
 		ppu->window_ly++;
 	}
 	if (t->x == 0) {
