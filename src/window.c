@@ -393,7 +393,7 @@ void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bo
 		strncpy(win->msg.text, msg, MSG_BUF_SIZE);
 	}
 	win->msg.lines = 1 + strlen(win->msg.text) / (GBC_SCREEN_WIDTH / win->font.tile_width);
-	win->msg.time_left = seconds * 1000000000;
+	win->msg.time_left = seconds * SECOND;
 }
 
 void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y)
@@ -493,6 +493,6 @@ void update_timers(struct gbcc *gbc)
 
 	/* Update message timer */
 	if (win->msg.time_left > 0) {
-		win->msg.time_left -= (int64_t)dt;
+		win->msg.time_left -= (int64_t)(dt * GBC_FRAME_PERIOD);
 	}
 }
