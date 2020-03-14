@@ -47,7 +47,6 @@ void gbcc_menu_update(struct gbcc *gbc)
 
 	snprintf(menu->text, menu->width * menu->height + 1,
 			"                                "
-			"                                "
 			"%cSave state:  1 2 3 4 5 6 7 8 9 "
 			"%cLoad state:  1 2 3 4 5 6 7 8 9 "
 			"%cAutosave:    %-18s"
@@ -57,6 +56,7 @@ void gbcc_menu_update(struct gbcc *gbc)
 			"%cTurbo mult:  %-18s"
 			"%cVsync:       %-18s"
 			"%cInterlacing: %-18s"
+			"%cFPS counter: %-18s"
 			"                                ",
 			selected(menu, GBCC_MENU_ENTRY_SAVE_STATE),
 			selected(menu, GBCC_MENU_ENTRY_LOAD_STATE),
@@ -73,7 +73,9 @@ void gbcc_menu_update(struct gbcc *gbc)
 			selected(menu, GBCC_MENU_ENTRY_VSYNC),
 			bool2str(gbc->core.sync_to_video),
 			selected(menu, GBCC_MENU_ENTRY_INTERLACING),
-			bool2str(gbc->core.interlace)
+			bool2str(gbc->core.interlace),
+			selected(menu, GBCC_MENU_ENTRY_FPS_COUNTER),
+			bool2str(gbc->window.fps.show)
 	);
 }
 
@@ -173,8 +175,10 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 		case GBCC_MENU_ENTRY_INTERLACING:
 			gbc->core.interlace ^= 1;
 			break;
+		case GBCC_MENU_ENTRY_FPS_COUNTER:
+			gbc->window.fps.show ^= 1;
+			break;
 		case GBCC_MENU_ENTRY_NUM_ENTRIES:
-		default:
 			break;
 	}
 }
