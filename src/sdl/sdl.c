@@ -337,9 +337,9 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			case 34:
 			case 35:
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 24);
+					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 26);
 				} else {
-					emulator_key = GBCC_KEY_LOAD_STATE_1 + (int8_t)(key - 24);
+					emulator_key = GBCC_KEY_LOAD_STATE_1 + (int8_t)(key - 26);
 				}
 				break;
 			default:
