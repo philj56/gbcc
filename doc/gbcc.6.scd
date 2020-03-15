@@ -41,8 +41,8 @@ emulator development and writing a large project in C. Development is ongoing
 
 *-i, --interlace*
 	Enable interlaced mode. The Game Boy draws every other line darker, leading
-	to interesting visual effects in some games. This will only take effect if
-	Vsync is also enabled, and use without frame-blending *will* look terrible.
+	to interesting visual effects in some games. Using this without
+	frame-blending *will* look terrible.
 
 *-p, --palette*=_palette_
 	Select the color palette for use in DMG mode.
@@ -59,8 +59,7 @@ emulator development and writing a large project in C. Development is ongoing
 	at real Game Boy speed. This leads to slight visual flickering, which is only
 	noticeable if playing a game that makes use of transparency. Enabling Vsync
 	will cause gbcc to sync to video instead, playing back slightly faster than a
-	real Game Boy (by about 0.5%) and eliminating visual flickering. Required in
-	order to enable interlacing.
+	real Game Boy (by about 0.5%) and eliminating visual flickering.
 
 *-V, --vram-window*
 	Display a window containing VRAM tile data.

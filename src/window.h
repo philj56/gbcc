@@ -45,6 +45,7 @@ struct gbcc_window {
 		GLuint ebo;
 		GLuint fbo;
 		GLuint fbo_texture;
+		GLuint last_frame_texture;
 		GLuint rbo;
 		GLuint texture;
 		GLuint lut_texture;

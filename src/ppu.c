@@ -451,34 +451,6 @@ void composite_line(struct gbcc_core *gbc)
 			line[x] = ppu->sprite_line.colour[x];
 		}
 	}
-	if (gbc->interlace && gbc->sync_to_video) {
-		if (!gbc->keys.turbo && ly % 2 == ppu->frame % 2) {
-			for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-				uint32_t px = line[x];
-				uint8_t r = (px & 0xFF000000u) >> 25u;
-				uint8_t g = (px & 0x00FF0000u) >> 17u;
-				uint8_t b = (px & 0x0000FF00u) >> 9u;
-				line[x] = (r << 24u) | (g << 16u) | (b << 8u) | 0xFFu;
-			}
-		} else if (gbc->keys.turbo) {
-			/*
-			 * Interlacing necessarily darkens the screen by about
-			 * 25%. To stop the brightness changing when turboing
-			 * with interlacing enabled, here we darken the entire
-			 * screen to match that when not turboing.
-			 */
-			for (size_t x = 0; x < GBC_SCREEN_WIDTH; x++) {
-				uint32_t px = line[x];
-				uint8_t r = (px & 0xFF000000u) >> 25u;
-				uint8_t g = (px & 0x00FF0000u) >> 17u;
-				uint8_t b = (px & 0x0000FF00u) >> 9u;
-				r += r / 2;
-				g += g / 2;
-				b += b / 2;
-				line[x] = (r << 24u) | (g << 16u) | (b << 8u) | 0xFFu;
-			}
-		}
-	}
 }
 
 uint8_t get_video_mode(uint8_t stat)

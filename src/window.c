@@ -127,6 +127,19 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	/* Copy of framebuffer for frameblending */
+	glGenTextures(1, &win->gl.last_frame_texture);
+	glBindTexture(GL_TEXTURE_2D, win->gl.last_frame_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0 + 2);
+	glBindTexture(GL_TEXTURE_2D, win->gl.last_frame_texture);
+	glActiveTexture(GL_TEXTURE0);
+
 	glGenFramebuffers(1, &win->gl.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, win->gl.fbo_texture, 0);
@@ -151,7 +164,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	 * before post-processing */
 	glGenTextures(1, &win->gl.texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GBC_SCREEN_WIDTH * 2, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
 			GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -228,9 +241,6 @@ void gbcc_window_update(struct gbcc *gbc)
 
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
-	if (win->frame_blending) {
-		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
-	}
 	memcpy(win->buffer, gbc->core.ppu.screen.sdl, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
 	{
 		int val = 0;
@@ -265,28 +275,7 @@ void gbcc_window_update(struct gbcc *gbc)
 				| (tmp & 0xFF000000u) >> 24u;
 	}
 
-	if (!win->frame_blending) {
-		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
-	}
-
-	/* First pass - render the gbc screen to the framebuffer */
-	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
-	glViewport(0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT);
-	glClearColor(0.0, 0.0, 0.0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
-			GL_UNSIGNED_BYTE, (GLvoid *)win->buffer);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, GBC_SCREEN_WIDTH, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
-			GL_UNSIGNED_BYTE, (GLvoid *)win->last_buffer);
-	glUseProgram(win->gl.base_shader);
-	glUniform1i( glGetUniformLocation( win->gl.base_shader, "tex"), 0);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-	/* Second pass - render the framebuffer to the screen */
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
-
+	/* Setup - resize our screen textures if needed */
 	if (win->fractional_scaling) {
 		win->scale = min((double)win->width / GBC_SCREEN_WIDTH, (double)win->height / GBC_SCREEN_HEIGHT);
 	} else {
@@ -296,14 +285,52 @@ void gbcc_window_update(struct gbcc *gbc)
 	int height = win->scale * GBC_SCREEN_HEIGHT;
 	win->x = (win->width - width) / 2;
 	win->y = (win->height - height) / 2;
+
+	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, win->gl.last_frame_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glBindRenderbuffer(GL_RENDERBUFFER, win->gl.rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	/* First pass - render the gbc screen to the framebuffer */
+	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
+	glViewport(0, 0, width, height);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
+			GL_UNSIGNED_BYTE, (GLvoid *)win->buffer);
+	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
+	glUniform1i(glGetUniformLocation(win->gl.shaders[win->gl.cur_shader].program, "tex"), 0);
+	glUniform1i(glGetUniformLocation(win->gl.shaders[win->gl.cur_shader].program, "lut"), 1);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	/* Second pass - render the framebuffer to the screen */
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
 	glViewport(win->x, win->y, width, height);
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
-	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
-	glUniform1i( glGetUniformLocation( win->gl.shaders[win->gl.cur_shader].program, "tex"), 0);
-	glUniform1i( glGetUniformLocation( win->gl.shaders[win->gl.cur_shader].program, "lut"), 1);
+	glUseProgram(win->gl.base_shader);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "tex"), 0);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "last_tex"), 2);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "odd_frame"), gbc->core.ppu.frame & 1);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "interlacing"), gbc->core.interlace);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "frameblending"), gbc->window.frame_blending);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	/* Copy the intermediate frame texture for frameblending next time */
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, win->gl.fbo);
+	glBindTexture(GL_TEXTURE_2D, win->gl.last_frame_texture);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, width, height, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
 
 	if (screenshot) {
 		gbcc_screenshot(gbc);
