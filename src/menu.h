@@ -33,6 +33,7 @@ struct gbcc_menu {
 };
 
 void gbcc_menu_init(struct gbcc *gbc);
+void gbcc_menu_destroy(struct gbcc *gbc);
 void gbcc_menu_update(struct gbcc *gbc);
 void gbcc_menu_process_key(struct gbcc *gbc, enum gbcc_key key);
 

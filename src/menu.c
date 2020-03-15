@@ -17,12 +17,19 @@ void gbcc_menu_init(struct gbcc *gbc)
 {
 	struct gbcc_menu *menu = &gbc->menu;
 
+	menu->show = false;
 	menu->save_state = 1;
 	menu->load_state = 1;
 
 	menu->width = GBC_SCREEN_WIDTH / gbc->window.font.tile_width;
 	menu->height = GBC_SCREEN_HEIGHT / gbc->window.font.tile_height;
 	menu->text = calloc(menu->width * menu->height + 1, 1);
+}
+
+void gbcc_menu_destroy(struct gbcc *gbc)
+{
+	struct gbcc_menu *menu = &gbc->menu;
+	free(menu->text);
 }
 
 void gbcc_menu_update(struct gbcc *gbc)
