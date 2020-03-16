@@ -458,6 +458,9 @@ void process_game_controller(struct gbcc_sdl *sdl)
 		}
 	}
 
+	if (sdl->haptic == NULL) {
+		return;
+	}
 	if (sdl->gbc.core.cart.rumble_state) {
 		if (SDL_HapticRumblePlay(sdl->haptic, 0.1, 100) != 0) {
 			printf("%s\n", SDL_GetError());
