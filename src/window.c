@@ -63,16 +63,16 @@ void gbcc_window_initialise(struct gbcc *gbc)
 			SHADER_PATH "subpixel.frag"
 			);
 
-	win->gl.shaders[2].name = "Nothing";
+	win->gl.shaders[2].name = "Dot Matrix";
 	win->gl.shaders[2].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
-			SHADER_PATH "nothing.frag"
+			SHADER_PATH "dotmatrix.frag"
 			);
 
-	win->gl.shaders[3].name = "Dot Matrix";
+	win->gl.shaders[3].name = "Nothing";
 	win->gl.shaders[3].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
-			SHADER_PATH "dotmatrix.frag"
+			SHADER_PATH "nothing.frag"
 			);
 
 
