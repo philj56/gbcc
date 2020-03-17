@@ -63,6 +63,7 @@ struct gbcc_window {
 	bool raw_screenshot;
 	bool fractional_scaling;
 	bool frame_blending;
+	bool interlacing;
 	bool vram_display;
 	bool initialised;
 };

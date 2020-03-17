@@ -174,11 +174,11 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			}
 			break;
 		case GBCC_KEY_INTERLACE:
-			gbc->core.interlace ^= pressed;
+			gbc->window.interlacing ^= pressed;
 			if (!pressed) {
 				break;
 			}
-			if (gbc->core.interlace) {
+			if (gbc->window.interlacing) {
 				gbcc_window_show_message(gbc, "Interlacing enabled", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Interlacing disabled", 1, true);

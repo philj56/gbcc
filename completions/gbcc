@@ -13,7 +13,7 @@ _gbcc()
         COMPREPLY=()
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
-        opts="--autoresume --autosave --background --config --fractional --frame-blending --help --interlace --palette --shader --turbo --vsync --vram-window"
+        opts="--autoresume --autosave --background --config --fractional --frame-blending --help --interlacing --palette --shader --turbo --vsync --vram-window"
         palettes="blue brown dark-blue dark-brown dark-green green grey invert monochrome orange pastel red yellow"
         shaders="nothing colour\ correct subpixel dot\ matrix"
 

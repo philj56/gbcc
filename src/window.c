@@ -320,7 +320,7 @@ void gbcc_window_update(struct gbcc *gbc)
 	glUniform1i(glGetUniformLocation(win->gl.base_shader, "tex"), 0);
 	glUniform1i(glGetUniformLocation(win->gl.base_shader, "last_tex"), 2);
 	glUniform1i(glGetUniformLocation(win->gl.base_shader, "odd_frame"), gbc->core.ppu.frame & 1);
-	glUniform1i(glGetUniformLocation(win->gl.base_shader, "interlacing"), gbc->core.interlace);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "interlacing"), win->interlacing);
 	glUniform1i(glGetUniformLocation(win->gl.base_shader, "frameblending"), gbc->window.frame_blending);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 

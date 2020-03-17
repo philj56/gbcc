@@ -436,7 +436,7 @@ void check_settings_options(GtkWidget *widget, void *data)
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.fractional_scaling), gbc->window.fractional_scaling);
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.frame_blending), gbc->window.frame_blending);
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.vsync), gbc->core.sync_to_video);
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.interlacing), gbc->core.interlace);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.interlacing), gbc->window.interlacing);
 	}
 }
 
@@ -537,7 +537,7 @@ void toggle_vsync(GtkCheckMenuItem *widget, void *data)
 void toggle_interlacing(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	gtk->gbc.core.interlace = gtk_check_menu_item_get_active(widget);
+	gtk->gbc.window.interlacing = gtk_check_menu_item_get_active(widget);
 }
 
 void turbo_speed(GtkCheckMenuItem *widget, void *data)

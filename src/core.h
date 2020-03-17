@@ -105,7 +105,6 @@ struct gbcc_core {
 	bool hide_window;
 	bool hide_sprites;
 	bool link_cable_loop;
-	bool interlace;
 	bool initialised;
 };
 

@@ -27,7 +27,7 @@ static void usage()
 	       "  -f, --fractional      Enable fractional scaling.\n"
 	       "  -F, --frame-blending  Enable simple frame blending.\n"
 	       "  -h, --help            Print this message and exit.\n"
-	       "  -i, --interlace       Enable interlacing.\n"
+	       "  -i, --interlacing       Enable interlacing.\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
 	       "  -s, --shader=NAME     Select the initial shader to use.\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
@@ -49,7 +49,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"fractional", no_argument, NULL, 'f'},
 		{"frame-blending", no_argument, NULL, 'F'},
 		{"help", no_argument, NULL, 'h'},
-		{"interlace", no_argument, NULL, 'i'},
+		{"interlacing", no_argument, NULL, 'i'},
 		{"palette", required_argument, NULL, 'p'},
 		{"shader", required_argument, NULL, 's'},
 		{"turbo", required_argument, NULL, 't'},
@@ -106,7 +106,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				usage();
 				return false;
 			case 'i':
-				gbc->core.interlace = true;
+				gbc->window.interlacing = true;
 				break;
 			case 'p':
 				gbc->core.ppu.palette = gbcc_get_palette(optarg);

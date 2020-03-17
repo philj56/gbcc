@@ -80,7 +80,7 @@ void gbcc_menu_update(struct gbcc *gbc)
 			selected(menu, GBCC_MENU_ENTRY_VSYNC),
 			bool2str(gbc->core.sync_to_video),
 			selected(menu, GBCC_MENU_ENTRY_INTERLACING),
-			bool2str(gbc->core.interlace),
+			bool2str(gbc->window.interlacing),
 			selected(menu, GBCC_MENU_ENTRY_FPS_COUNTER),
 			bool2str(gbc->window.fps.show)
 	);
@@ -180,7 +180,7 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			gbc->core.sync_to_video ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_INTERLACING:
-			gbc->core.interlace ^= 1;
+			gbc->window.interlacing ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_FPS_COUNTER:
 			gbc->window.fps.show ^= 1;

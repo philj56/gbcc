@@ -39,8 +39,8 @@ emulator development and writing a large project in C. Development is ongoing
 *-h, --help*
 	Show help message and exit.
 
-*-i, --interlace*
-	Enable interlaced mode. The Game Boy draws every other line darker, leading
+*-i, --interlacing*
+	Enable interlacing mode. The Game Boy draws every other line darker, leading
 	to interesting visual effects in some games. Using this without
 	frame-blending *will* look terrible.
 
