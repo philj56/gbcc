@@ -575,7 +575,7 @@ void select_turbo_text(GtkWidget *widget, void *data)
 void custom_turbo_speed(GtkSpinButton *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	double val = 0;
+	float val = 0;
 	g_object_get(widget, "value", &val, NULL);
 	gtk->gbc.core.turbo_speed = val;
 }

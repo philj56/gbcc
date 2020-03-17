@@ -214,7 +214,7 @@ void time_sync(struct gbcc_core *gbc)
 		gbc->apu.sample = 0;
 		return;
 	}
-	double mult = 1;
+	float mult = 1;
 	if (gbc->keys.turbo) {
 		mult = gbc->turbo_speed;
 	}

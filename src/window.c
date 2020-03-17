@@ -277,7 +277,7 @@ void gbcc_window_update(struct gbcc *gbc)
 
 	/* Setup - resize our screen textures if needed */
 	if (win->fractional_scaling) {
-		win->scale = min((double)win->width / GBC_SCREEN_WIDTH, (double)win->height / GBC_SCREEN_HEIGHT);
+		win->scale = min((float)win->width / GBC_SCREEN_WIDTH, (float)win->height / GBC_SCREEN_HEIGHT);
 	} else {
 		win->scale = min(win->width / GBC_SCREEN_WIDTH, win->height / GBC_SCREEN_HEIGHT);
 	}
@@ -488,9 +488,9 @@ void update_timers(struct gbcc *gbc)
 	struct fps_counter *fps = &win->fps;
 	struct timespec cur_time;
 	clock_gettime(CLOCK_REALTIME, &cur_time);
-	double dt = gbcc_time_diff(&cur_time, &fps->last_time);
+	float dt = gbcc_time_diff(&cur_time, &fps->last_time);
 	dt /= GBC_FRAME_PERIOD;
-	const double alpha = 0.001;
+	const float alpha = 0.001;
 	if (dt < 1.1 && dt > 0.9) {
 		gbc->audio.scale = alpha * dt + (1 - alpha) * gbc->audio.scale;
 	}

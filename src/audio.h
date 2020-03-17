@@ -38,15 +38,15 @@ struct gbcc_audio {
 		ALCdevice *device;
 		ALCcontext *context;
 		ALuint source;
-		ALuint buffers[5];
+		ALuint buffers[8];
 	} al;
-	uint64_t sample_clock;
-	uint64_t clock;
+	float clock;
+	int sample;
 	size_t index;
 	struct timespec cur_time;
 	struct timespec start_time;
 	GBCC_AUDIO_FMT mix_buffer[GBCC_AUDIO_BUFSIZE];
-	double scale;
+	float scale;
 };
 
 void gbcc_audio_initialise(struct gbcc *gbc);

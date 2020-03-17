@@ -28,7 +28,7 @@
 #include <time.h>
 
 #define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F / 0x10u)
-#define CLOCKS_PER_SAMPLE (GBC_CLOCK_FREQ / GBCC_SAMPLE_RATE)
+#define CLOCKS_PER_SAMPLE ((float)GBC_CLOCK_FREQ / (float)GBCC_SAMPLE_RATE)
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -107,7 +107,7 @@ void gbcc_audio_destroy(struct gbcc *gbc) {
 void gbcc_audio_update(struct gbcc *gbc)
 {
 	struct gbcc_audio *audio = &gbc->audio;
-	double mult = 1;
+	float mult = 1;
 	if (gbc->core.keys.turbo) {
 		if (gbc->core.turbo_speed > 0) {
 			mult = gbc->core.turbo_speed;
@@ -119,10 +119,30 @@ void gbcc_audio_update(struct gbcc *gbc)
 	if (gbc->core.sync_to_video) {
 		mult /= audio->scale;
 	}
-	if (audio->clock - audio->sample_clock >= CLOCKS_PER_SAMPLE * mult) {
+	/* When err > 0, it tells us how much we overshot the last sample by */
+	float err = audio->clock - CLOCKS_PER_SAMPLE * mult * audio->sample;
+	if (err >= 0) {
+		ALint processed = 0;
+		alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
+		if (gbc->core.sync_to_video) {
+			/*
+			 * Some minor black magic to keep our audio buffers
+			 * being filled at the correct rate. If we overshot
+			 * this sample, we take the next sample slightly early.
+			 *
+			 * (processed * 0.1) is a factor controlling how strong
+			 * this effect is - really it should be 1, but then we
+			 * get horrible wobble in the audio. Instead I fudge
+			 * it a little here, being more aggressive the more
+			 * we're lagging behind to avoid filling all our
+			 * buffers and producing a stutter.
+			 *
+			 * A better way to achieve this would be very much
+			 * appreciated :)
+			 */
+			if (err < 1) audio->clock += err * processed * 0.1f;
+		}
 		if (audio->index >= GBCC_AUDIO_BUFSIZE) {
-			ALint processed = 0;
-			alGetSourcei(audio->al.source, AL_BUFFERS_PROCESSED, &processed);
 			while (!processed) {
 				const struct timespec time = {.tv_sec = 0, .tv_nsec = 100000};
 				nanosleep(&time, NULL);
@@ -145,8 +165,10 @@ void gbcc_audio_update(struct gbcc *gbc)
 				alSourcePlay(audio->al.source);
 				gbcc_check_openal_error("Failed to resume audio playback.\n");
 			}
+			audio->clock = 0;
+			audio->sample = 0;
 		}
-		audio->sample_clock = audio->clock;
+		audio->sample++;
 		audio->mix_buffer[audio->index] = 0;
 		audio->mix_buffer[audio->index + 1] = 0;
 		ch1_update(gbc);
