@@ -11,9 +11,7 @@
 #ifndef GBCC_CORE_H
 #define GBCC_CORE_H
 
-#ifndef GBCC_SAVE_STATE_VERSION
-#define GBCC_SAVE_STATE_VERSION 0
-#endif
+#define GBCC_SAVE_STATE_VERSION 1
 
 #include "apu.h"
 #include "constants.h"

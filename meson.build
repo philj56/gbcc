@@ -77,7 +77,6 @@ add_project_arguments(
     '-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
     '-DSHADER_PATH="@0@"'.format(shader_location),
     '-DICON_PATH="@0@"'.format(icon_location),
-    '-DGBCC_SAVE_STATE_VERSION=1'
     #'-fprofile-instr-use',
     #'-fprofile-instr-generate',
   ],
