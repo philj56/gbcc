@@ -47,12 +47,18 @@ void gbcc_menu_update(struct gbcc *gbc)
 	struct gbcc_menu *menu = &gbc->menu;
 
 	const char *link_text;
-	if (gbc->core.link_cable_loop) {
-		link_text = "Loopback";
-	} else if (gbc->core.printer.connected) {
-		link_text = "Printer";
-	} else {
-		link_text = "Disconnected";
+	switch (gbc->core.link_cable.state) {
+		case GBCC_LINK_CABLE_STATE_DISCONNECTED:
+			link_text = "Disconnected";
+			break;
+		case GBCC_LINK_CABLE_STATE_LOOPBACK:
+			link_text = "Loopback";
+			break;
+		case GBCC_LINK_CABLE_STATE_PRINTER:
+			link_text = "Printer";
+			break;
+		default:
+			break;
 	}
 
 	char turbo_text[10];
@@ -160,14 +166,14 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			break;
 		case GBCC_MENU_ENTRY_LINK_CABLE:
 			if (key == GBCC_KEY_LEFT) {
-				bool tmp = gbc->core.link_cable_loop;
-				gbc->core.link_cable_loop = gbc->core.printer.connected;
-				gbc->core.printer.connected = !(tmp | gbc->core.link_cable_loop);
+				gbc->core.link_cable.state--;
 			} else {
-				bool tmp = gbc->core.printer.connected;
-				gbc->core.printer.connected = gbc->core.link_cable_loop;
-				gbc->core.link_cable_loop = !(tmp | gbc->core.printer.connected);
+				gbc->core.link_cable.state++;
 			}
+			if (gbc->core.link_cable.state < 0) {
+				gbc->core.link_cable.state += GBCC_LINK_CABLE_STATE_NUM_STATES;
+			}
+			gbc->core.link_cable.state %= GBCC_LINK_CABLE_STATE_NUM_STATES;
 			break;
 		case GBCC_MENU_ENTRY_SHADER:
 			if (key == GBCC_KEY_LEFT) {

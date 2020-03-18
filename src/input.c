@@ -68,8 +68,14 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			gbc->pause ^= pressed;
 			break;
 		case GBCC_KEY_PRINTER:
-			gbc->core.printer.connected ^= pressed;
-			if (gbc->core.printer.connected) {
+			if (pressed) {
+				if (gbc->core.link_cable.state == GBCC_LINK_CABLE_STATE_PRINTER) {
+					gbc->core.link_cable.state = GBCC_LINK_CABLE_STATE_DISCONNECTED;
+				} else{
+					gbc->core.link_cable.state = GBCC_LINK_CABLE_STATE_PRINTER;
+				}
+			}
+			if (gbc->core.link_cable.state == GBCC_LINK_CABLE_STATE_PRINTER) {
 				gbcc_window_show_message(gbc, "Printer connected", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Printer disconnected", 1, true);
@@ -135,11 +141,14 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			}
 			break;
 		case GBCC_KEY_LINK_CABLE:
-			gbc->core.link_cable_loop ^= pressed;
-			if (!pressed) {
-				break;
+			if (pressed) {
+				if (gbc->core.link_cable.state == GBCC_LINK_CABLE_STATE_LOOPBACK) {
+					gbc->core.link_cable.state = GBCC_LINK_CABLE_STATE_DISCONNECTED;
+				} else{
+					gbc->core.link_cable.state = GBCC_LINK_CABLE_STATE_LOOPBACK;
+				}
 			}
-			if (gbc->core.link_cable_loop) {
+			if (gbc->core.link_cable.state == GBCC_LINK_CABLE_STATE_LOOPBACK) {
 				gbcc_window_show_message(gbc, "Link cable connected", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Link cable disconnected", 1, true);

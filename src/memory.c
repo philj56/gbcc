@@ -455,7 +455,7 @@ void ioreg_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val, bool overrid
 				gbc->link_cable.divider = 512;
 			}
 			if (check_bit(val, 7)) {
-				if (!gbc->link_cable_loop && !check_bit(val, 0)) {
+				if (gbc->link_cable.state != GBCC_LINK_CABLE_STATE_LOOPBACK && !check_bit(val, 0)) {
 					/*
 					 * Externally clocked transfer with no
 					 * cable connected, do nothing.
@@ -469,12 +469,18 @@ void ioreg_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val, bool overrid
 				 * This means the gameboy acts like it's
 				 * talking to an exact clone of itself.
 				 */
-				if (gbc->link_cable_loop) {
-					gbc->link_cable.received = gbc->memory.ioreg[SB - IOREG_START];
-				} else if (gbc->printer.connected) {
-					gbc->link_cable.received = gbcc_printer_parse_byte(&gbc->printer, gbc->memory.ioreg[SB - IOREG_START]);
-				} else {
-					gbc->link_cable.received = 0xFFu;
+				switch (gbc->link_cable.state) {
+					case GBCC_LINK_CABLE_STATE_DISCONNECTED:
+						gbc->link_cable.received = 0xFFu;
+						break;
+					case GBCC_LINK_CABLE_STATE_LOOPBACK:
+						gbc->link_cable.received = gbc->memory.ioreg[SB - IOREG_START];
+						break;
+					case GBCC_LINK_CABLE_STATE_PRINTER:
+						gbc->link_cable.received = gbcc_printer_parse_byte(&gbc->printer, gbc->memory.ioreg[SB - IOREG_START]);
+						break;
+					default:
+						break;
 				}
 				return;
 			}

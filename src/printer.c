@@ -197,7 +197,6 @@ void execute(struct printer *p)
 void initialise(struct printer *p)
 {
 	*p = (struct printer){0};
-	p->connected = true;
 }
 
 void start_printing(struct printer *p)

@@ -22,6 +22,13 @@
 #include <stdlib.h>
 #include <time.h>
 
+enum GBCC_LINK_CABLE_STATE {
+	GBCC_LINK_CABLE_STATE_DISCONNECTED,
+	GBCC_LINK_CABLE_STATE_LOOPBACK,
+	GBCC_LINK_CABLE_STATE_PRINTER,
+	GBCC_LINK_CABLE_STATE_NUM_STATES
+};
+
 struct gbcc_core {
 	/* Core emulator areas */
 	struct cpu cpu;
@@ -96,6 +103,7 @@ struct gbcc_core {
 		uint8_t current_bit;
 		uint16_t divider;
 		uint16_t clock;
+		enum GBCC_LINK_CABLE_STATE state;
 	} link_cable;
 
 	/* Settings */
@@ -103,7 +111,6 @@ struct gbcc_core {
 	bool hide_background;
 	bool hide_window;
 	bool hide_sprites;
-	bool link_cable_loop;
 	bool initialised;
 };
 

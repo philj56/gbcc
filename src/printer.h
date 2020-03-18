@@ -42,7 +42,6 @@ struct printer {
 	uint8_t status;
 	bool magic; 	/* Flag for detecting magic bytes that start a packet */
 	bool in_packet;
-	bool connected;
 	uint16_t print_byte;
 	uint8_t print_line;
 	pthread_t print_thread;
