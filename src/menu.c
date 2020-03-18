@@ -26,6 +26,7 @@ static const float turbo_speeds[] = {0, 0.25, 0.5, 1.5, 2, 3, 4, 5, 10};
 void gbcc_menu_init(struct gbcc *gbc)
 {
 	struct gbcc_menu *menu = &gbc->menu;
+	*menu = (struct gbcc_menu){0};
 
 	menu->show = false;
 	menu->save_state = 1;

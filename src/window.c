@@ -46,6 +46,7 @@ static void update_timers(struct gbcc *gbc);
 void gbcc_window_initialise(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	*win = (struct gbcc_window){0};
 
 	GLint read_framebuffer = 0;
 	GLint draw_framebuffer = 0;
