@@ -211,6 +211,7 @@ void gbcc_load_state(struct gbcc *gbc)
 			fclose(sav);
 			return;
 		}
+		*core = tmp_core;
 	}
 	/* FIXME: Thread-unsafe, screen could try to read from here while the
 	 * pointer is still invalid */
