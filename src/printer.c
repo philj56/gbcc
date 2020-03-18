@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "bit_utils.h"
 #include "debug.h"
 #include "printer.h"

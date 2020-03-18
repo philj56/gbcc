@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (C) 2017-2020 Philip Jones
+
+ Licensed under the MIT License.
+ See either the LICENSE file, or:
+
+ https://opensource.org/licenses/MIT
+-->
 <interface>
 	<requires lib="gtk+" version="3.10"/>
 
