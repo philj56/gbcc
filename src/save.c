@@ -154,6 +154,7 @@ void gbcc_load_state(struct gbcc *gbc)
 	const char *name = core->cart.filename;
 	uint32_t *buf0 = core->ppu.screen.buffer_0;
 	uint32_t *buf1 = core->ppu.screen.buffer_1;
+	bool sync_to_video = core->sync_to_video;
 
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
@@ -224,6 +225,7 @@ void gbcc_load_state(struct gbcc *gbc)
 	core->memory.wramx = core->memory.wram_bank[wram_bank];
 	core->memory.echo = core->memory.wram0;
 	memset(&core->keys, 0, sizeof(core->keys));
+	core->sync_to_video = sync_to_video;
 
 	snprintf(tmp, MAX_NAME_LEN, "Loaded state %d", gbc->load_state);
 	gbcc_window_show_message(gbc, tmp, 2, true);
