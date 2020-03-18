@@ -187,12 +187,30 @@ void gbcc_load_state(struct gbcc *gbc)
 		gbc->load_state = 0;
 		return;
 	}
-	if (fread(core, sizeof(struct gbcc_core), 1, sav) == 0) {
-		gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
-		gbc->save_state = 0;
-		gbc->load_state = 0;
-		fclose(sav);
-		return;
+	{
+		struct gbcc_core tmp_core;
+		if (fread(&tmp_core, sizeof(struct gbcc_core), 1, sav) == 0) {
+			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
+			gbc->save_state = 0;
+			gbc->load_state = 0;
+			fclose(sav);
+			return;
+		}
+		if (tmp_core.version != core->version) {
+			gbcc_log_error("Save state %d version mismatch, tried "
+					"to load v%u (current version is v%u).\n",
+					gbc->load_state, tmp_core.version,
+					core->version);
+			snprintf(tmp, MAX_NAME_LEN, "Save state %d version "
+					"mismatch:\n have v%u, loaded v%u",
+					gbc->load_state, core->version,
+					tmp_core.version);
+			gbcc_window_show_message(gbc, tmp, 2, true);
+			gbc->save_state = 0;
+			gbc->load_state = 0;
+			fclose(sav);
+			return;
+		}
 	}
 	/* FIXME: Thread-unsafe, screen could try to read from here while the
 	 * pointer is still invalid */

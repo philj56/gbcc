@@ -49,6 +49,7 @@ static void init_ioreg(struct gbcc_core *gbc);
 void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 {
 	*gbc = (const struct gbcc_core){0};
+	gbc->version = GBCC_SAVE_STATE_VERSION;
 	gbc->cart.filename = filename;
 	gbc->cart.mbc.type = NONE;
 	gbc->cart.mbc.romx_bank = 0x01u;

@@ -11,6 +11,10 @@
 #ifndef GBCC_CORE_H
 #define GBCC_CORE_H
 
+#ifndef GBCC_SAVE_STATE_VERSION
+#define GBCC_SAVE_STATE_VERSION 0
+#endif
+
 #include "apu.h"
 #include "constants.h"
 #include "cpu.h"
@@ -30,6 +34,9 @@ enum GBCC_LINK_CABLE_STATE {
 };
 
 struct gbcc_core {
+	/* Version number for checking save state compatibility */
+	uint32_t version;
+
 	/* Core emulator areas */
 	struct cpu cpu;
 	struct apu apu;
