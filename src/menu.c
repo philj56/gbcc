@@ -46,10 +46,10 @@ void gbcc_menu_update(struct gbcc *gbc)
 	}
 
 	char turbo_text[10];
-	if (gbc->core.turbo_speed == 0) {
+	if (gbc->turbo_speed == 0) {
 		strncpy(turbo_text, "Unlimited", sizeof(turbo_text));
 	} else {
-		snprintf(turbo_text, sizeof(turbo_text), "%gx", gbc->core.turbo_speed);
+		snprintf(turbo_text, sizeof(turbo_text), "%gx", gbc->turbo_speed);
 	}
 
 	snprintf(menu->text, menu->width * menu->height + 1,
@@ -207,7 +207,7 @@ int modulo(int x, int n)
 
 void turbo_index(struct gbcc *gbc, bool inc)
 {
-	const float mult = gbc->core.turbo_speed;
+	const float mult = gbc->turbo_speed;
 	const size_t len = N_ELEM(turbo_speeds);
 	size_t idx;
 	if (inc) {
@@ -218,5 +218,5 @@ void turbo_index(struct gbcc *gbc, bool inc)
 		idx--;
 	}
 	idx = modulo(idx, len);
-	gbc->core.turbo_speed = turbo_speeds[idx];
+	gbc->turbo_speed = turbo_speeds[idx];
 }

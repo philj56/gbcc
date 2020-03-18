@@ -109,8 +109,8 @@ void gbcc_audio_update(struct gbcc *gbc)
 	struct gbcc_audio *audio = &gbc->audio;
 	float mult = 1;
 	if (gbc->core.keys.turbo) {
-		if (gbc->core.turbo_speed > 0) {
-			mult = gbc->core.turbo_speed;
+		if (gbc->turbo_speed > 0) {
+			mult = gbc->turbo_speed;
 		} else {
 			return;
 		}

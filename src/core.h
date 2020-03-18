@@ -99,7 +99,6 @@ struct gbcc_core {
 	} link_cable;
 
 	/* Settings */
-	float turbo_speed;
 	bool sync_to_video;
 	bool hide_background;
 	bool hide_window;

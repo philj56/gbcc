@@ -117,7 +117,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				break;
 			case 't':
 				/* TODO: error check */
-				gbc->core.turbo_speed = strtod(optarg, NULL);
+				gbc->turbo_speed = strtod(optarg, NULL);
 				break;
 			case 'v':
 				gbc->core.sync_to_video = true;

@@ -209,21 +209,12 @@ void time_sync(struct gbcc_core *gbc)
 {
 	clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);
 	uint64_t diff = gbcc_time_diff(&gbc->apu.cur_time, &gbc->apu.start_time);
-	if (diff > SLEEP_DETECT + (SECOND * gbc->apu.sample) / SYNC_FREQ) {
+	if (diff > SLEEP_DETECT + (SECOND * gbc->apu.sample) / SYNC_FREQ || gbc->keys.turbo) {
 		gbc->apu.start_time = gbc->apu.cur_time;
 		gbc->apu.sample = 0;
 		return;
 	}
-	float mult = 1;
-	if (gbc->keys.turbo) {
-		mult = gbc->turbo_speed;
-	}
-	if (mult == 0) {
-		gbc->apu.start_time = gbc->apu.cur_time;
-		gbc->apu.sample = 0;
-		return;
-	}
-	while (diff < (SECOND * gbc->apu.sample) / (SYNC_FREQ * mult)) {
+	while (diff < (SECOND * gbc->apu.sample) / SYNC_FREQ) {
 		const struct timespec time = {.tv_sec = 0, .tv_nsec = SLEEP_TIME};
 		nanosleep(&time, NULL);
 		clock_gettime(CLOCK_REALTIME, &gbc->apu.cur_time);

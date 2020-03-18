@@ -548,11 +548,11 @@ void turbo_speed(GtkCheckMenuItem *widget, void *data)
 	}
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
 	if (!strncmp(name, "_Unlimited", 9)) {
-		gtk->gbc.core.turbo_speed = 0;
+		gtk->gbc.turbo_speed = 0;
 	} else {
-		gtk->gbc.core.turbo_speed = strtod(strstr(name, "_") + 1, NULL);
-		if (gtk->gbc.core.turbo_speed == 0) {
-			gtk->gbc.core.turbo_speed = 10;
+		gtk->gbc.turbo_speed = strtod(strstr(name, "_") + 1, NULL);
+		if (gtk->gbc.turbo_speed == 0) {
+			gtk->gbc.turbo_speed = 10;
 		}
 	}
 }
@@ -577,7 +577,7 @@ void custom_turbo_speed(GtkSpinButton *widget, void *data)
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	float val = 0;
 	g_object_get(widget, "value", &val, NULL);
-	gtk->gbc.core.turbo_speed = val;
+	gtk->gbc.turbo_speed = val;
 }
 
 void start_emulation_thread(struct gbcc_gtk *gtk, char *file)

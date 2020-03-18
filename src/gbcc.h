@@ -24,6 +24,7 @@ struct gbcc {
 	struct gbcc_audio audio;
 	struct gbcc_menu menu;
 	
+	float turbo_speed;
 	bool quit;
 	bool pause;
 	int8_t save_state;

@@ -147,7 +147,7 @@ void parse_option(struct gbcc *gbc, const char *option, const char *value)
 	} else if (strcmp(opt, "shader") == 0) {
 		gbcc_window_use_shader(gbc, val);
 	} else if (strcmp(opt, "turbo") == 0) {
-		gbc->core.turbo_speed = strtod(val, NULL);
+		gbc->turbo_speed = strtod(val, NULL);
 	} else if (strcmp(opt, "vsync") == 0) {
 	} else if (strcmp(opt, "vram-window") == 0) {
 		gbc->window.vram_display = strtol(val, NULL, 0);
