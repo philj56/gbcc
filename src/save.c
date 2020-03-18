@@ -137,7 +137,9 @@ void gbcc_save_state(struct gbcc *gbc)
 		fwrite(core->cart.ram, 1, core->cart.ram_size, sav);
 	}
 	fclose(sav);
+	snprintf(tmp, MAX_NAME_LEN, "Saved state %d", gbc->save_state);
 	gbcc_log_info("Saved state %s\n", fname);
+	gbcc_window_show_message(gbc, tmp, 2, true);
 	gbc->save_state = 0;
 	gbc->load_state = 0;
 }
@@ -165,6 +167,10 @@ void gbcc_load_state(struct gbcc *gbc)
 	}
 	sav = fopen(fname, "rb");
 	if (!sav) {
+		if (errno == ENOENT) {
+			snprintf(tmp, MAX_NAME_LEN, "State %d not found", gbc->load_state);
+			gbcc_window_show_message(gbc, tmp, 2, true);
+		}
 		gbcc_log_error("Error opening %s: %s\n", fname, strerror(errno));
 		gbc->save_state = 0;
 		gbc->load_state = 0;
@@ -217,11 +223,14 @@ void gbcc_load_state(struct gbcc *gbc)
 	core->memory.wram0 = core->memory.wram_bank[0];
 	core->memory.wramx = core->memory.wram_bank[wram_bank];
 	core->memory.echo = core->memory.wram0;
+	memset(&core->keys, 0, sizeof(core->keys));
+
+	snprintf(tmp, MAX_NAME_LEN, "Loaded state %d", gbc->load_state);
+	gbcc_window_show_message(gbc, tmp, 2, true);
+	gbcc_log_info("Loaded state %s\n", fname);
+
 	gbc->save_state = 0;
 	gbc->load_state = 0;
-	
-	memset(&core->keys, 0, sizeof(core->keys));
-	gbcc_log_info("Loaded state %s\n", fname);
 }
 
 bool gbcc_check_savestate(struct gbcc *gbc, int state)
