@@ -242,6 +242,10 @@ void gbcc_window_clear()
 void gbcc_window_update(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!win->initialised) {
+		gbcc_log_error("Window not initialised!\n");
+		return;
+	}
 	if (!gbc->menu.show) {
 		update_timers(gbc);
 	}
