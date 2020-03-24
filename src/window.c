@@ -216,6 +216,10 @@ void gbcc_window_initialise(struct gbcc *gbc)
 void gbcc_window_deinitialise(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!win->initialised) {
+		gbcc_log_error("Window not initialised!\n");
+		return;
+	}
 	win->initialised = false;
 
 	gbcc_fontmap_destroy(&win->font);
@@ -412,6 +416,10 @@ GLuint gbcc_create_shader_program(const char *vert, const char *frag)
 void gbcc_window_use_shader(struct gbcc *gbc, const char *name)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!win->initialised) {
+		gbcc_log_error("Window not initialised!\n");
+		return;
+	}
 	int num_shaders = N_ELEM(win->gl.shaders);
 	int s;
 	for (s = 0; s < num_shaders; s++) {
@@ -429,6 +437,10 @@ void gbcc_window_use_shader(struct gbcc *gbc, const char *name)
 void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bool pad)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!win->initialised) {
+		gbcc_log_error("Window not initialised!\n");
+		return;
+	}
 	if (pad) {
 		snprintf(win->msg.text, MSG_BUF_SIZE, " %s ", msg);
 	} else {
