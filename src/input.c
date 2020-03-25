@@ -82,11 +82,11 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			}
 			break;
 		case GBCC_KEY_FPS:
-			gbc->window.fps.show ^= pressed;
+			gbc->show_fps ^= pressed;
 			break;
 		case GBCC_KEY_FRAME_BLENDING:
-			gbc->window.frame_blending ^= pressed;
-			if (gbc->window.frame_blending) {
+			gbc->frame_blending ^= pressed;
+			if (gbc->frame_blending) {
 				gbcc_window_show_message(gbc, "Frame blending enabled", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Frame blending disabled", 1, true);
@@ -105,7 +105,7 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			}
 			break;
 		case GBCC_KEY_VRAM:
-			gbc->window.vram_display ^= pressed;
+			gbc->vram_display ^= pressed;
 			break;
 		case GBCC_KEY_DISPLAY_BACKGROUND:
 			gbc->core.hide_background ^= pressed;
@@ -183,11 +183,11 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			}
 			break;
 		case GBCC_KEY_INTERLACE:
-			gbc->window.interlacing ^= pressed;
+			gbc->interlacing ^= pressed;
 			if (!pressed) {
 				break;
 			}
-			if (gbc->window.interlacing) {
+			if (gbc->interlacing) {
 				gbcc_window_show_message(gbc, "Interlacing enabled", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Interlacing disabled", 1, true);

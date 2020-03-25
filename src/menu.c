@@ -87,7 +87,7 @@ void gbcc_menu_update(struct gbcc *gbc)
 			selected(menu, GBCC_MENU_ENTRY_AUTOSAVE),
 			bool2str(gbc->autosave),
 			selected(menu, GBCC_MENU_ENTRY_FRAMEBLEND),
-			bool2str(gbc->window.frame_blending),
+			bool2str(gbc->frame_blending),
 			selected(menu, GBCC_MENU_ENTRY_LINK_CABLE),
 			link_text,
 			selected(menu, GBCC_MENU_ENTRY_SHADER),
@@ -97,9 +97,9 @@ void gbcc_menu_update(struct gbcc *gbc)
 			selected(menu, GBCC_MENU_ENTRY_VSYNC),
 			bool2str(gbc->core.sync_to_video),
 			selected(menu, GBCC_MENU_ENTRY_INTERLACING),
-			bool2str(gbc->window.interlacing),
+			bool2str(gbc->interlacing),
 			selected(menu, GBCC_MENU_ENTRY_FPS_COUNTER),
-			bool2str(gbc->window.fps.show)
+			bool2str(gbc->show_fps)
 	);
 }
 
@@ -163,7 +163,7 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			gbc->autosave ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_FRAMEBLEND:
-			gbc->window.frame_blending ^= 1;
+			gbc->frame_blending ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_LINK_CABLE:
 			if (key == GBCC_KEY_LEFT) {
@@ -197,10 +197,10 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			gbc->core.sync_to_video ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_INTERLACING:
-			gbc->window.interlacing ^= 1;
+			gbc->interlacing ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_FPS_COUNTER:
-			gbc->window.fps.show ^= 1;
+			gbc->show_fps ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_NUM_ENTRIES:
 			break;

@@ -276,7 +276,7 @@ void gbcc_window_update(struct gbcc *gbc)
 		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 1 + 1);
 		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 2 + 1);
 	} else {
-		if (win->fps.show && !screenshot) {
+		if (gbc->show_fps && !screenshot) {
 			char fps_text[16];
 			snprintf(fps_text, 16, " FPS: %.0f ", win->fps.fps);
 			render_text(win, fps_text, 0, 0);
@@ -295,7 +295,7 @@ void gbcc_window_update(struct gbcc *gbc)
 	}
 
 	/* Setup - resize our screen textures if needed */
-	if (win->fractional_scaling) {
+	if (gbc->fractional_scaling) {
 		win->scale = min((float)win->width / GBC_SCREEN_WIDTH, (float)win->height / GBC_SCREEN_HEIGHT);
 	} else {
 		win->scale = min(win->width / GBC_SCREEN_WIDTH, win->height / GBC_SCREEN_HEIGHT);
@@ -339,8 +339,8 @@ void gbcc_window_update(struct gbcc *gbc)
 	glUniform1i(glGetUniformLocation(win->gl.base_shader, "tex"), 0);
 	glUniform1i(glGetUniformLocation(win->gl.base_shader, "last_tex"), 2);
 	glUniform1i(glGetUniformLocation(win->gl.base_shader, "odd_frame"), gbc->core.ppu.frame & 1);
-	glUniform1i(glGetUniformLocation(win->gl.base_shader, "interlacing"), win->interlacing);
-	glUniform1i(glGetUniformLocation(win->gl.base_shader, "frameblending"), gbc->window.frame_blending);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "interlacing"), gbc->interlacing);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "frameblending"), gbc->frame_blending);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	/* Copy the intermediate frame texture for frameblending next time */

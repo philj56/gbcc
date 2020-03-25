@@ -32,6 +32,11 @@ struct gbcc {
 	bool background_play;
 	bool has_focus;
 	bool autosave;
+	bool fractional_scaling;
+	bool frame_blending;
+	bool interlacing;
+	bool vram_display;
+	bool show_fps;
 };
 
 void *gbcc_emulation_loop(void *_gbc);

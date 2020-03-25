@@ -149,7 +149,7 @@ void gbcc_sdl_update(struct gbcc_sdl *sdl)
 {
 	struct gbcc *gbc = &sdl->gbc;
 	struct gbcc_window *win = &gbc->window;
-	if (win->vram_display) {
+	if (gbc->vram_display) {
 		if (!gbc->vram_window.initialised) {
 			gbcc_sdl_vram_window_initialise(sdl);
 
@@ -392,7 +392,7 @@ int process_input(struct gbcc_sdl *sdl, const SDL_Event *e)
 			if (id == SDL_GetWindowID(sdl->window)) {
 				return -2;
 			} else if (id == SDL_GetWindowID(sdl->vram_window)) {
-				gbc->window.vram_display = false;
+				gbc->vram_display = false;
 			} else {
 				gbcc_log_error("Unknown window ID %u\n", id);
 			}

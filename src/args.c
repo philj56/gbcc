@@ -97,16 +97,16 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 			case 'c':
 				break;
 			case 'f':
-				gbc->window.fractional_scaling = true;
+				gbc->fractional_scaling = true;
 				break;
 			case 'F':
-				gbc->window.frame_blending = true;
+				gbc->frame_blending = true;
 				break;
 			case 'h':
 				usage();
 				return false;
 			case 'i':
-				gbc->window.interlacing = true;
+				gbc->interlacing = true;
 				break;
 			case 'p':
 				gbc->core.ppu.palette = gbcc_get_palette(optarg);
@@ -123,7 +123,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbc->core.sync_to_video = true;
 				break;
 			case 'V':
-				gbc->window.vram_display = true;
+				gbc->vram_display = true;
 				break;
 			case '?':
 				if (optopt == 'p' || optopt == 't') {

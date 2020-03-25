@@ -268,7 +268,7 @@ gboolean on_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 	gbc->window.width = gtk_widget_get_allocated_width(GTK_WIDGET(gl_area)) * scale;
 	gbc->window.height = gtk_widget_get_allocated_height(GTK_WIDGET(gl_area)) * scale;
 	gbcc_window_update(gbc);
-	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), gbc->window.vram_display);
+	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), gbc->vram_display);
 	gbcc_gtk_process_input(gtk);
 
 	return true;
@@ -433,10 +433,10 @@ void check_settings_options(GtkWidget *widget, void *data)
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.autosave), gbc->autosave);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.background_playback), gbc->background_play);
 	if (gbc->core.initialised) {
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.fractional_scaling), gbc->window.fractional_scaling);
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.frame_blending), gbc->window.frame_blending);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.fractional_scaling), gbc->fractional_scaling);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.frame_blending), gbc->frame_blending);
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.vsync), gbc->core.sync_to_video);
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.interlacing), gbc->window.interlacing);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.interlacing), gbc->interlacing);
 	}
 }
 
@@ -501,7 +501,7 @@ void change_palette(GtkWidget *widget, void *data)
 void toggle_vram_display(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	gtk->gbc.window.vram_display = gtk_check_menu_item_get_active(widget);
+	gtk->gbc.vram_display = gtk_check_menu_item_get_active(widget);
 }
 
 void toggle_autosave(GtkCheckMenuItem *widget, void *data)
@@ -519,13 +519,13 @@ void toggle_background_playback(GtkCheckMenuItem *widget, void *data)
 void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	gtk->gbc.window.fractional_scaling = gtk_check_menu_item_get_active(widget);
+	gtk->gbc.fractional_scaling = gtk_check_menu_item_get_active(widget);
 }
 
 void toggle_frame_blending(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	gtk->gbc.window.frame_blending = gtk_check_menu_item_get_active(widget);
+	gtk->gbc.frame_blending = gtk_check_menu_item_get_active(widget);
 }
 
 void toggle_vsync(GtkCheckMenuItem *widget, void *data)
@@ -537,7 +537,7 @@ void toggle_vsync(GtkCheckMenuItem *widget, void *data)
 void toggle_interlacing(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	gtk->gbc.window.interlacing = gtk_check_menu_item_get_active(widget);
+	gtk->gbc.interlacing = gtk_check_menu_item_get_active(widget);
 }
 
 void turbo_speed(GtkCheckMenuItem *widget, void *data)
