@@ -125,6 +125,7 @@ void gbcc_menu_process_key(struct gbcc *gbc, enum gbcc_key key)
 			toggle_option(gbc, key);
 			break;
 		case GBCC_KEY_MENU:
+		case GBCC_KEY_B:
 			menu->show = false;
 		default:
 			break;
