@@ -9,6 +9,7 @@
  */
 
 #include "gbcc.h"
+#include "debug.h"
 #include "input.h"
 #include "menu.h"
 #include "nelem.h"
@@ -28,19 +29,24 @@ void gbcc_menu_init(struct gbcc *gbc)
 	struct gbcc_menu *menu = &gbc->menu;
 	*menu = (struct gbcc_menu){0};
 
-	menu->show = false;
 	menu->save_state = 1;
 	menu->load_state = 1;
 
 	menu->width = GBC_SCREEN_WIDTH / gbc->window.font.tile_width;
 	menu->height = GBC_SCREEN_HEIGHT / gbc->window.font.tile_height;
 	menu->text = calloc(menu->width * menu->height + 1, 1);
+	menu->initialised = true;
 }
 
 void gbcc_menu_destroy(struct gbcc *gbc)
 {
 	struct gbcc_menu *menu = &gbc->menu;
+	if (!menu->initialised) {
+		gbcc_log_error("Menu not initialised!\n");
+		return;
+	}
 	free(menu->text);
+	menu->initialised = false;
 }
 
 void gbcc_menu_update(struct gbcc *gbc)

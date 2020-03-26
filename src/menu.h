@@ -33,6 +33,7 @@ enum GBCC_MENU_ENTRY {
 };
 
 struct gbcc_menu {
+	bool initialised;
 	bool show;
 	int save_state;
 	int load_state;
