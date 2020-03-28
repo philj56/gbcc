@@ -6,7 +6,7 @@ intro.gbc: intro.o
 	rgblink -o $@ $^
 	rgbfix -v -p0 $@
 
-intro.o: intro.s
+intro.o: intro.rgbasm
 	rgbasm -o $@ $^
 
 clean:
