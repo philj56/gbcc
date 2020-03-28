@@ -108,5 +108,6 @@ packages](#prebuilt-packages-)). It can be enabled by passing `--with-gtk` to
 the `msys2.sh` script mentioned above.
 
 ### Android
-You can get GBCC on (Google Play)[https://play.google.com/store/apps/details?id=com.philj56.gbcc],
-or from the (project repo)[https://github.com/philj56/gbcc-android/].
+You can get GBCC on
+[Google Play](https://play.google.com/store/apps/details?id=com.philj56.gbcc),
+or from the [project repo](https://github.com/philj56/gbcc-android/).
