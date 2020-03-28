@@ -14,6 +14,7 @@
 #include "../gbcc.h"
 #include <SDL2/SDL.h>
 #include <stdbool.h>
+#include <time.h>
 
 struct gbcc_sdl {
 	struct gbcc gbc;
@@ -24,6 +25,7 @@ struct gbcc_sdl {
 	SDL_GLContext vram_context;
 	SDL_GameController *game_controller;
 	SDL_Haptic *haptic;
+	struct timespec last_cursor_move;
 };
 
 void gbcc_sdl_initialise(struct gbcc_sdl *sdl);

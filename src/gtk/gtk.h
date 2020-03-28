@@ -17,11 +17,15 @@
 #include <pthread.h>
 #include <SDL2/SDL.h>
 #include <stdbool.h>
+#include <time.h>
 
 struct gbcc_gtk {
 	struct gbcc gbc;
 	bool fullscreen;
 	pthread_t emulation_thread;
+	struct timespec last_cursor_move;
+	GdkCursor* blank_cursor;
+	GdkCursor* default_cursor;
 	SDL_GameController *game_controller;
 	SDL_Haptic *haptic;
 	GtkWindow *window;

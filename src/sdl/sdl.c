@@ -12,6 +12,7 @@
 #include "../debug.h"
 #include "../input.h"
 #include "../nelem.h"
+#include "../time_diff.h"
 #include "../window.h"
 #include "sdl.h"
 #include "vram_window.h"
@@ -149,6 +150,14 @@ void gbcc_sdl_update(struct gbcc_sdl *sdl)
 {
 	struct gbcc *gbc = &sdl->gbc;
 	struct gbcc_window *win = &gbc->window;
+
+	/* Hide the cursor after 2 seconds of inactivity */
+	struct timespec cur_time;
+	clock_gettime(CLOCK_REALTIME, &cur_time);
+	if (gbcc_time_diff(&cur_time, &sdl->last_cursor_move) > 2 * SECOND) {
+		SDL_ShowCursor(SDL_DISABLE);
+	}
+
 	if (gbc->vram_display) {
 		if (!gbc->vram_window.initialised) {
 			gbcc_sdl_vram_window_initialise(sdl);
@@ -199,6 +208,10 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			} else {
 				continue;
 			}
+		} else if (e.type == SDL_MOUSEMOTION) {
+			clock_gettime(CLOCK_REALTIME, &sdl->last_cursor_move);
+			SDL_ShowCursor(SDL_ENABLE);
+			continue;
 		} else {
 			continue;
 		}

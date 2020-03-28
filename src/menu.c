@@ -65,6 +65,7 @@ void gbcc_menu_update(struct gbcc *gbc)
 			link_text = "Printer";
 			break;
 		default:
+			link_text = "";
 			break;
 	}
 

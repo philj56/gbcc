@@ -13,6 +13,7 @@
 #include "../input.h"
 #include "../nelem.h"
 #include "../save.h"
+#include "../time_diff.h"
 #include "gtk.h"
 #include "input.h"
 #include <gdk/gdk.h>
@@ -33,6 +34,7 @@ static void on_vram_realise(GtkGLArea *gl_area, void *data);
 static gboolean on_vram_render(GtkGLArea *gl_area, GdkGLContext *context, void *data);
 static void on_destroy(GtkWidget *window, void *data);
 static void on_window_state_change(GtkWidget *window, GdkEvent *event, void *data);
+static void mouse_motion(GtkWidget *widget, GdkEvent *event, void *data);
 static void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data);
 static void load_rom(GtkWidget *widget, void *data);
 static void stop(GtkWidget *widget, void *data);
@@ -117,11 +119,12 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	g_signal_connect(G_OBJECT(gtk->window), "window-state-event", G_CALLBACK(on_window_state_change), gtk);
 
 	gtk->gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "gl_area"));
-	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK);
+	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK | GDK_POINTER_MOTION_MASK);
 	g_signal_connect(G_OBJECT(gtk->gl_area), "realize", G_CALLBACK(on_realise), gtk);
 	g_signal_connect(G_OBJECT(gtk->gl_area), "render", G_CALLBACK(on_render), gtk);
-	g_signal_connect(G_OBJECT(gtk->gl_area), "key_press_event", G_CALLBACK(on_keypress), gtk);
-	g_signal_connect(G_OBJECT(gtk->gl_area), "key_release_event", G_CALLBACK(on_keypress), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "key-press-event", G_CALLBACK(on_keypress), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "key-release-event", G_CALLBACK(on_keypress), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "motion-notify-event", G_CALLBACK(mouse_motion), gtk);
 	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->gl_area), 3, 2);
 	
 	gtk->vram_gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "vram_gl_area"));
@@ -190,6 +193,10 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_widget_show_all(GTK_WIDGET(gtk->window));
 	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), false);
 	gtk_window_set_focus(gtk->window, gtk->gl_area);
+
+	GdkDisplay *display = gtk_widget_get_display(GTK_WIDGET(gtk->window));
+	gtk->default_cursor = gdk_cursor_new_from_name(display, "default");
+	gtk->blank_cursor = gdk_cursor_new_from_name(display, "none");
 
 	{
 		/*
@@ -270,6 +277,15 @@ gboolean on_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 	gbcc_window_update(gbc);
 	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), gbc->vram_display);
 	gbcc_gtk_process_input(gtk);
+	
+
+	/* Hide the cursor after 2 seconds of inactivity */
+	struct timespec cur_time;
+	clock_gettime(CLOCK_REALTIME, &cur_time);
+	if (gbcc_time_diff(&cur_time, &gtk->last_cursor_move) > 2 * SECOND) {
+		GdkWindow* win = gtk_widget_get_window(GTK_WIDGET(gtk->window));
+		gdk_window_set_cursor(win, gtk->blank_cursor);
+	}
 
 	return true;
 }
@@ -609,6 +625,14 @@ void stop_emulation_thread(struct gbcc_gtk *gtk)
 	gbcc_save_state(gbc);
 	gbcc_free(&gbc->core);
 	gbc->core = (struct gbcc_core){0};
+}
+
+void mouse_motion(GtkWidget *widget, GdkEvent *event, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	clock_gettime(CLOCK_REALTIME, &gtk->last_cursor_move);
+	GdkWindow* win = gtk_widget_get_window(GTK_WIDGET(gtk->window));
+	gdk_window_set_cursor(win, gtk->default_cursor);
 }
 
 void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
