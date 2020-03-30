@@ -128,8 +128,10 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->gl_area), 3, 2);
 	
 	gtk->vram_gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "vram_gl_area"));
+	gtk_widget_add_events(gtk->vram_gl_area, GDK_POINTER_MOTION_MASK);
 	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "realize", G_CALLBACK(on_vram_realise), gtk);
 	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "render", G_CALLBACK(on_vram_render), gtk);
+	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "motion-notify-event", G_CALLBACK(mouse_motion), gtk);
 	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->vram_gl_area), 3, 2);
 	
 	gtk->menu.bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
