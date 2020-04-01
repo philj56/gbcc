@@ -43,7 +43,7 @@ REPT $134 - $104
   db 0
 ENDR
 
-  db "GBCCINTRO", 0, 0 ; ROM Title
+  db "GBCCCOLOUR", 0 ; ROM Title
   db "PHIL" ; Manufacturer Code
   db CART_COMPATIBLE_GBC ; GBC Flag
   db "PJ" ; Licensee Code
