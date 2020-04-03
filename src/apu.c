@@ -258,6 +258,15 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch1.envelope.start_volume = (val & 0xF0u) >> 4u;
 			gbc->apu.ch1.envelope.dir = val & 0x08u ? 1 : -1;
 			gbc->apu.ch1.envelope.timer.period = val & 0x07u;
+
+			// Obscure behaviour: writing a value in add mode with
+			// 0 period increments the volume by one
+			// TODO: This is not the full behaviour, but apparently
+			// the only reliable bit
+			if (gbc->apu.ch1.enabled && (val & 0x0Fu) == 0x08u) {
+				gbc->apu.ch1.envelope.volume++;
+				gbc->apu.ch1.envelope.volume &= 0x0Fu;
+			}
 			break;
 		case NR13:
 			gbc->apu.ch1.duty.freq &= ~0x00FFu;
@@ -296,6 +305,15 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch2.envelope.start_volume = (val & 0xF0u) >> 4u;
 			gbc->apu.ch2.envelope.dir = val & 0x08u ? 1 : -1;
 			gbc->apu.ch2.envelope.timer.period = val & 0x07u;
+
+			// Obscure behaviour: writing a value in add mode with
+			// 0 period increments the volume by one
+			// TODO: This is not the full behaviour, but apparently
+			// the only reliable bit
+			if (gbc->apu.ch2.enabled && (val & 0x0Fu) == 0x08u) {
+				gbc->apu.ch2.envelope.volume++;
+				gbc->apu.ch2.envelope.volume &= 0x0Fu;
+			}
 			break;
 		case NR23:
 			gbc->apu.ch2.duty.freq &= ~0x00FFu;
@@ -367,6 +385,15 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch4.envelope.start_volume = (val & 0xF0u) >> 4u;
 			gbc->apu.ch4.envelope.dir = val & 0x08u ? 1 : -1;
 			gbc->apu.ch4.envelope.timer.period = val & 0x07u;
+
+			// Obscure behaviour: writing a value in add mode with
+			// 0 period increments the volume by one
+			// TODO: This is not the full behaviour, but apparently
+			// the only reliable bit
+			if (gbc->apu.ch4.enabled && (val & 0x0Fu) == 0x08u) {
+				gbc->apu.ch4.envelope.volume++;
+				gbc->apu.ch4.envelope.volume &= 0x0Fu;
+			}
 			break;
 		case NR43:
 			gbc->apu.noise.shift = (val & 0xF0u) >> 4u;
