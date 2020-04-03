@@ -27,7 +27,10 @@
 #include <string.h>
 #include <time.h>
 
-#define BASE_AMPLITUDE (UINT16_MAX / 4 / 0x0F / 0x10u)
+/* Max amplitude / no. channels / max global volume multiplier */
+#define MAX_CHANNEL_AMPLITUDE (INT16_MAX / 4 / 0x10u)
+/* Max channel amplitude / max envelope volume multiplier */
+#define BASE_AMPLITUDE (MAX_CHANNEL_AMPLITUDE / 0x10u)
 #define CLOCKS_PER_SAMPLE ((float)GBC_CLOCK_FREQ / (float)GBCC_SAMPLE_RATE)
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -184,6 +187,11 @@ void gbcc_audio_update(struct gbcc *gbc)
 void ch1_update(struct gbcc *gbc)
 {
 	struct channel *ch1 = &gbc->core.apu.ch1;
+	if (ch1->dac) {
+		/* The DAC produces a signal in the range [-1, 1] */
+		gbc->audio.mix_buffer[gbc->audio.index] -= MAX_CHANNEL_AMPLITUDE / 2;
+		gbc->audio.mix_buffer[gbc->audio.index + 1] -= MAX_CHANNEL_AMPLITUDE / 2;
+	}
 	if (!ch1->enabled) {
 		return;
 	}
@@ -195,6 +203,11 @@ void ch1_update(struct gbcc *gbc)
 void ch2_update(struct gbcc *gbc)
 {
 	struct channel *ch2 = &gbc->core.apu.ch2;
+	if (ch2->dac) {
+		/* The DAC produces a signal in the range [-1, 1] */
+		gbc->audio.mix_buffer[gbc->audio.index] -= MAX_CHANNEL_AMPLITUDE / 2;
+		gbc->audio.mix_buffer[gbc->audio.index + 1] -= MAX_CHANNEL_AMPLITUDE / 2;
+	}
 	if (!ch2->enabled) {
 		return;
 	}
@@ -206,6 +219,11 @@ void ch2_update(struct gbcc *gbc)
 void ch3_update(struct gbcc *gbc)
 {
 	struct channel *ch3 = &gbc->core.apu.ch3;
+	if (ch3->dac) {
+		/* The DAC produces a signal in the range [-1, 1] */
+		gbc->audio.mix_buffer[gbc->audio.index] -= MAX_CHANNEL_AMPLITUDE / 2;
+		gbc->audio.mix_buffer[gbc->audio.index + 1] -= MAX_CHANNEL_AMPLITUDE / 2;
+	}
 	if (!ch3->enabled || gbc->core.apu.wave.shift == 0) {
 		return;
 	}
@@ -216,6 +234,11 @@ void ch3_update(struct gbcc *gbc)
 void ch4_update(struct gbcc *gbc)
 {
 	struct channel *ch4 = &gbc->core.apu.ch4;
+	if (ch4->dac) {
+		/* The DAC produces a signal in the range [-1, 1] */
+		gbc->audio.mix_buffer[gbc->audio.index] -= MAX_CHANNEL_AMPLITUDE / 2;
+		gbc->audio.mix_buffer[gbc->audio.index + 1] -= MAX_CHANNEL_AMPLITUDE / 2;
+	}
 	if (!ch4->enabled) {
 		return;
 	}

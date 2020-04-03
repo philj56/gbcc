@@ -65,8 +65,13 @@ void gbcc_apu_clock(struct gbcc_core *gbc)
 	}
 
 	/* Duty */
-	apu->ch1.state = duty_clock(&apu->ch1.duty);
-	apu->ch2.state = duty_clock(&apu->ch2.duty);
+	/* Duty cycle doesn't clock after powering on until first trigger */
+	if (apu->ch1.duty.enabled) {
+		apu->ch1.state = duty_clock(&apu->ch1.duty);
+	}
+	if (apu->ch2.duty.enabled) {
+		apu->ch2.state = duty_clock(&apu->ch2.duty);
+	}
 
 	/* Noise */
 	if (apu->noise.shift < 14 && timer_clock(&apu->noise.timer)) {
@@ -249,11 +254,9 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch1.counter = 64 - (val & 0x3Fu);
 			break;
 		case NR12:
-			if (!(val & 0xF8u)) {
+			gbc->apu.ch1.dac = val & 0xF8u;
+			if (!gbc->apu.ch1.dac) {
 				gbc->apu.ch1.enabled = false;
-				gbc->apu.ch1.dac = false;
-			} else {
-				gbc->apu.ch1.dac = true;
 			}
 			gbc->apu.ch1.envelope.start_volume = (val & 0xF0u) >> 4u;
 			gbc->apu.ch1.envelope.dir = val & 0x08u ? 1 : -1;
@@ -296,11 +299,9 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch2.counter = 64 - (val & 0x3Fu);
 			break;
 		case NR22:
-			if (!(val & 0xF8u)) {
-				gbc->apu.ch2.enabled = val & 0xF8u;
-				gbc->apu.ch2.dac = false;
-			} else {
-				gbc->apu.ch2.dac = true;
+			gbc->apu.ch2.dac = val & 0xF8u;
+			if (!gbc->apu.ch2.dac) {
+				gbc->apu.ch2.enabled = false;
 			}
 			gbc->apu.ch2.envelope.start_volume = (val & 0xF0u) >> 4u;
 			gbc->apu.ch2.envelope.dir = val & 0x08u ? 1 : -1;
@@ -376,11 +377,9 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			gbc->apu.ch4.counter = 64 - (val & 0x3Fu);
 			break;
 		case NR42:
-			if (!(val & 0xF8u)) {
+			gbc->apu.ch4.dac = val & 0xF8u;
+			if (!gbc->apu.ch4.dac) {
 				gbc->apu.ch4.enabled = false;
-				gbc->apu.ch4.dac = false;
-			} else {
-				gbc->apu.ch4.dac = true;
 			}
 			gbc->apu.ch4.envelope.start_volume = (val & 0xF0u) >> 4u;
 			gbc->apu.ch4.envelope.dir = val & 0x08u ? 1 : -1;
@@ -452,6 +451,7 @@ void ch1_trigger(struct gbcc_core *gbc)
 	uint8_t nr11 = gbcc_memory_read(gbc, NR11, true);
 	uint8_t nr13 = gbcc_memory_read(gbc, NR13, true);
 	uint8_t nr14 = gbcc_memory_read(gbc, NR14, true);
+	gbc->apu.ch1.duty.enabled = true;
 	gbc->apu.ch1.duty.cycle = (nr11 & 0xC0u) >> 6u;
 	gbc->apu.ch1.duty.freq = nr13;
 	gbc->apu.ch1.duty.freq |= (nr14 & 0x07u) << 8u;
@@ -491,6 +491,7 @@ void ch2_trigger(struct gbcc_core *gbc)
 	uint8_t nr21 = gbcc_memory_read(gbc, NR21, true);
 	uint8_t nr23 = gbcc_memory_read(gbc, NR23, true);
 	uint8_t nr24 = gbcc_memory_read(gbc, NR24, true);
+	gbc->apu.ch2.duty.enabled = true;
 	gbc->apu.ch2.duty.cycle = (nr21 & 0xC0u) >> 6u;
 	gbc->apu.ch2.duty.freq = nr23;
 	gbc->apu.ch2.duty.freq |= (nr24 & 0x07u) << 8u;

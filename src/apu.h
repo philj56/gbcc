@@ -27,6 +27,7 @@ struct duty {
 	uint8_t counter;
 	uint8_t cycle;
 	uint16_t freq;
+	bool enabled;
 };
 
 struct sweep {
