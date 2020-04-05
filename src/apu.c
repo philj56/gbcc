@@ -165,16 +165,16 @@ void gbcc_apu_sequencer_clock(struct gbcc_core *gbc)
 {
 	/* Length counters every other clock */
 	if (!(gbc->apu.sequencer_counter & 0x01u)) {
-		if (gbc->apu.ch1.length_enable) {
+		if (gbc->apu.ch1.length_enable && gbc->apu.ch1.enabled) {
 			length_counter_clock(&gbc->apu.ch1);
 		}
-		if (gbc->apu.ch2.length_enable) {
+		if (gbc->apu.ch2.length_enable && gbc->apu.ch2.enabled) {
 			length_counter_clock(&gbc->apu.ch2);
 		}
-		if (gbc->apu.ch3.length_enable) {
+		if (gbc->apu.ch3.length_enable && gbc->apu.ch3.enabled) {
 			length_counter_clock(&gbc->apu.ch3);
 		}
-		if (gbc->apu.ch4.length_enable) {
+		if (gbc->apu.ch4.length_enable && gbc->apu.ch4.enabled) {
 			length_counter_clock(&gbc->apu.ch4);
 		}
 	}
@@ -464,7 +464,11 @@ void ch1_trigger(struct gbcc_core *gbc)
 		}
 	}
 	timer_reset(&gbc->apu.ch1.duty.timer);
-	gbc->apu.ch1.envelope.enabled = true;
+	if (gbc->apu.ch1.envelope.timer.period > 0) {
+		gbc->apu.ch1.envelope.enabled = true;
+	} else {
+		gbc->apu.ch1.envelope.enabled = false;
+	}
 	gbc->apu.ch1.envelope.volume = gbc->apu.ch1.envelope.start_volume;
 	timer_reset(&gbc->apu.ch1.envelope.timer);
 	gbc->apu.sweep.freq = gbc->apu.ch1.duty.freq;
@@ -504,7 +508,11 @@ void ch2_trigger(struct gbcc_core *gbc)
 		}
 	}
 	timer_reset(&gbc->apu.ch2.duty.timer);
-	gbc->apu.ch2.envelope.enabled = true;
+	if (gbc->apu.ch2.envelope.timer.period > 0) {
+		gbc->apu.ch2.envelope.enabled = true;
+	} else {
+		gbc->apu.ch2.envelope.enabled = false;
+	}
 	gbc->apu.ch2.envelope.volume = gbc->apu.ch2.envelope.start_volume;
 	timer_reset(&gbc->apu.ch2.envelope.timer);
 	if (!gbc->apu.ch2.dac) {
@@ -541,7 +549,11 @@ void ch4_trigger(struct gbcc_core *gbc)
 		}
 	}
 	timer_reset(&gbc->apu.noise.timer);
-	gbc->apu.ch4.envelope.enabled = true;
+	if (gbc->apu.ch4.envelope.timer.period > 0) {
+		gbc->apu.ch4.envelope.enabled = true;
+	} else {
+		gbc->apu.ch4.envelope.enabled = false;
+	}
 	gbc->apu.ch4.envelope.volume = gbc->apu.ch4.envelope.start_volume;
 	timer_reset(&gbc->apu.ch4.envelope.timer);
 	gbc->apu.noise.lfsr = 0xFFFFu;
