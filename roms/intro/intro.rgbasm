@@ -1,6 +1,5 @@
 INCLUDE "hardware.inc"
-INCLUDE "font.rgbasm"
-
+INCLUDE "notes.inc"
 
 SECTION "Interrupt handlers", HRAM
 VBLANK_ADDRESS:
@@ -18,9 +17,9 @@ JOYPAD_ADDRESS:
 SECTION "Variables", WRAM0
 BounceIndices: ; Indices into bounce table for each letter in welcome message
   ds 10
-LogoFadeFrame: ; Current frame of logo fade animation
-  ds 1
 LogoFadeIndex: ; Current palette index for logo fade animation 
+  ds 1
+FrameCounter: ; Generic frame counter
   ds 1
 
 
@@ -138,16 +137,24 @@ Start:
   ld hl, LogoPalettes
   ld de, rBCPD
 .copyPalette
-  ld a, [hli]
+  ldi a, [hl]
   ld [de], a
   dec b
   jr nz, .copyPalette
 
   ld b, 8
+  ld hl, LogoSpritePalettes.text
+.copyTextPalette
+  ldi a, [hl]
+  ld [de], a
+  dec b
+  jr nz, .copyTextPalette
+
+  ld b, 8
   ld hl, LogoSpritePalettes
   ld de, rOCPD
 .copySpritePalette
-  ld a, [hli]
+  ldi a, [hl]
   ld [de], a
   dec b
   jr nz, .copySpritePalette
@@ -165,6 +172,32 @@ Start:
 SECTION "Welcome Screen", ROM0
 
 WelcomeScreen:
+  ld a, $80
+  ld [rNR52], a ; Enable sound
+  ld a, $FF
+  ld [rNR51], a ; All sounds to both sides
+  ld a, $77
+  ld [rNR50], a ; Full volume, no Vin
+
+  xor a
+  ld [rNR10], a ; No sweep
+  ld a, $80
+  ld [rNR12], a ; Quarter volume, fast decreasing envelope
+
+  ; Fill wave ram with a 50% duty sqare wave
+  ld hl, _AUD3WAVERAM
+  ld b, 4
+.fillWave
+  ld a, $FF
+  ldi [hl], a
+  ld a, $88
+  ldi [hl], a
+  ldi [hl], a
+  xor a
+  ldi [hl], a
+  dec b
+  jr nz, .fillWave
+
   ; Setup our sprites
   ld bc, WelcomeStr
   ld hl, _OAMRAM
@@ -203,7 +236,7 @@ WelcomeScreen:
   xor a
   ld hl, LogoFadeIndex
   ld [hl], a
-  ld hl, LogoFadeFrame
+  ld hl, FrameCounter
   ld [hl], a
 
   ; Install the initial vblank handler
@@ -255,7 +288,7 @@ WelcomeScroll:
   ; Check if we've finished the animation
   ld a, e
   or a
-  jr z, .finish
+  jp z, WelcomeScrollFinish
 
   ; Do the actual animation
   ld bc, BounceIndices ; Table of indices into bounce table for each letter
@@ -271,7 +304,89 @@ WelcomeScroll:
   jr nc, .scroll2 
   inc b ; Manually add the carried bit, so we add an 8-bit reg to bc
 .scroll2
-  ld a, [bc] ; a = current y-coordinate
+  ld a, [hl] ; a = current y-coordinate
+
+  ; Play a beep when going from y < 30 to y >= 30
+  cp 28
+  jr nc, .scroll3 ; We're not currently above 39
+  ld a, [bc] ; a = next y-coordinate
+  cp 28
+  jr c, .scroll3 ; We'll not be at 40 next frame
+  ld a, %00111111
+  ld [rNR11], a ; 50% duty, No length
+
+  push bc
+  push hl
+  ld hl, .play
+  ld a, d
+  dec a
+  jr z, .note9
+  dec a
+  jr z, .note8
+  dec a
+  jr z, .note7
+  dec a
+  jr z, .note6
+  dec a
+  jr z, .note5
+  dec a
+  jr z, .note4
+  dec a
+  jr z, .note3
+  dec a
+  jr z, .note2
+  dec a
+  jr z, .note1
+  dec a
+.note0
+  ld bc, NOTE_C4 | $8000
+  jp hl
+.note1
+  ld bc, NOTE_D4 | $8000
+  jp hl
+.note2
+  ld bc, NOTE_E4 | $8000
+  jp hl
+.note3
+  ld bc, NOTE_F4 | $8000
+  jp hl
+.note4
+  ld bc, NOTE_G4 | $8000
+  jp hl
+.note5
+  ld bc, NOTE_A4 | $8000
+  jp hl
+.note6
+  ld bc, NOTE_B4 | $8000
+  jp hl
+.note7
+  ld bc, NOTE_C5 | $8000
+  jp hl
+.note8
+  ld bc, NOTE_D5 | $8000
+  jp hl
+.note9
+  ld bc, NOTE_E5 | $8000
+
+  ld a, %10000110
+  ld [rNR12], a ; Slow fade out on last note
+
+  ; Set the volume based on how many letters are still bouncing
+  ;ld a, e
+  ;swap a
+  ;and $F0
+  ;or 2
+  ;ld [rNR12], a
+.play
+  ld a, c
+  ld [rNR13], a
+  ld a, b
+  ld [rNR14], a
+  pop hl
+  pop bc
+
+.scroll3
+  ld a, [bc] ; a = next y-coordinate
   ld [hl], a
   inc hl
   inc hl
@@ -288,7 +403,7 @@ WelcomeScroll:
   pop af
   ret
 
-.finish
+WelcomeScrollFinish:
   ; Install the next vblank handler
   ld hl, VBLANK_ADDRESS+1
   ld a, LOW(WelcomeFade)
@@ -296,7 +411,38 @@ WelcomeScroll:
   ld a, HIGH(WelcomeFade)
   ldi [hl], a
 
-  jr .return
+  ; Set initial master volume to 0 (which is really 1)
+  xor a
+  ld [rNR50], a
+  
+  ; Play the chord for the fade in
+  xor a
+  ld [rNR10], a ; No sweep
+  ld a, %10000000
+  ld [rNR11], a ; 50% duty, No length
+  ld [rNR21], a
+  ld a, $80
+  ld [rNR12], a ; 50% volume, no fade (we'll do it manually)
+  ld [rNR22], a
+  ld a, LOW(NOTE_E4)
+  ld [rNR13], a
+  ld a, HIGH(NOTE_E4) | %10000000
+  ld [rNR14], a
+  ld a, LOW(NOTE_G4)
+  ld [rNR23], a
+  ld a, HIGH(NOTE_G4) | %10000000
+  ld [rNR24], a
+
+  ld a, $80
+  ld [rNR30], a ; Enable wave
+  ld a, %01000000
+  ld [rNR32], a ; 100% volume (as we're playing 2 notes with wave)
+  ld a, LOW(1046)
+  ld [rNR33], a ; Frequency fudged to give correct C4-C5 chord
+  ld a, HIGH(1046) | %10000000
+  ld [rNR34], a
+
+  jr WelcomeScroll.return
 
 ; Fade in the GBCC logo
 WelcomeFade:
@@ -333,30 +479,141 @@ ENDR
   jr nz, .copyPalette
   
   ; Check whether to increment the palette
-  ld hl, LogoFadeFrame
+  ld hl, FrameCounter
   ld a, [hl]
   inc a
   ld [hl], a ; Increment the frame
-  cp 6 ; Increment the palette every 30 frames
+  cp 3 ; Increment the palette & volume every 3 frames
   jr nz, .return ; Nothing else to do, return
   xor a
   ld [hl], a ; Reset frame
+  
+  ; Fade in audio
+  ld a, [rNR50]
+  cp $77
+  jr z, .continue2
+  inc a
+  swap a
+  inc a
+  ld [rNR50], a ; Volume is stored in bits 0-2 and 4-6, hence inc-swap-inc
 
+.continue2
   ld hl, LogoFadeIndex
   ld a, [hl]
   inc a
   cp a, 8
-  jr nz, .continue2
-  dec a
-.continue2
+  jr z, .finish
   ld [hl], a
-
+  jr .return
+.finish
+  ld hl, FrameCounter
+  xor a
+  ld [hl], a
+  ld hl, VBLANK_ADDRESS+1
+  ld a, LOW(LogoFadeOutAudio)
+  ldi [hl], a
+  ld a, HIGH(LogoFadeOutAudio)
+  ldi [hl], a
 
 .return
   pop hl
   pop de
   pop bc
   pop af
+  ret
+
+
+LogoFadeOutAudio:
+  push af
+  push bc
+  push hl
+
+  ld hl, FrameCounter
+  ld a, [hl]
+  inc a
+  cp 20 ; Start decreasing volume after 20 frame delay
+  ld [hl], a
+  jr c, .return
+  sub 20
+  cp 4 ; Decrease every 4 frames
+  jr nz, .return
+
+  ld a, 20
+  ld [hl], a ; Reset frame counter
+  ld a, [rNR50]
+  dec a
+  swap a
+  dec a
+  ld [rNR50], a ; Volume is stored in bits 0-2 and 4-6, hence dec-swap-dec
+  jr nz, .return
+  ; Finished, reset frame counter & install next vblank handler
+  xor a
+  ld hl, rNR10
+  ld b, rNR44 - rNR10
+.zeroAudio ; Stop & reset each channel
+  ldi [hl], a
+  dec b
+  jr nz, .zeroAudio
+  ld a, $77
+  ld [rNR50], a ; Reset master volume to full
+  ld hl, VBLANK_ADDRESS+1
+  ld a, LOW(ShowStart)
+  ldi [hl], a
+  ld a, HIGH(ShowStart)
+  ldi [hl], a
+.return
+  pop hl
+  pop bc
+  pop af
+  ret
+
+ShowStart:
+  push af
+  push bc
+  push de
+  push hl
+
+  ld hl, FrameCounter
+  ld a, [hl]
+  inc a
+  cp 30 ; Wait 30 frames
+  ld [hl], a
+  jr c, .return
+  cp 31
+  jr nz, .show
+  ld hl, VBLANK_ADDRESS+1
+  ld a, LOW(DoNothing)
+  ldi [hl], a
+  ld a, HIGH(DoNothing)
+  ldi [hl], a
+.return
+  pop hl
+  pop de
+  pop bc
+  pop af
+  ret
+
+.show
+  ; Play a high beep
+  xor a
+  ld [rNR10], a ; No sweep
+  ld a, $80
+  ld [rNR11], a ; 50% duty, no length
+  ld a, $47
+  ld [rNR12], a ; 50% volume, slow decreasing envelope
+  ld a, LOW(NOTE_C7)
+  ld [rNR13], a
+  ld a, HIGH(NOTE_C7) | %10000000
+  ld [rNR14], a
+
+  ; Show the text
+  ld b, 5
+  ld c, 15
+  ld de, PressStartStr
+  call PrintString
+  jr .return
+
+DoNothing:
   ret
 
 SECTION "Functions", ROM0
@@ -379,12 +636,61 @@ Memcpy:
   jr nz, Memcpy
   ret
 
+; Display a string on the screen
+; @param b The x tile co-ordinate to start printing at
+; @param c The y tile co-ordinate to start printing at
+; @param de A pointer to the string to be printed
+; @return de A pointer to the byte after the source string's terminating byte
+; @return hl A pointer to the byte after the last copied byte
+; @return a Garbage
+; @return flags C reset, Z set
+PrintString:
+  ; Set h to contain upper byte of tile number (32 * c + b)
+  ld h, c 
+  srl h
+  srl h
+  srl h
+  ; And l to contain lower byte
+  ld a, c
+  sla a
+  sla a
+  sla a
+  sla a
+  sla a
+  add b
+  ld l, a
+  push bc
+  ld bc, $9800  ; Beginning of background tile map
+  add hl, bc
+  call Strcpy
+  pop bc
+  ret
+  
+
+; Copy a string up to but not including the first NUL character
+; @param de A pointer to the string to be copied
+; @param hl A pointer to the beginning of the destination buffer
+; @return de A pointer to the byte after the source string's terminating byte
+; @return hl A pointer to the byte after the last copied byte
+; @return a Zero
+; @return flags C reset, Z set
+Strcpy:
+  ld a, [de]
+  inc de
+  and a
+  ret z
+  ld [hli], a
+  jr Strcpy
+
 
 SECTION "Strings", ROM0
 
 WelcomeStr:
   db "Welcome to", 0
 WelcomeStrEnd:
+
+PressStartStr:
+  db "Press start", 0
 
 
 SECTION "Sprite Palettes", ROM0
@@ -552,11 +858,11 @@ GBCCLogoMapEnd:
 SECTION "GBCC Logo Attributes", ROM0
 
 GBCCLogoAttributes:
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
   db $00,$00,$00,$00,$00,$00,$01,$01,$01,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
   db $00,$00,$00,$00,$00,$00,$01,$01,$01,$01,$00,$02,$02,$02,$02,$03,$03,$03,$03,$03,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
   db $00,$00,$00,$00,$00,$00,$01,$01,$01,$01,$02,$02,$02,$02,$02,$03,$03,$03,$03,$03,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -565,23 +871,23 @@ GBCCLogoAttributes:
   db $00,$00,$00,$00,$00,$00,$01,$01,$01,$01,$02,$02,$02,$02,$03,$03,$03,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
   db $00,$00,$00,$00,$00,$00,$01,$01,$01,$01,$22,$02,$02,$02,$02,$03,$03,$03,$03,$03,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
   db $00,$00,$00,$00,$00,$00,$61,$01,$01,$00,$00,$00,$42,$02,$00,$00,$03,$03,$03,$43,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-  db $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
+  db $05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05,$05
 GBCCLogoAttributesEnd:

@@ -98,7 +98,7 @@ FontStart:
   db $00,$00,$00,$00,$20,$20,$54,$54,$54,$54,$08,$08,$00,$00,$00,$00
 FontEnd:
 
-InstallFont:
+InstallFont::
   ld hl, $8200
   ld de, FontStart
   ld bc, FontEnd - FontStart
