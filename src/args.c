@@ -71,6 +71,9 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		}
 	} else {
 		gbcc_initialise(&gbc->core, argv[optind]);
+		if (gbc->core.error) {
+			return false;
+		}
 	}
 
 	char *config = NULL;

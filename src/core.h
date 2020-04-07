@@ -116,7 +116,11 @@ struct gbcc_core {
 	bool hide_background;
 	bool hide_window;
 	bool hide_sprites;
+
+	/* Initialisation state */
 	bool initialised;
+	bool error;
+	const char *error_msg;
 };
 
 void gbcc_initialise(struct gbcc_core *gbc, const char *filename);
