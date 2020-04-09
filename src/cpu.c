@@ -26,6 +26,7 @@ static void check_interrupts(struct gbcc_core *gbc);
 static inline void cpu_clock(struct gbcc_core *gbc);
 
 /* TODO: Check order of all of these */
+__attribute__((always_inline))
 void gbcc_emulate_cycle(struct gbcc_core *gbc)
 {
 	check_interrupts(gbc);

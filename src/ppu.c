@@ -96,6 +96,7 @@ void gbcc_enable_lcd(struct gbcc_core *gbc)
 	ppu->clock = 248;
 }
 
+__attribute__((always_inline))
 void gbcc_ppu_clock(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;

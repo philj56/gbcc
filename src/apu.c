@@ -50,14 +50,17 @@ void gbcc_apu_init(struct gbcc_core *gbc)
 	clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 }
 
+__attribute__((always_inline))
 void gbcc_apu_clock(struct gbcc_core *gbc)
 {
 	struct apu *apu = &gbc->apu;
-	apu->sync_clock++;
-	if (!gbc->sync_to_video && apu->sync_clock == CLOCKS_PER_SYNC) {
-		apu->sync_clock = 0;
-		apu->sample++;
-		time_sync(gbc);
+	if (!gbc->sync_to_video) {
+		apu->sync_clock++;
+		if (apu->sync_clock == CLOCKS_PER_SYNC) {
+			apu->sync_clock = 0;
+			apu->sample++;
+			time_sync(gbc);
+		}
 	}
 
 	if (apu->disabled) {

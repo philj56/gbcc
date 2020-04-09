@@ -107,6 +107,7 @@ void gbcc_audio_destroy(struct gbcc *gbc) {
 	alcCloseDevice(gbc->audio.al.device);
 }
 
+__attribute__((always_inline))
 void gbcc_audio_update(struct gbcc *gbc)
 {
 	struct gbcc_audio *audio = &gbc->audio;
