@@ -234,14 +234,14 @@ void gbcc_print_op(struct gbcc_core *gbc)
 	uint8_t op = cpu->opcode;
 	gbcc_log_debug("%02X", op);
 	for (uint8_t i = 0; i < gbcc_op_sizes[op] - 1; i++) {
-		gbcc_log_append_debug("%02X", gbcc_memory_read(gbc, cpu->reg.pc + i, true));
+		gbcc_log_append_debug("%02X", gbcc_memory_read_force(gbc, cpu->reg.pc + i));
 	}
 	if (op == 0xCB) {
-		uint8_t cb_op = gbcc_memory_read(gbc, cpu->reg.pc, false);
+		uint8_t cb_op = gbcc_memory_read(gbc, cpu->reg.pc);
 		gbcc_log_append_debug("%02X", cb_op);
 		gbcc_log_append_debug("\t%s\n", cb_op_dissassemblies[cb_op]);
 	} else if (op == 0xE0 || op == 0xF0) {
-		uint8_t arg = gbcc_memory_read(gbc, cpu->reg.pc, true);
+		uint8_t arg = gbcc_memory_read_force(gbc, cpu->reg.pc);
 		const char *reg = NULL;
 		if (arg < 0x80) {
 			reg = ioreg_names[arg];

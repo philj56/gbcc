@@ -136,8 +136,8 @@ void INTERRUPT(struct gbcc_core *gbc)
 		done(cpu);
 		return;
 	}
-	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
-	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
+	uint8_t iereg = gbcc_memory_read(gbc, IE);
+	uint8_t ifreg = gbcc_memory_read(gbc, IF);
 	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
 	if (!interrupt && cpu->instruction.step < 4) {
 		if (cpu->instruction.step < 3) {
@@ -165,10 +165,10 @@ void INTERRUPT(struct gbcc_core *gbc)
 		case 1:
 			YIELD
 		case 2:
-			gbcc_memory_write(gbc, --cpu->reg.sp, high_byte(cpu->reg.pc), false);
+			gbcc_memory_write(gbc, --cpu->reg.sp, high_byte(cpu->reg.pc));
 			YIELD
 		case 3:
-			gbcc_memory_write(gbc, --cpu->reg.sp, low_byte(cpu->reg.pc), false);
+			gbcc_memory_write(gbc, --cpu->reg.sp, low_byte(cpu->reg.pc));
 			/* 
 			 * Interrupt address is calculated here according to
 			 * mooneye's tests. Interrupt priority is in memory
@@ -193,19 +193,19 @@ void INTERRUPT(struct gbcc_core *gbc)
 	}
 	switch (cpu->interrupt.addr) {
 		case INT_VBLANK:
-			gbcc_memory_clear_bit(gbc, IF, 0, false);
+			gbcc_memory_clear_bit(gbc, IF, 0);
 			break;
 		case INT_LCDSTAT:
-			gbcc_memory_clear_bit(gbc, IF, 1, false);
+			gbcc_memory_clear_bit(gbc, IF, 1);
 			break;
 		case INT_TIMER:
-			gbcc_memory_clear_bit(gbc, IF, 2, false);
+			gbcc_memory_clear_bit(gbc, IF, 2);
 			break;
 		case INT_SERIAL:
-			gbcc_memory_clear_bit(gbc, IF, 3, false);
+			gbcc_memory_clear_bit(gbc, IF, 3);
 			break;
 		case INT_JOYPAD:
-			gbcc_memory_clear_bit(gbc, IF, 4, false);
+			gbcc_memory_clear_bit(gbc, IF, 4);
 			break;
 	}
 	cpu->reg.pc = cpu->interrupt.addr;
@@ -232,11 +232,11 @@ void NOP(struct gbcc_core *gbc)
 
 void STOP(struct gbcc_core *gbc)
 {
-	uint8_t key1 = gbcc_memory_read(gbc, KEY1, true);
+	uint8_t key1 = gbcc_memory_read_force(gbc, KEY1);
 	if (gbc->mode == GBC && check_bit(key1, 0)) {
 		gbc->cpu.double_speed = !gbc->cpu.double_speed;
 		key1 = gbc->cpu.double_speed * bit(7);
-		gbcc_memory_write(gbc, KEY1, key1, true);
+		gbcc_memory_write_force(gbc, KEY1, key1);
 	} else {
 		gbc->cpu.stop = true;
 	}
@@ -247,8 +247,8 @@ void STOP(struct gbcc_core *gbc)
 void HALT(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
-	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
-	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
+	uint8_t iereg = gbcc_memory_read(gbc, IE);
+	uint8_t ifreg = gbcc_memory_read(gbc, IF);
 	bool interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
 	if (cpu->ime) {
 		/* HALT proceeds normally */
@@ -446,10 +446,10 @@ void LD_A(struct gbcc_core *gbc)
 	}
 	switch((cpu->opcode % 0x10u) / 0x08u) {
 		case 0:
-			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a, false);
+			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a);
 			break;
 		case 1:
-			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr, false);
+			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr);
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_A\n");
@@ -474,10 +474,10 @@ void LD_a16(struct gbcc_core *gbc)
 	uint16_t addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 	switch ((cpu->opcode - 0xE0u) / 0x10u) {
 		case 0:
-			gbcc_memory_write(gbc, addr, cpu->reg.a, false);
+			gbcc_memory_write(gbc, addr, cpu->reg.a);
 			break;
 		case 1:
-			cpu->reg.a = gbcc_memory_read(gbc, addr, false);
+			cpu->reg.a = gbcc_memory_read(gbc, addr);
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_a16\n");
@@ -498,10 +498,10 @@ void LDH_a8(struct gbcc_core *gbc)
 	}
 	switch ((cpu->opcode - 0xE0u) / 0x10u) {
 		case 0:
-			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a, false);
+			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a);
 			break;
 		case 1:
-			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr, false);
+			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr);
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_OFFSET\n");
@@ -520,10 +520,10 @@ void LDH_C(struct gbcc_core *gbc)
 
 	switch ((cpu->opcode - 0xE0u) / 0x10u) {
 		case 0:
-			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a, false);
+			gbcc_memory_write(gbc, cpu->instruction.addr, cpu->reg.a);
 			break;
 		case 1:
-			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr, false);
+			cpu->reg.a = gbcc_memory_read(gbc, cpu->instruction.addr);
 			break;
 		default:
 			gbcc_log_error("Impossible case in LD_OFFSET\n");
@@ -546,10 +546,10 @@ void STORE_SP(struct gbcc_core *gbc)
 			YIELD
 		case 3:
 			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
-			gbcc_memory_write(gbc, cpu->instruction.addr, low_byte(cpu->reg.sp), false);
+			gbcc_memory_write(gbc, cpu->instruction.addr, low_byte(cpu->reg.sp));
 			YIELD
 		case 4:
-			gbcc_memory_write(gbc, cpu->instruction.addr+1, high_byte(cpu->reg.sp), false);
+			gbcc_memory_write(gbc, cpu->instruction.addr+1, high_byte(cpu->reg.sp));
 	}
 	done(cpu);
 }
@@ -591,10 +591,10 @@ void POP(struct gbcc_core *gbc)
 		case 0:
 			YIELD
 		case 1:
-			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
+			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++);
 			YIELD
 		case 2:
-			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
+			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++);
 	}
 	uint16_t tmp = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 	switch ((cpu->opcode % 0x40u) / 0x10u) {
@@ -649,10 +649,10 @@ void PUSH(struct gbcc_core *gbc)
 		case 1:
 			YIELD
 		case 2:
-			gbcc_memory_write(gbc, --(cpu->reg.sp), cpu->instruction.op1, false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), cpu->instruction.op1);
 			YIELD
 		case 3:
-			gbcc_memory_write(gbc, --(cpu->reg.sp), cpu->instruction.op2, false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), cpu->instruction.op2);
 	}
 	done(cpu);
 }
@@ -788,7 +788,7 @@ void INC_DEC_REG(struct gbcc_core *gbc)
 			op = cpu->reg.l;
 			break;
 		case 6:
-			op = gbcc_memory_read(gbc, cpu->reg.hl, false);
+			op = gbcc_memory_read(gbc, cpu->reg.hl);
 			break;
 		case 7:
 			op = cpu->reg.a;
@@ -824,7 +824,7 @@ void INC_DEC_HL(struct gbcc_core *gbc)
 		case 0:
 			YIELD
 		case 1:
-			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.hl, false);
+			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.hl);
 			YIELD
 	}
 	uint8_t op = cpu->instruction.op1;
@@ -1115,10 +1115,10 @@ void CALL(struct gbcc_core *gbc)
 			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 			YIELD
 		case 4:
-			gbcc_memory_write(gbc, --(cpu->reg.sp), high_byte(cpu->reg.pc), false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), high_byte(cpu->reg.pc));
 			YIELD
 		case 5:
-			gbcc_memory_write(gbc, --(cpu->reg.sp), low_byte(cpu->reg.pc), false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), low_byte(cpu->reg.pc));
 	}
 	cpu->reg.pc = cpu->instruction.addr;
 	done(cpu);
@@ -1162,10 +1162,10 @@ void CALL_COND(struct gbcc_core *gbc)
 			cpu->instruction.addr = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
 			YIELD
 		case 4:
-			gbcc_memory_write(gbc, --(cpu->reg.sp), high_byte(cpu->reg.pc), false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), high_byte(cpu->reg.pc));
 			YIELD
 		case 5:
-			gbcc_memory_write(gbc, --(cpu->reg.sp), low_byte(cpu->reg.pc), false);
+			gbcc_memory_write(gbc, --(cpu->reg.sp), low_byte(cpu->reg.pc));
 			cpu->reg.pc = cpu->instruction.addr;
 	}
 	done(cpu);
@@ -1178,10 +1178,10 @@ void RET(struct gbcc_core *gbc)
 		case 0:
 			YIELD
 		case 1:
-			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
+			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++);
 			YIELD
 		case 2:
-			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
+			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++);
 			YIELD
 		case 3:
 			cpu->reg.pc = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
@@ -1227,10 +1227,10 @@ void RET_COND(struct gbcc_core *gbc)
 				break;
 			}
 		case 2:
-			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
+			cpu->instruction.op1 = gbcc_memory_read(gbc, cpu->reg.sp++);
 			YIELD
 		case 3:
-			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++, false);
+			cpu->instruction.op2 = gbcc_memory_read(gbc, cpu->reg.sp++);
 			YIELD
 		case 4:
 			cpu->reg.pc = cat_bytes(cpu->instruction.op1, cpu->instruction.op2);
@@ -1247,10 +1247,10 @@ void RST(struct gbcc_core *gbc)
 		case 1:
 			YIELD
 		case 2:
-			gbcc_memory_write(gbc, --cpu->reg.sp, high_byte(cpu->reg.pc), false);
+			gbcc_memory_write(gbc, --cpu->reg.sp, high_byte(cpu->reg.pc));
 			YIELD
 		case 3:
-			gbcc_memory_write(gbc, --cpu->reg.sp, low_byte(cpu->reg.pc), false);
+			gbcc_memory_write(gbc, --cpu->reg.sp, low_byte(cpu->reg.pc));
 	}
 	cpu->reg.pc = cpu->opcode - 0xC7u;
 	done(cpu);
@@ -1424,7 +1424,7 @@ uint8_t READ_OPERAND_MOD(struct gbcc_core *gbc)
 		case 5:
 			return cpu->reg.l;
 		case 6:
-			ret = gbcc_memory_read(gbc, cpu->reg.hl, false);
+			ret = gbcc_memory_read(gbc, cpu->reg.hl);
 			return ret;
 		case 7:
 			return cpu->reg.a;
@@ -1456,7 +1456,7 @@ void WRITE_OPERAND_MOD(struct gbcc_core *gbc, uint8_t val)
 			cpu->reg.l = val;
 			break;
 		case 6:
-			gbcc_memory_write(gbc, cpu->reg.hl, val, false);
+			gbcc_memory_write(gbc, cpu->reg.hl, val);
 			break;
 		case 7:
 			cpu->reg.a = val;
@@ -1487,7 +1487,7 @@ void WRITE_OPERAND_DIV(struct gbcc_core *gbc, uint8_t offset, uint8_t val)
 			cpu->reg.l = val;
 			break;
 		case 6:
-			gbcc_memory_write(gbc, cpu->reg.hl, val, false);
+			gbcc_memory_write(gbc, cpu->reg.hl, val);
 			break;
 		case 7:
 			cpu->reg.a = val;

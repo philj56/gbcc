@@ -96,7 +96,7 @@ void gbcc_apu_clock(struct gbcc_core *gbc)
 		apu->wave.position &= 31u;
 		apu->wave.addr = WAVE_START + (apu->wave.position / 2);
 		//printf("Wave clocked to %04X\n", apu->wave.addr);
-		apu->wave.buffer = gbcc_memory_read(gbc, apu->wave.addr, true);
+		apu->wave.buffer = gbcc_memory_read_force(gbc, apu->wave.addr);
 		/* Alternates between high & low nibble, high first */
 		if (apu->wave.position % 2) {
 			apu->wave.buffer &= 0x0Fu;
@@ -189,11 +189,11 @@ void gbcc_apu_sequencer_clock(struct gbcc_core *gbc)
 			if (gbc->apu.sweep.shift != 0 && freq < 2048) {
 				gbc->apu.sweep.freq = freq;
 				gbc->apu.ch1.duty.freq = gbc->apu.sweep.freq;
-				gbcc_memory_write(gbc, NR13, freq & 0xFFu, true);
-				uint8_t nr14 = gbcc_memory_read(gbc, NR14, true);
+				gbcc_memory_write_force(gbc, NR13, freq & 0xFFu);
+				uint8_t nr14 = gbcc_memory_read_force(gbc, NR14);
 				nr14 &= ~0x07u;
 				nr14 |= (freq & 0x0700u) >> 8u;
-				gbcc_memory_write(gbc, NR14, nr14, true);
+				gbcc_memory_write_force(gbc, NR14, nr14);
 			}
 			freq = frequency_calc(&gbc->apu.sweep);
 			if (freq > 2047) {
@@ -451,9 +451,9 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 
 void ch1_trigger(struct gbcc_core *gbc)
 {
-	uint8_t nr11 = gbcc_memory_read(gbc, NR11, true);
-	uint8_t nr13 = gbcc_memory_read(gbc, NR13, true);
-	uint8_t nr14 = gbcc_memory_read(gbc, NR14, true);
+	uint8_t nr11 = gbcc_memory_read_force(gbc, NR11);
+	uint8_t nr13 = gbcc_memory_read_force(gbc, NR13);
+	uint8_t nr14 = gbcc_memory_read_force(gbc, NR14);
 	gbc->apu.ch1.duty.enabled = true;
 	gbc->apu.ch1.duty.cycle = (nr11 & 0xC0u) >> 6u;
 	gbc->apu.ch1.duty.freq = nr13;
@@ -495,9 +495,9 @@ void ch1_trigger(struct gbcc_core *gbc)
 
 void ch2_trigger(struct gbcc_core *gbc)
 {
-	uint8_t nr21 = gbcc_memory_read(gbc, NR21, true);
-	uint8_t nr23 = gbcc_memory_read(gbc, NR23, true);
-	uint8_t nr24 = gbcc_memory_read(gbc, NR24, true);
+	uint8_t nr21 = gbcc_memory_read_force(gbc, NR21);
+	uint8_t nr23 = gbcc_memory_read_force(gbc, NR23);
+	uint8_t nr24 = gbcc_memory_read_force(gbc, NR24);
 	gbc->apu.ch2.duty.enabled = true;
 	gbc->apu.ch2.duty.cycle = (nr21 & 0xC0u) >> 6u;
 	gbc->apu.ch2.duty.freq = nr23;

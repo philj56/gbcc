@@ -525,7 +525,7 @@ void update_timers(struct gbcc *gbc)
 	/* Update FPS counter */
 	fps->last_time = cur_time;
 	float df = gbc->core.ppu.frame - fps->last_frame;
-	uint8_t ly = gbcc_memory_read(&gbc->core, LY, true);
+	uint8_t ly = gbcc_memory_read_force(&gbc->core, LY);
 	uint8_t tmp = ly;
 	if (ly < fps->last_ly) {
 		df -= 1;

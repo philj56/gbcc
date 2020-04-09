@@ -21,19 +21,19 @@ void gbcc_hdma_copy_chunk(struct gbcc_core *gbc)
 	}
 	/* In single speed mode, hdma copies twice as much per clock */
 	for (int i = 0; i < 4 * (1 + !gbc->cpu.double_speed) && gbc->hdma.to_copy > 0; i++) {
-		gbcc_memory_copy(gbc, gbc->hdma.source, gbc->hdma.dest, true);
+		gbcc_memory_copy(gbc, gbc->hdma.source, gbc->hdma.dest);
 		gbc->hdma.source++;
 		gbc->hdma.dest++;
 		gbc->hdma.length--;
 		gbc->hdma.to_copy--;
 	}
-	gbcc_memory_write(gbc, HDMA1, (gbc->hdma.source >> 8u), true);
-	gbcc_memory_write(gbc, HDMA2, (gbc->hdma.source & 0xFFu), true);
-	gbcc_memory_write(gbc, HDMA3, (gbc->hdma.dest >> 8u), true);
-	gbcc_memory_write(gbc, HDMA4, (gbc->hdma.dest & 0xFFu), true);
+	gbcc_memory_write_force(gbc, HDMA1, (gbc->hdma.source >> 8u));
+	gbcc_memory_write_force(gbc, HDMA2, (gbc->hdma.source & 0xFFu));
+	gbcc_memory_write_force(gbc, HDMA3, (gbc->hdma.dest >> 8u));
+	gbcc_memory_write_force(gbc, HDMA4, (gbc->hdma.dest & 0xFFu));
 	if (gbc->hdma.length == 0) {
-		gbcc_memory_write(gbc, HDMA5, 0xFFu, true);
+		gbcc_memory_write_force(gbc, HDMA5, 0xFFu);
 	} else {
-		gbcc_memory_write(gbc, HDMA5, (uint8_t)((gbc->hdma.length >> 4u) - 1), true);
+		gbcc_memory_write_force(gbc, HDMA5, (uint8_t)((gbc->hdma.length >> 4u) - 1));
 	}
 }

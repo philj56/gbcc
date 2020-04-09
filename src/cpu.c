@@ -63,7 +63,7 @@ void cpu_clock(struct gbcc_core *gbc)
 	}
 	if (cpu->dma.timer > 0) {
 		cpu->dma.running = true;
-		gbc->memory.oam[low_byte(cpu->dma.source)] = gbcc_memory_read(gbc, cpu->dma.source, false);
+		gbc->memory.oam[low_byte(cpu->dma.source)] = gbcc_memory_read(gbc, cpu->dma.source);
 		cpu->dma.timer--;
 		cpu->dma.source++;
 	} else {
@@ -101,7 +101,7 @@ void clock_div(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	cpu->div_timer++;
-	uint8_t tac = gbcc_memory_read(gbc, TAC, false);
+	uint8_t tac = gbcc_memory_read(gbc, TAC);
 	uint16_t mask = 0;
 	switch (tac & 0x03u) {
 		/* 
@@ -128,7 +128,7 @@ void clock_div(struct gbcc_core *gbc)
 		 * The selected bit was previously high, and is now low, so
 		 * the tima increment logic triggers.
 		 */
-		uint8_t tima = gbcc_memory_read(gbc, TIMA, false);
+		uint8_t tima = gbcc_memory_read(gbc, TIMA);
 		tima++;
 		if (tima == 0) {
 			/* 
@@ -140,7 +140,7 @@ void clock_div(struct gbcc_core *gbc)
 			 */
 			cpu->tima_reload = 8;
 		}
-		gbcc_memory_write(gbc, TIMA, tima, false);
+		gbcc_memory_write(gbc, TIMA, tima);
 	}
 	cpu->tac_bit = cpu->div_timer & mask;
 	if (cpu->tima_reload > 0) {
@@ -152,15 +152,15 @@ void clock_div(struct gbcc_core *gbc)
 			 * they get cancelled, and everything proceeds as
 			 * normal.
 			 */
-			if (gbcc_memory_read(gbc, TIMA, false) != 0) {
+			if (gbcc_memory_read(gbc, TIMA) != 0) {
 				cpu->tima_reload = 0;
 			} else {
-				gbcc_memory_copy(gbc, TMA, TIMA, false);
-				gbcc_memory_set_bit(gbc, IF, 2, false);
+				gbcc_memory_copy(gbc, TMA, TIMA);
+				gbcc_memory_set_bit(gbc, IF, 2);
 			}
 		}
 		else if (cpu->tima_reload == 0) {
-			gbcc_memory_copy(gbc, TMA, TIMA, false);
+			gbcc_memory_copy(gbc, TMA, TIMA);
 		}
 	}
 	if (!gbc->apu.disabled) {
@@ -180,8 +180,8 @@ void clock_div(struct gbcc_core *gbc)
 void check_interrupts(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
-	uint8_t iereg = gbcc_memory_read(gbc, IE, false);
-	uint8_t ifreg = gbcc_memory_read(gbc, IF, false);
+	uint8_t iereg = gbcc_memory_read(gbc, IE);
+	uint8_t ifreg = gbcc_memory_read(gbc, IF);
 	uint8_t interrupt = (uint8_t)(iereg & ifreg) & 0x1Fu;
 	if (interrupt) {
 		cpu->halt.set = false;
@@ -200,7 +200,7 @@ uint8_t gbcc_fetch_instruction(struct gbcc_core *gbc)
 	if (cpu->halt.skip) {
 		/* HALT bug; CPU fails to increment pc */
 		cpu->halt.skip = false;
-		return gbcc_memory_read(gbc, cpu->reg.pc, false);
+		return gbcc_memory_read(gbc, cpu->reg.pc);
 	} 
-	return gbcc_memory_read(gbc, cpu->reg.pc++, false);
+	return gbcc_memory_read(gbc, cpu->reg.pc++);
 }

@@ -241,8 +241,8 @@ void gbcc_load_state(struct gbcc *gbc)
 			vram_bank = 0;
 			break;
 		case GBC:
-			wram_bank = gbcc_memory_read(core, SVBK, false) & 0x07u;
-			vram_bank = gbcc_memory_read(core, VBK, false) & 0x01u;
+			wram_bank = gbcc_memory_read(core, SVBK) & 0x07u;
+			vram_bank = gbcc_memory_read(core, VBK) & 0x01u;
 			break;
 	}
 
