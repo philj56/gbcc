@@ -12,6 +12,7 @@
 #include "bit_utils.h"
 #include "colour.h"
 #include "debug.h"
+#include "gbcc.h"
 #include "memory.h"
 #include "palettes.h"
 #include "ppu.h"
@@ -96,7 +97,7 @@ void gbcc_enable_lcd(struct gbcc_core *gbc)
 	ppu->clock = 248;
 }
 
-__attribute__((always_inline))
+ANDROID_INLINE
 void gbcc_ppu_clock(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;

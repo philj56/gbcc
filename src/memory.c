@@ -12,6 +12,7 @@
 #include "apu.h"
 #include "bit_utils.h"
 #include "debug.h"
+#include "gbcc.h"
 #include "hdma.h"
 #include "mbc.h"
 #include "memory.h"
@@ -117,7 +118,7 @@ void gbcc_memory_clear_bit(struct gbcc_core *gbc, uint16_t addr, uint8_t b)
 	gbcc_memory_write(gbc, addr, gbcc_memory_read(gbc, addr) & (uint8_t)~bit(b));
 }
 
-__attribute__((always_inline))
+ANDROID_INLINE
 uint8_t gbcc_memory_read_force(struct gbcc_core *gbc, uint16_t addr) {
 	if (addr >= OAM_START && addr < OAM_END) {
 		return gbc->memory.oam[addr - OAM_START];
@@ -181,7 +182,7 @@ uint8_t gbcc_memory_read(struct gbcc_core *gbc, uint16_t addr)
 	return 0;
 }
 
-__attribute__((always_inline))
+ANDROID_INLINE
 void gbcc_memory_write_force(struct gbcc_core *gbc, uint16_t addr, uint8_t val) {
 	if (addr >= OAM_START && addr < OAM_END) {
 		gbc->memory.oam[addr - OAM_START] = val;

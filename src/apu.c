@@ -12,6 +12,7 @@
 #include "apu.h"
 #include "bit_utils.h"
 #include "debug.h"
+#include "gbcc.h"
 #include "memory.h"
 #include "nelem.h"
 #include "time_diff.h"
@@ -50,7 +51,7 @@ void gbcc_apu_init(struct gbcc_core *gbc)
 	clock_gettime(CLOCK_REALTIME, &gbc->apu.start_time);
 }
 
-__attribute__((always_inline))
+ANDROID_INLINE
 void gbcc_apu_clock(struct gbcc_core *gbc)
 {
 	struct apu *apu = &gbc->apu;

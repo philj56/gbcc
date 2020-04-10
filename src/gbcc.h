@@ -11,6 +11,12 @@
 #ifndef GBCC_H
 #define GBCC_H
 
+#ifdef __ANDROID__
+#define ANDROID_INLINE __attribute__((always_inline))
+#else
+#define ANDROID_INLINE
+#endif
+
 #include "audio.h"
 #include "core.h"
 #include "menu.h"

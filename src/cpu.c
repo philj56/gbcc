@@ -13,6 +13,7 @@
 #include "bit_utils.h"
 #include "cpu.h"
 #include "debug.h"
+#include "gbcc.h"
 #include "hdma.h"
 #include "memory.h"
 #include "ops.h"
@@ -26,7 +27,7 @@ static void check_interrupts(struct gbcc_core *gbc);
 static inline void cpu_clock(struct gbcc_core *gbc);
 
 /* TODO: Check order of all of these */
-__attribute__((always_inline))
+ANDROID_INLINE
 void gbcc_emulate_cycle(struct gbcc_core *gbc)
 {
 	check_interrupts(gbc);
@@ -42,7 +43,7 @@ void gbcc_emulate_cycle(struct gbcc_core *gbc)
 	}
 }
 
-__attribute__((always_inline))
+ANDROID_INLINE
 void cpu_clock(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
