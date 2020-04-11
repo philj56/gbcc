@@ -27,7 +27,7 @@ emulator development and writing a large project in C. Development is ongoing
 *-b, --background*
 	Enable playback while unfocused.
 
-*-c, --config*
+*-c, --config*=_path_
 	Specify path to custom config file.
 
 *-f, --fractional*
@@ -47,8 +47,12 @@ emulator development and writing a large project in C. Development is ongoing
 *-p, --palette*=_palette_
 	Select the color palette for use in DMG mode.
 
-*-s, --shader*
+*-s, --shader*=_shader_
 	Select the shader to use on startup.
+
+*-S, --save-dir*=_path_
+	Specify a directory to use for saves and savestates. By default, the same
+	folder as the rom file will be used.
 
 *-t, --turbo*=_speed_
 	Set a fractional speed limit for turbo mode. Defaults to 0 (unlimited). Audio

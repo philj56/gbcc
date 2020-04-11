@@ -30,6 +30,7 @@ struct gbcc {
 	struct gbcc_audio audio;
 	struct gbcc_menu menu;
 	
+	const char *save_directory;
 	float turbo_speed;
 	bool quit;
 	bool pause;

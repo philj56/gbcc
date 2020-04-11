@@ -19,8 +19,17 @@
 #include <string.h>
 
 #define MAX_NAME_LEN 4096
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#define PATH_SEP '\\'
+#define PATH_SEP_STR "\\"
+#else
+#define PATH_SEP '/'
+#define PATH_SEP_STR "/"
+#endif
 
+static void get_save_basename(struct gbcc *gbc, char savename[MAX_NAME_LEN]);
 static void strip_ext(char *fname);
+static const char *gbcc_basename(const char *fname);
 
 void gbcc_save(struct gbcc *gbc)
 {
@@ -31,10 +40,7 @@ void gbcc_save(struct gbcc *gbc)
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
 	FILE *sav;
-	if (snprintf(tmp, MAX_NAME_LEN, "%s", core->cart.filename) >= MAX_NAME_LEN) {
-		gbcc_log_error("Filename %s too long\n", tmp);
-	}
-	strip_ext(tmp);
+	get_save_basename(gbc, tmp);
 	if (snprintf(fname, MAX_NAME_LEN, "%s.sav", tmp) >= MAX_NAME_LEN) {
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
@@ -71,10 +77,7 @@ void gbcc_load(struct gbcc *gbc)
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
 	FILE *sav;
-	if (snprintf(tmp, MAX_NAME_LEN, "%s", core->cart.filename) >= MAX_NAME_LEN) {
-		gbcc_log_error("Filename %s too long\n", tmp);
-	}
-	strip_ext(tmp);
+	get_save_basename(gbc, tmp);
 	if (snprintf(fname, MAX_NAME_LEN, "%s.sav", tmp) >= MAX_NAME_LEN) {
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
@@ -130,10 +133,7 @@ void gbcc_save_state(struct gbcc *gbc)
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
 	FILE *sav;
-	if (snprintf(tmp, MAX_NAME_LEN, "%s", core->cart.filename) >= MAX_NAME_LEN) {
-		gbcc_log_error("Filename %s too long\n", tmp);
-	}
-	strip_ext(tmp);
+	get_save_basename(gbc, tmp);
 	if (snprintf(fname, MAX_NAME_LEN, "%s.s%d", tmp, gbc->save_state) >= MAX_NAME_LEN) {
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
@@ -169,10 +169,7 @@ void gbcc_load_state(struct gbcc *gbc)
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
 	FILE *sav;
-	if (snprintf(tmp, MAX_NAME_LEN, "%s", core->cart.filename) >= MAX_NAME_LEN) {
-		gbcc_log_error("Filename %s too long\n", tmp);
-	}
-	strip_ext(tmp);
+	get_save_basename(gbc, tmp);
 	if (snprintf(fname, MAX_NAME_LEN, "%s.s%d", tmp, gbc->load_state) >= MAX_NAME_LEN) {
 		gbcc_log_error("Filename %s too long\n", fname);
 	}
@@ -286,6 +283,33 @@ bool gbcc_check_savestate(struct gbcc *gbc, int state)
 	return true;
 }
 
+void get_save_basename(struct gbcc *gbc, char savename[MAX_NAME_LEN]) {
+	int written  = 0;
+	if (gbc->save_directory != NULL) {
+		const char *fmt;
+		if (gbc->save_directory[strlen(gbc->save_directory) - 1] == PATH_SEP) {
+			fmt = "%s%s";
+		} else {
+			fmt = "%s" PATH_SEP_STR "%s";
+		}
+		written = snprintf(
+				savename,
+				MAX_NAME_LEN,
+				fmt,
+				gbc->save_directory,
+				gbcc_basename(gbc->core.cart.filename));
+		if (written >= MAX_NAME_LEN) {
+			gbcc_log_error("Filename %s too long\n", savename);
+		}
+	} else {
+		written = snprintf(savename, MAX_NAME_LEN, "%s", gbc->core.cart.filename);
+		if (written >= MAX_NAME_LEN) {
+			gbcc_log_error("Filename %s too long\n", savename);
+		}
+	}
+	strip_ext(savename);
+}
+
 void strip_ext(char *fname)
 {
 	char *end = fname + strlen(fname);
@@ -296,4 +320,10 @@ void strip_ext(char *fname)
 	if (end > fname) {
 		*end = '\0';
 	}
+}
+
+const char *gbcc_basename(const char *fname)
+{
+	const char *ret = strrchr(fname, PATH_SEP);
+	return ret ? ret + 1 : fname;
 }

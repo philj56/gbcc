@@ -27,9 +27,10 @@ static void usage()
 	       "  -f, --fractional      Enable fractional scaling.\n"
 	       "  -F, --frame-blending  Enable simple frame blending.\n"
 	       "  -h, --help            Print this message and exit.\n"
-	       "  -i, --interlacing       Enable interlacing.\n"
+	       "  -i, --interlacing     Enable interlacing.\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
 	       "  -s, --shader=NAME     Select the initial shader to use.\n"
+	       "  -S, --save-dir=PATH   Path to use for save files.\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
 	       "                        (0 = unlimited).\n"
 	       "  -v, --vsync           Enable VSync (experimental).\n"
@@ -52,11 +53,12 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"interlacing", no_argument, NULL, 'i'},
 		{"palette", required_argument, NULL, 'p'},
 		{"shader", required_argument, NULL, 's'},
+		{"save-dir", required_argument, NULL, 'S'},
 		{"turbo", required_argument, NULL, 't'},
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "aAbc:fFhip:s:t:vV";
+	const char *short_options = "aAbc:fFhip:s:S:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -117,6 +119,9 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				break;
 			case 's':
 				gbcc_window_use_shader(gbc, optarg);
+				break;
+			case 'S':
+				gbc->save_directory = optarg;
 				break;
 			case 't':
 				/* TODO: error check */
