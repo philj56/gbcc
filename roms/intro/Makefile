@@ -19,4 +19,4 @@ font.o: font.rgbasm
 	rgbasm -o $@ $<
 
 clean:
-	rm -f intro.o intro.gbc
+	rm -f *.o *.gbc *.sav *.s[0-9]
