@@ -325,6 +325,10 @@ void draw_window_pixel(struct gbcc_core *gbc)
 	}
 	if (t->x == 0) {
 		load_window_tile(gbc);
+		if (ppu->x == 0) {
+			/* Skip pixels to make wx=7 be at x=0 */
+			t->x += (7 - ppu->wx);
+		}
 	}
 
 	uint8_t colour = get_tile_pixel(t->hi, t->lo, t->x, check_bit(t->attr, 5));
