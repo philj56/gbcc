@@ -3,7 +3,7 @@ default: all
 all: intro.gbc
 
 intro.gbc: intro.o bounce.o palettes.o font.o
-	rgblink -o $@ $^
+	rgblink -t -o $@ $^
 	rgbfix -v -p0 $@
 
 intro.o: intro.rgbasm hardware.inc notes.inc
