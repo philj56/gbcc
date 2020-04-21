@@ -2042,10 +2042,43 @@ FinalScreen:
   xor a
   ldh [rVBK], a
 
-  ; We're done; disable the VBlank interrupt
-  xor a
-  ld [rIE], a
+  ; We're done; install the final handler
+  ld hl, VBLANK_ADDRESS+1
+  ld a, LOW(FinalScreenStart)
+  ldi [hl], a
+  ld a, HIGH(FinalScreenStart)
+  ldi [hl], a
 
+  pop hl
+  pop de
+  pop bc
+  pop af
+  ret
+
+
+FinalScreenStart:
+  push af
+  push bc
+  push de
+  push hl
+
+  ; Check if start is pressed
+  ld hl, rP1
+  ld a, %00010000
+  ld [hl], a
+  ld a, [hl]
+  and %00001000 ; Check for start
+  cp %00001000
+  jr z, .return
+
+  ; Reset the tutorial
+  pop hl
+  pop de
+  pop bc
+  pop af
+  jp $0100
+
+.return
   pop hl
   pop de
   pop bc
@@ -2916,10 +2949,10 @@ FinalScreenMap:
   db "       games                    "
   db "                                "
   db "                                "
+  db "        or                      "
   db "                                "
   db "                                "
-  db "                                "
-  db "                                "
-  db "                                "
+  db "   Press start to               "
+  db "       reset                    "
   db "                                "
 FinalScreenMapEnd:
