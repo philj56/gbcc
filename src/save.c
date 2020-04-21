@@ -140,6 +140,8 @@ void gbcc_save_state(struct gbcc *gbc)
 	sav = fopen(fname, "wb");
 	if (!sav) {
 		gbcc_log_error("Error opening %s: %s\n", fname, strerror(errno));
+		gbc->save_state = 0;
+		gbc->load_state = 0;
 		return;
 	}
 	fwrite(core, sizeof(struct gbcc_core), 1, sav);
