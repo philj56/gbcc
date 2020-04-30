@@ -410,9 +410,9 @@ void get_cartridge_hardware(struct gbcc_core *gbc)
 			gbcc_log_info("\tHardware: MBC7 + Tilt Sensor + Rumble + RAM + Battery\n");
 			break;
 		case 0xFCu: 	/* Pocket Camera */
-			gbcc_log_error("Pocket Camera not yet supported.\n");
-			gbc->error = true;
-			gbc->error_msg = "Pocket Camera not yet supported.\n";
+			gbc->cart.mbc.type = CAMERA;
+			gbc->cart.battery = true;
+			gbcc_log_info("\tHardware: Pocket Camera\n");
 			break;
 		case 0xFDu: 	/* Bandai TAMA5 */
 			gbcc_log_error("Bandai TAMA5 not yet supported.\n");

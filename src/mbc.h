@@ -74,27 +74,58 @@ struct gbcc_mbc {
 		uint16_t value;
 		uint16_t data[128];
 	} eeprom;
+	struct gbcc_camera {
+		uint32_t capture_timer;
+		bool mapped;
+		uint8_t filter_mode;
+		uint8_t matrix[4][4][3];
+		/* M64282FP registers */
+		uint8_t reg0;
+		uint8_t reg1;
+		uint8_t reg2;
+		uint8_t reg3;
+		uint8_t reg4;
+		uint8_t reg5;
+		uint8_t reg6;
+		uint8_t reg7;
+		struct {
+			bool n; // Exclusive vertical edge enhacement
+			uint8_t vh; // Vertical / horizontal edge mode
+			uint8_t g; // Analogue output gain
+			uint16_t exposure_steps; // Number of 16us steps
+			uint8_t p; // 1D kernel "plus"
+			uint8_t m; // 1D kernel "minus"
+			uint8_t x; // 1D kernel "x" (always 0x01)
+			uint8_t e; // Edge enhacement ratio
+			bool i; // Invert output
+			uint8_t v; // Output bias voltage
+			uint8_t z; // Zero point calibration
+			uint8_t o; // Output reference voltage
+		} reg;
+	} camera;
 };
 
 uint8_t gbcc_mbc_none_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_none_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_mbc1_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_mbc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_mbc2_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_mbc2_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_mbc3_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_mbc3_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_mbc5_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_mbc5_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_mbc6_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_mbc6_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_mbc7_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_mbc7_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_huc1_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_huc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_huc3_read(struct gbcc_core *gbc, uint16_t addr);
-void gbcc_mbc_huc3_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 uint8_t gbcc_mbc_mmm01_read(struct gbcc_core *gbc, uint16_t addr);
+uint8_t gbcc_mbc_cam_read(struct gbcc_core *gbc, uint16_t addr);
+void gbcc_mbc_none_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_mbc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_mbc2_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_mbc3_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_mbc5_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_mbc6_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_mbc7_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_huc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_huc3_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 void gbcc_mbc_mmm01_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
+void gbcc_mbc_cam_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 
 #endif /* GBCC_MBC_H */

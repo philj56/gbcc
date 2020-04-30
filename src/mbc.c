@@ -8,6 +8,7 @@
  *
  */
 
+#include "camera/camera.h"
 #include "core.h"
 #include "bit_utils.h"
 #include "debug.h"
@@ -830,6 +831,120 @@ void gbcc_mbc_mmm01_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 	if (mbc->unlocked) {
 		set_mbc_banks(gbc);
 	}
+}
+
+uint8_t gbcc_mbc_cam_read(struct gbcc_core *gbc, uint16_t addr)
+{
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
+	struct gbcc_camera *cam = &mbc->camera;
+	if (addr < ROM0_END) {
+		return gbc->memory.rom0[addr];
+	}
+	if (addr >= ROMX_START && addr < ROMX_END) {
+		return gbc->memory.romx[addr - ROMX_START];
+	}
+	if (addr >= SRAM_START && addr < SRAM_END) {
+		/*
+		 * Camera MBC always allows reading
+		 * from SRAM or camera registers
+		 * (although only 0xA000 returns non-zero)
+		 */
+		if (cam->mapped) {
+			if (addr == 0xA000u) {
+				return (cam->capture_timer > 0) | (cam->filter_mode << 1);
+			}
+			return 0x00u;
+		}
+		/* Can't read SRAM while capturing an image */
+		if (cam->capture_timer > 0) {
+			return 0x00u;
+		}
+		return gbc->memory.sram[addr - SRAM_START];
+	}
+	gbcc_log_error("Reading memory address 0x%04X out of bounds.\n", addr);
+	return 0xFFu;
+}
+
+void gbcc_mbc_cam_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
+{
+	struct gbcc_mbc *mbc = &gbc->cart.mbc;
+	struct gbcc_camera *cam = &mbc->camera;
+	if (addr >= SRAM_START && addr < SRAM_END) {
+		if (!cam->mapped && !mbc->sram_enable) {
+			gbcc_log_debug("SRAM not enabled!\n");
+			return;
+		} else if (cam->mapped) {
+			if (addr == 0xA000u) {
+				cam->filter_mode = (val >> 1) & 0x03u;
+				switch (cam->filter_mode) {
+					case 0:
+						cam->reg4 = 0x00u;
+						cam->reg5 = 0x01u;
+						break;
+					case 1:
+						cam->reg4 = 0x01u;
+						cam->reg5 = 0x00u;
+						break;
+					case 2:
+						cam->reg4 = 0x01u;
+						cam->reg5 = 0x02u;
+						break;
+					case 3:
+						cam->reg4 = 0x01u;
+						cam->reg5 = 0x02u;
+						break;
+				}
+				/* reg6 = reg.x is always 1 */
+				cam->reg6 = 0x01u;
+				if (check_bit(val, 0)) {
+					gbcc_camera_capture_image(gbc);
+				}
+			} else if (addr == 0xA001u) {
+				cam->reg1 = val;
+			} else if (addr == 0xA002u) {
+				cam->reg2 = val;
+			} else if (addr == 0xA003u) {
+				cam->reg3 = val;
+			} else if (addr == 0xA004u) {
+				cam->reg7 = val;
+			} else if (addr == 0xA005u) {
+				cam->reg0 = val;
+			} else if (addr < 0xA036u) {
+				uint8_t idx = addr - 0xA006u;
+				uint8_t n = idx % 3;
+				uint8_t x = (idx / 3) % 4;
+				uint8_t y = idx / (3 * 4);
+				cam->matrix[y][x][n] = val;
+			} else {
+				gbcc_log_debug("Writing 0x%02X to invalid camera register 0x%04X\n", val, addr);
+			}
+		} else {
+			gbc->memory.sram[addr - SRAM_START] = val;
+		}
+	} else if (addr < 0x2000u) {
+		mbc->ramg = val;
+	} else if (addr < 0x4000u) {
+		mbc->romb0 = val;
+	} else if (addr < 0x6000u) {
+		cam->mapped = check_bit(val, 4);
+		if (!cam->mapped) {
+			mbc->ramb = val;
+		}
+	} else {
+		gbcc_log_error("Writing memory address %04X out of bounds.\n", addr);
+	}
+
+	/* RAMG switches on SRAM when it has 0x0A in the lower 4 bits. */
+	mbc->sram_enable = ((mbc->ramg & 0x0Fu) == 0x0Au);
+
+	/* ROMB0 selects 7 bit ROMX bank number. 0 maps to 1. */
+	mbc->romx_bank = mbc->romb0 & 0x7Fu;
+	mbc->romx_bank += !mbc->romx_bank;
+
+	/* RAMB selects RAM bank number */
+	mbc->sram_bank = mbc->ramb;
+
+	set_mbc_banks(gbc);
 }
 
 void eeprom_write(struct gbcc_core *gbc, uint8_t val)

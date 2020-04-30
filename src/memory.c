@@ -152,6 +152,8 @@ uint8_t gbcc_memory_read(struct gbcc_core *gbc, uint16_t addr)
 				return gbcc_mbc_huc3_read(gbc, addr);
 			case MMM01:
 				return gbcc_mbc_mmm01_read(gbc, addr);
+			case CAMERA:
+				return gbcc_mbc_cam_read(gbc, addr);
 		}
 	}
 	if (addr >= VRAM_START && addr < VRAM_END) {
@@ -230,6 +232,9 @@ void gbcc_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 				break;
 			case MMM01:
 				gbcc_mbc_mmm01_write(gbc, addr, val);
+				break;
+			case CAMERA:
+				gbcc_mbc_cam_write(gbc, addr, val);
 				break;
 		}
 		return;
