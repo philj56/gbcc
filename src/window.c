@@ -217,7 +217,7 @@ void gbcc_window_deinitialise(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
 	if (!win->initialised) {
-		gbcc_log_error("Window not initialised!\n");
+		gbcc_log_error("Can't destroy window: Window not initialised!\n");
 		return;
 	}
 	win->initialised = false;
@@ -247,7 +247,7 @@ void gbcc_window_update(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
 	if (!win->initialised) {
-		gbcc_log_error("Window not initialised!\n");
+		gbcc_log_error("Can't update window: Window not initialised!\n");
 		return;
 	}
 	if (!gbc->menu.show) {
@@ -417,7 +417,7 @@ void gbcc_window_use_shader(struct gbcc *gbc, const char *name)
 {
 	struct gbcc_window *win = &gbc->window;
 	if (!win->initialised) {
-		gbcc_log_error("Window not initialised!\n");
+		gbcc_log_error("Can't load shader: Window not initialised!\n");
 		return;
 	}
 	int num_shaders = N_ELEM(win->gl.shaders);
@@ -438,7 +438,7 @@ void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bo
 {
 	struct gbcc_window *win = &gbc->window;
 	if (!win->initialised) {
-		gbcc_log_error("Window not initialised!\n");
+		gbcc_log_error("Can't show message: window not initialised!\n");
 		return;
 	}
 	if (pad) {
