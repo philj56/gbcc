@@ -15,6 +15,7 @@
 #include "memory.h"
 #include "nelem.h"
 #include "time_diff.h"
+#include "wav.h"
 
 #ifdef __APPLE__
 #include <OpenAL/al.h>
@@ -24,6 +25,7 @@
 #include <AL/alc.h>
 #endif
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
@@ -39,6 +41,8 @@ static void ch1_update(struct gbcc *gbc);
 static void ch2_update(struct gbcc *gbc);
 static void ch3_update(struct gbcc *gbc);
 static void ch4_update(struct gbcc *gbc);
+static int check_openal_error(const char *msg);
+static void *wav_thread(void *filename);
 
 void gbcc_audio_initialise(struct gbcc *gbc)
 {
@@ -59,33 +63,33 @@ void gbcc_audio_initialise(struct gbcc *gbc)
 	}
 
 	alGenSources(1, &audio->al.source);
-	if (gbcc_check_openal_error("Failed to create source.\n")) {
+	if (check_openal_error("Failed to create source.\n")) {
 		exit(EXIT_FAILURE);
 	}
 
 	alSourcef(audio->al.source, AL_PITCH, 1);
-	if (gbcc_check_openal_error("Failed to set pitch.\n")) {
+	if (check_openal_error("Failed to set pitch.\n")) {
 		exit(EXIT_FAILURE);
 	}
 	alSourcef(audio->al.source, AL_GAIN, 1);
-	if (gbcc_check_openal_error("Failed to set gain.\n")) {
+	if (check_openal_error("Failed to set gain.\n")) {
 		exit(EXIT_FAILURE);
 	}
 	alSource3f(audio->al.source, AL_POSITION, 0, 0, 0);
-	if (gbcc_check_openal_error("Failed to set position.\n")) {
+	if (check_openal_error("Failed to set position.\n")) {
 		exit(EXIT_FAILURE);
 	}
 	alSource3f(audio->al.source, AL_VELOCITY, 0, 0, 0);
-	if (gbcc_check_openal_error("Failed to set velocity.\n")) {
+	if (check_openal_error("Failed to set velocity.\n")) {
 		exit(EXIT_FAILURE);
 	}
 	alSourcei(audio->al.source, AL_LOOPING, AL_FALSE);
-	if (gbcc_check_openal_error("Failed to set loop.\n")) {
+	if (check_openal_error("Failed to set loop.\n")) {
 		exit(EXIT_FAILURE);
 	}
 
 	alGenBuffers(N_ELEM(audio->al.buffers), audio->al.buffers);
-	if (gbcc_check_openal_error("Failed to create buffers.\n")) {
+	if (check_openal_error("Failed to create buffers.\n")) {
 		exit(EXIT_FAILURE);
 	}
 
@@ -95,9 +99,9 @@ void gbcc_audio_initialise(struct gbcc *gbc)
 		alBufferData(audio->al.buffers[i], AL_FORMAT_STEREO16, audio->mix_buffer, sizeof(audio->mix_buffer), GBCC_SAMPLE_RATE);
 	}
 	alSourceQueueBuffers(audio->al.source, N_ELEM(audio->al.buffers), audio->al.buffers);
-	gbcc_check_openal_error("Failed to queue buffers.\n");
+	check_openal_error("Failed to queue buffers.\n");
 	alSourcePlay(audio->al.source);
-	gbcc_check_openal_error("Failed to play audio.\n");
+	check_openal_error("Failed to play audio.\n");
 }
 
 void gbcc_audio_destroy(struct gbcc *gbc) {
@@ -154,20 +158,20 @@ void gbcc_audio_update(struct gbcc *gbc)
 			}
 			ALuint buffer;
 			alSourceUnqueueBuffers(audio->al.source, 1, &buffer);
-			gbcc_check_openal_error("Failed to unqueue buffer.\n");
+			check_openal_error("Failed to unqueue buffer.\n");
 			alBufferData(buffer, AL_FORMAT_STEREO16, audio->mix_buffer, audio->index * sizeof(audio->mix_buffer[0]), GBCC_SAMPLE_RATE);
-			gbcc_check_openal_error("Failed to fill buffer.\n");
+			check_openal_error("Failed to fill buffer.\n");
 			alSourceQueueBuffers(audio->al.source, 1, &buffer);
-			gbcc_check_openal_error("Failed to queue buffer.\n");
+			check_openal_error("Failed to queue buffer.\n");
 			audio->index = 0;
 			ALint state;
 			alGetSourcei(audio->al.source, AL_SOURCE_STATE, &state);
-			gbcc_check_openal_error("Failed to get source state.\n");
+			check_openal_error("Failed to get source state.\n");
 			if (state == AL_STOPPED) {
 				clock_gettime(CLOCK_REALTIME, &gbc->core.apu.start_time);
 				gbc->core.apu.sample = 0;
 				alSourcePlay(audio->al.source);
-				gbcc_check_openal_error("Failed to resume audio playback.\n");
+				check_openal_error("Failed to resume audio playback.\n");
 			}
 			audio->clock = 0;
 			audio->sample = 0;
@@ -249,7 +253,7 @@ void ch4_update(struct gbcc *gbc)
 }
 
 
-int gbcc_check_openal_error(const char *msg)
+int check_openal_error(const char *msg)
 {
 	ALenum error = alGetError();
 	switch (error) {
@@ -273,4 +277,98 @@ int gbcc_check_openal_error(const char *msg)
 	}
 	gbcc_log_error("%s", msg);
 	return 1;
+}
+
+
+void gbcc_audio_play_wav(const char *filename)
+{
+	pthread_t thread;
+	pthread_create(&thread, NULL, wav_thread, (void *)filename);
+	pthread_detach(thread);
+}
+
+void *wav_thread(void *filename) {
+	ALuint source;
+	alGenSources(1, &source);
+	if (check_openal_error("Failed to create source.\n")) {
+		return NULL;
+	}
+
+	alSourcef(source, AL_PITCH, 1);
+	if (check_openal_error("Failed to set pitch.\n")) {
+		goto CLEANUP_SOURCE;
+	}
+	alSourcef(source, AL_GAIN, 1);
+	if (check_openal_error("Failed to set gain.\n")) {
+		goto CLEANUP_SOURCE;
+	}
+	alSource3f(source, AL_POSITION, 0, 0, 0);
+	if (check_openal_error("Failed to set position.\n")) {
+		goto CLEANUP_SOURCE;
+	}
+	alSource3f(source, AL_VELOCITY, 0, 0, 0);
+	if (check_openal_error("Failed to set velocity.\n")) {
+		goto CLEANUP_SOURCE;
+	}
+	alSourcei(source, AL_LOOPING, AL_FALSE);
+	if (check_openal_error("Failed to set loop.\n")) {
+		goto CLEANUP_SOURCE;
+	}
+
+	ALuint buffer;
+	alGenBuffers(1, &buffer);
+	if (check_openal_error("Failed to create buffer.\n")) {
+		goto CLEANUP_SOURCE;
+	}
+
+	FILE *wav = fopen(filename, "rb");
+	if (!wav) {
+		gbcc_log_error("Failed to open print sound file.\n");
+		goto CLEANUP_SOURCE;
+	}
+	struct wav_header header;
+	wav_parse_header(&header, wav);
+	if (header.AudioFormat != 1) {
+		gbcc_log_error("Only PCM files are supported.\n");
+		fclose(wav);
+		goto CLEANUP_SOURCE;
+	}
+	uint8_t *data = malloc(header.Subchunk2Size);
+	if (!data) {
+		gbcc_log_error("Failed to allocate audio data buffer.\n");
+		fclose(wav);
+		goto CLEANUP_SOURCE;
+	}
+	if (fread(data, 1, header.Subchunk2Size, wav) == 0) {
+		gbcc_log_error("Failed to read print audio data.\n");
+		fclose(wav);
+		goto CLEANUP_ALL;
+	}
+	fclose(wav);
+
+	alBufferData(buffer, AL_FORMAT_MONO8, data, header.Subchunk2Size, header.SampleRate);
+	if (check_openal_error("Failed to set buffer data.\n")) {
+		goto CLEANUP_ALL;
+	}
+	alSourcei(source, AL_BUFFER, buffer);
+	if (check_openal_error("Failed to set source buffer.\n")) {
+		goto CLEANUP_ALL;
+	}
+
+
+	unsigned long long ns = SECOND * header.Subchunk2Size / header.ByteRate;
+
+	struct timespec tts = {
+		.tv_sec = ns / SECOND,
+		.tv_nsec = ns % SECOND
+	};
+	alSourcePlay(source);
+	nanosleep(&tts, NULL);
+
+CLEANUP_ALL:
+	free(data);
+CLEANUP_SOURCE:
+	alDeleteSources(1, &source);
+	check_openal_error("Failed to delete source.\n");
+	return NULL;
 }

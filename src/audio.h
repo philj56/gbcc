@@ -26,7 +26,7 @@
 #define GBCC_AUDIO_BUFSIZE_SAMPLES 1024
 #else
 #define GBCC_SAMPLE_RATE 96000
-#define GBCC_AUDIO_BUFSIZE_SAMPLES 2048
+#define GBCC_AUDIO_BUFSIZE_SAMPLES 1024
 #endif
 #define GBCC_AUDIO_BUFSIZE (GBCC_AUDIO_BUFSIZE_SAMPLES*2) /* samples * channels */
 #define GBCC_AUDIO_FMT int16_t
@@ -52,6 +52,6 @@ struct gbcc_audio {
 void gbcc_audio_initialise(struct gbcc *gbc);
 void gbcc_audio_destroy(struct gbcc *gbc);
 void gbcc_audio_update(struct gbcc *gbc);
-int gbcc_check_openal_error(const char *msg);
+void gbcc_audio_play_wav(const char *filename);
 
 #endif /* GBCC_AUDIO_H */

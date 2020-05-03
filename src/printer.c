@@ -11,15 +11,8 @@
 #include "bit_utils.h"
 #include "debug.h"
 #include "printer.h"
-#include "wav.h"
+#include "audio.h"
 
-#ifdef __APPLE__
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-#else
-#include <AL/al.h>
-#include <AL/alc.h>
-#endif
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -63,8 +56,6 @@ static void *print(void *printer);
 static bool print_margin(struct printer *p, bool top);
 static bool print_strip(struct printer *p);
 static uint8_t get_palette_colour(struct printer *p, uint8_t colour);
-
-static int check_openal_error(const char *msg);
 
 uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 {
@@ -311,92 +302,11 @@ void parse_print_args(struct printer *p, uint8_t byte)
 void *print(void *printer)
 {
 	struct printer *p = (struct printer *)printer;
-
-	ALuint source;
-	alGenSources(1, &source);
-	if (check_openal_error("Failed to create source.\n")) {
-		initialise(p);
-		return 0;
-	}
-
-	alSourcef(source, AL_PITCH, 1);
-	if (check_openal_error("Failed to set pitch.\n")) {
-		goto CLEANUP;
-	}
-	alSourcef(source, AL_GAIN, 1);
-	if (check_openal_error("Failed to set gain.\n")) {
-		goto CLEANUP;
-	}
-	alSource3f(source, AL_POSITION, 0, 0, 0);
-	if (check_openal_error("Failed to set position.\n")) {
-		goto CLEANUP;
-	}
-	alSource3f(source, AL_VELOCITY, 0, 0, 0);
-	if (check_openal_error("Failed to set velocity.\n")) {
-		goto CLEANUP;
-	}
-	alSourcei(source, AL_LOOPING, AL_TRUE);
-	if (check_openal_error("Failed to set loop.\n")) {
-		goto CLEANUP;
-	}
-
-	ALuint buffer;
-	alGenBuffers(1, &buffer);
-	if (check_openal_error("Failed to create buffer.\n")) {
-		goto CLEANUP;
-	}
-
-	FILE *wav = fopen(PRINTER_SOUND_PATH, "rb");
-	if (!wav) {
-		gbcc_log_error("Failed to open print sound file.\n");
-		goto CLEANUP;
-	}
-	struct wav_header header;
-	wav_parse_header(&header, wav);
-	if (header.AudioFormat != 1) {
-		gbcc_log_error("Only PCM files are supported.\n");
-		fclose(wav);
-		goto CLEANUP;
-	}
-	uint8_t *data = malloc(header.Subchunk2Size);
-	if (!data) {
-		gbcc_log_error("Failed to allocate audio data buffer.\n");
-		fclose(wav);
-		goto CLEANUP;
-	}
-	if (fread(data, 1, header.Subchunk2Size, wav) == 0) {
-		gbcc_log_error("Failed to read print audio data.\n");
-		fclose(wav);
-		goto CLEANUP;
-	}
-	fclose(wav);
-
-	alBufferData(buffer, AL_FORMAT_MONO8, data, header.Subchunk2Size, header.SampleRate);
-	if (check_openal_error("Failed to set buffer data.\n")) {
-		goto CLEANUP;
-	}
-	alSourcei(source, AL_BUFFER, buffer);
-	if (check_openal_error("Failed to set source buffer.\n")) {
-		goto CLEANUP;
-	}
-
-
-	ALint last_pos = 0;
 	int stage = 0;
-	alSourcePlay(source);
 	while (stage < 3) {
+		gbcc_audio_play_wav(PRINTER_SOUND_PATH);
 		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 850000000};
-		if (check_openal_error("Failed to play printer sound.\n")) {
-			goto CLEANUP;
-		}
 		nanosleep(&to_sleep, NULL);
-		ALint pos = last_pos;
-		do {
-			last_pos = pos;
-			alGetSourcei(source, AL_SAMPLE_OFFSET, &pos);
-			check_openal_error("Failed to get sample offset.\n");
-		} while (pos >= last_pos);
-		last_pos = pos;
 		if (stage == 0) {
 			stage += print_margin(p, true);
 		}
@@ -413,38 +323,6 @@ void *print(void *printer)
 			}
 		}
 	}
-	alSourcei(source, AL_LOOPING, AL_FALSE);
-	check_openal_error("Failed to unset loop.\n");
-
-CLEANUP:
-	alDeleteSources(1, &source);
-	check_openal_error("Failed to delete source.\n");
 	initialise(p);
 	return 0;
-}
-
-int check_openal_error(const char *msg)
-{
-	ALenum error = alGetError();
-	switch (error) {
-		case AL_NO_ERROR:
-			return 0;
-		case AL_INVALID_NAME:
-			gbcc_log_error("Invalid name: %s", msg);
-			break;
-		case AL_INVALID_ENUM:
-			gbcc_log_error("Invalid enum: %s", msg);
-			break;
-		case AL_INVALID_VALUE:
-			gbcc_log_error("Invalid value: %s", msg);
-			break;
-		case AL_INVALID_OPERATION:
-			gbcc_log_error("Invalid operation: %s", msg);
-			break;
-		case AL_OUT_OF_MEMORY:
-			gbcc_log_error("Out of memory: %s", msg);
-			break;
-	}
-	gbcc_log_error("%s", msg);
-	return 1;
 }
