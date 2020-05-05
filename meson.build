@@ -93,6 +93,7 @@ common_sources = files(
   'src/apu.c',
   'src/args.c',
   'src/audio.c',
+  'src/audio_platform/openal.c',
   'src/bit_utils.c',
   'src/camera/camera.c',
   'src/camera/null.c',

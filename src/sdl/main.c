@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
 	struct gbcc_sdl sdl = {0};
 	struct gbcc *gbc = &sdl.gbc;
-	gbcc_audio_initialise(gbc);
+	gbcc_audio_initialise(gbc, 96000, 2048);
 	gbcc_sdl_initialise(&sdl);
 
 	if (!gbcc_parse_args(gbc, true, argc, argv)) {

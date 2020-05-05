@@ -11,47 +11,38 @@
 #ifndef GBCC_AUDIO_H
 #define GBCC_AUDIO_H
 
-#ifdef __APPLE__
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
+#ifdef __ANDROID__
+#include "audio_platform/opensl.h"
 #else
-#include <AL/al.h>
-#include <AL/alc.h>
+#include "audio_platform/openal.h"
 #endif
 #include <stdint.h>
 #include <time.h>
 
-#ifdef __ANDROID__
-#define GBCC_SAMPLE_RATE 44100
-#define GBCC_AUDIO_BUFSIZE_SAMPLES 1024
-#else
-#define GBCC_SAMPLE_RATE 96000
-#define GBCC_AUDIO_BUFSIZE_SAMPLES 1024
-#endif
-#define GBCC_AUDIO_BUFSIZE (GBCC_AUDIO_BUFSIZE_SAMPLES*2) /* samples * channels */
 #define GBCC_AUDIO_FMT int16_t
 
 struct gbcc;
 
 struct gbcc_audio {
-	struct {
-		ALCdevice *device;
-		ALCcontext *context;
-		ALuint source;
-		ALuint buffers[8];
-	} al;
+	struct gbcc_audio_platform platform;
 	float clock;
 	int sample;
 	size_t index;
-	struct timespec cur_time;
-	struct timespec start_time;
-	GBCC_AUDIO_FMT mix_buffer[GBCC_AUDIO_BUFSIZE];
+	size_t sample_rate;
+	size_t buffer_samples;
+	size_t buffer_bytes;
+	float clocks_per_sample;
 	float scale;
+	GBCC_AUDIO_FMT *mix_buffer;
 };
 
-void gbcc_audio_initialise(struct gbcc *gbc);
+void gbcc_audio_initialise(struct gbcc *gbc, size_t sample_rate, size_t buffer_samples);
 void gbcc_audio_destroy(struct gbcc *gbc);
 void gbcc_audio_update(struct gbcc *gbc);
 void gbcc_audio_play_wav(const char *filename);
+
+void gbcc_audio_platform_initialise(struct gbcc *gbc);
+void gbcc_audio_platform_destroy(struct gbcc *gbc);
+void gbcc_audio_platform_queue_buffer(struct gbcc *gbc);
 
 #endif /* GBCC_AUDIO_H */
