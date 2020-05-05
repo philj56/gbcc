@@ -75,7 +75,6 @@ void gbcc_disable_lcd(struct gbcc_core *gbc)
 	uint8_t stat = gbcc_memory_read_force(gbc, STAT);
 	if (get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
 		gbcc_log_debug("LCD disabled outside of VBLANK.\n");
-		gbcc_log_debug("This would destroy your screen on a real device.\n");
 	}
 	stat = set_video_mode(stat, GBC_LCD_MODE_HBLANK);
 	gbcc_memory_write_force(gbc, STAT, stat);

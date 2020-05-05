@@ -66,7 +66,6 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 	gbc->ppu.screen.buffer_1 = calloc(GBC_SCREEN_SIZE, sizeof(uint32_t));
 	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
 	gbc->ppu.screen.sdl = gbc->ppu.screen.buffer_1;
-	sem_init(&gbc->ppu.vsync_semaphore, 0, 0);
 	load_rom(gbc, filename);
 	if (gbc->error) {
 		return;
@@ -88,6 +87,7 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 		gbc->memory.hram[i] = rand();
 	}
 
+	sem_init(&gbc->ppu.vsync_semaphore, 0, 0);
 	gbc->initialised = true;
 }
 
