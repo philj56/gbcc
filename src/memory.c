@@ -466,16 +466,21 @@ void ioreg_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			break;
 		case SC:
 			*dest = tmp | (val & mask);
+			if (gbc->link_cable.state == GBCC_LINK_CABLE_STATE_LOOPBACK) {
+				*dest = clear_bit(*dest, 7);
+				gbcc_memory_set_bit(gbc, IF, 3);
+				return;
+			}
 			if (check_bit(val, 1)) {
 				gbc->link_cable.divider = 16;
 			} else {
 				gbc->link_cable.divider = 512;
 			}
 			if (check_bit(val, 7)) {
-				if (gbc->link_cable.state != GBCC_LINK_CABLE_STATE_LOOPBACK && !check_bit(val, 0)) {
+				if (!check_bit(val, 0)) {
 					/*
-					 * Externally clocked transfer with no
-					 * cable connected, do nothing.
+					 * Externally clocked transfer,
+					 * do nothing for now.
 					 */
 					return;
 				}
