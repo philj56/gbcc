@@ -517,9 +517,9 @@ uint32_t get_palette_colour(struct gbcc_core *gbc, uint8_t palette, uint8_t n, e
 	uint8_t g = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);
 	uint8_t b = (hi & 0x7Cu) >> 2u;
 	uint32_t res = 0;
-	res |= (uint32_t)(r << 27u);
-	res |= (uint32_t)(g << 19u);
-	res |= (uint32_t)(b << 11u);
+	res |= ((uint32_t)r << 27u);
+	res |= ((uint32_t)g << 19u);
+	res |= ((uint32_t)b << 11u);
 	res |= 0xFFu;
 
 	return res;

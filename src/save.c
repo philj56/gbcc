@@ -248,7 +248,9 @@ void gbcc_load_state(struct gbcc *gbc)
 	core->memory.rom0 = core->cart.rom;
 	core->memory.romx = core->cart.rom + core->cart.mbc.romx_bank * ROMX_SIZE;
 	core->memory.vram = core->memory.vram_bank[vram_bank];
-	core->memory.sram = core->cart.ram + core->cart.mbc.sram_bank * SRAM_SIZE;
+	if (core->cart.ram != NULL) {
+		core->memory.sram = core->cart.ram + core->cart.mbc.sram_bank * SRAM_SIZE;
+	}
 	core->memory.wram0 = core->memory.wram_bank[0];
 	core->memory.wramx = core->memory.wram_bank[wram_bank];
 	core->memory.echo = core->memory.wram0;

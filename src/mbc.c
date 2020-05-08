@@ -45,7 +45,9 @@ void set_mbc_banks(struct gbcc_core *gbc)
 	/* And finally update the actual banks */
 	gbc->memory.rom0 = gbc->cart.rom + mbc->rom0_bank * ROM0_SIZE;
 	gbc->memory.romx = gbc->cart.rom + mbc->romx_bank * ROMX_SIZE;
-	gbc->memory.sram = gbc->cart.ram + mbc->sram_bank * SRAM_SIZE;
+	if (gbc->cart.ram != NULL) {
+		gbc->memory.sram = gbc->cart.ram + mbc->sram_bank * SRAM_SIZE;
+	}
 }
 
 uint8_t gbcc_mbc_none_read(struct gbcc_core *gbc, uint16_t addr)
