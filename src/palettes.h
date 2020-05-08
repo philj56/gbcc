@@ -26,5 +26,7 @@ struct palette {
 extern const struct palette gbcc_palettes[GBCC_NUM_PALETTES];
 
 struct palette gbcc_get_palette(const char *name);
+struct palette gbcc_get_palette_by_index(unsigned int index);
+unsigned int gbcc_get_palette_index(const char *name);
 
 #endif /* GBCC_PALETTE_H */

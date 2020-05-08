@@ -26,7 +26,7 @@ struct gbcc;
 struct gbcc_audio {
 	struct gbcc_audio_platform platform;
 	float clock;
-	int sample;
+	unsigned int sample;
 	size_t index;
 	size_t sample_rate;
 	size_t buffer_samples;

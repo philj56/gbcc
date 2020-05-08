@@ -103,6 +103,20 @@ const struct palette gbcc_palettes[GBCC_NUM_PALETTES] = {
 
 struct palette gbcc_get_palette(const char *name)
 {
+	return gbcc_palettes[gbcc_get_palette_index(name)];
+}
+
+struct palette gbcc_get_palette_by_index(unsigned int index)
+{
+	if (index >= N_ELEM(gbcc_palettes)) {
+		gbcc_log_error("Invalid palette index \"%u\"\n", index);
+		index = 0;
+	}
+	return gbcc_palettes[index];
+}
+
+unsigned int gbcc_get_palette_index(const char *name)
+{
 	unsigned int p;
 	for (p = 0; p < N_ELEM(gbcc_palettes); p++) {
 		if (strcasecmp(name, gbcc_palettes[p].name) == 0) {
@@ -111,7 +125,7 @@ struct palette gbcc_get_palette(const char *name)
 	}
 	if (p >= N_ELEM(gbcc_palettes)) {
 		gbcc_log_error("Invalid palette \"%s\"\n", name);
-		exit(EXIT_FAILURE);
+		p = 0;
 	}
-	return gbcc_palettes[p];
+	return p;
 }

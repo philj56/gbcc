@@ -88,7 +88,7 @@ void gbcc_menu_update(struct gbcc *gbc)
 			"%cVsync:       %-18s"
 			"%cInterlacing: %-18s"
 			"%cFPS counter: %-18s"
-			"                                ",
+			"%cPalette:     %-18s",
 			selected(menu, GBCC_MENU_ENTRY_SAVE_STATE),
 			selected(menu, GBCC_MENU_ENTRY_LOAD_STATE),
 			selected(menu, GBCC_MENU_ENTRY_AUTOSAVE),
@@ -106,7 +106,9 @@ void gbcc_menu_update(struct gbcc *gbc)
 			selected(menu, GBCC_MENU_ENTRY_INTERLACING),
 			bool2str(gbc->interlacing),
 			selected(menu, GBCC_MENU_ENTRY_FPS_COUNTER),
-			bool2str(gbc->show_fps)
+			bool2str(gbc->show_fps),
+			selected(menu, GBCC_MENU_ENTRY_PALETTE),
+			gbc->core.ppu.palette.name
 	);
 }
 
@@ -209,6 +211,17 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			break;
 		case GBCC_MENU_ENTRY_FPS_COUNTER:
 			gbc->show_fps ^= 1;
+			break;
+		case GBCC_MENU_ENTRY_PALETTE:
+			{
+				unsigned int p_idx = gbcc_get_palette_index(gbc->core.ppu.palette.name);
+				if (key == GBCC_KEY_LEFT) {
+					p_idx++;
+				} else {
+					p_idx = p_idx + GBCC_NUM_PALETTES - 1;
+				}
+				gbc->core.ppu.palette = gbcc_get_palette_by_index(p_idx % GBCC_NUM_PALETTES);
+			}
 			break;
 		case GBCC_MENU_ENTRY_NUM_ENTRIES:
 			break;
