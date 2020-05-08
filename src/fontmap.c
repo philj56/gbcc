@@ -16,10 +16,15 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifndef TILESET_PATH
+#define TILESET_PATH "tileset.png"
+#endif
+
 #define HEADER_BYTES 8
 
-void gbcc_fontmap_load(struct gbcc_fontmap *fontmap, const char *filename)
+void gbcc_fontmap_load(struct gbcc_fontmap *fontmap)
 {
+	const char *filename = TILESET_PATH;
 	FILE *fp = fopen(filename, "rb");
 	uint8_t header[HEADER_BYTES];
 	if (!fp) {

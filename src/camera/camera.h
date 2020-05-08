@@ -6,4 +6,3 @@
 
 void gbcc_camera_capture_image(struct gbcc_core *gbc);
 void gbcc_camera_platform_capture_image(uint8_t image[GB_CAMERA_SENSOR_SIZE]);
-void gbcc_camera_default_image(uint8_t *image);

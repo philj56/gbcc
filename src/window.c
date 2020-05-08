@@ -30,10 +30,6 @@
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-#ifndef TILESET_PATH
-#define TILESET_PATH "tileset.png"
-#endif
-
 #ifndef SHADER_PATH
 #define SHADER_PATH "shaders/"
 #endif
@@ -54,7 +50,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
 	clock_gettime(CLOCK_REALTIME, &win->fps.last_time);
-	gbcc_fontmap_load(&win->font, TILESET_PATH);
+	gbcc_fontmap_load(&win->font);
 
 	/* Compile and link the shader programs */
 	win->gl.base_shader = gbcc_create_shader_program(

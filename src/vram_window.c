@@ -28,10 +28,6 @@
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-#ifndef TILESET_PATH
-#define TILESET_PATH "tileset.png"
-#endif
-
 #ifndef SHADER_PATH
 #define SHADER_PATH "shaders/"
 #endif
