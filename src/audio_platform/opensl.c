@@ -45,6 +45,7 @@ void gbcc_audio_platform_initialise(struct gbcc *gbc)
 	result = slCreateEngine(&sl->engine_object, 0, NULL, 0, NULL, NULL);
 	if (result != SL_RESULT_SUCCESS) {
 		gbcc_log_error("Failed to create audio engine.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	result = (*sl->engine_object)->Realize(sl->engine_object, SL_BOOLEAN_FALSE);
@@ -193,6 +194,6 @@ void buffer_callback(SLAndroidSimpleBufferQueueItf bq, void *_audio) {
 	sl->read_buffer = (sl->read_buffer + 1) % 4;
 	SLresult result = (*sl->buffer_queue)->Enqueue(sl->buffer_queue, sl->playback_buffers[sl->read_buffer], audio->buffer_bytes);
 	if (result != SL_RESULT_SUCCESS) {
-		gbcc_log_error("FAILED\n");
+		gbcc_log_error("OpenSLES failed to enqueue buffer.\n");
 	}
 }
