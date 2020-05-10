@@ -1,4 +1,14 @@
-#include "camera.h"
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
+#include "../camera.h"
 #include "../debug.h"
 #include <png.h>
 #include <stdio.h>
@@ -11,15 +21,15 @@
 
 #define HEADER_BYTES 8
 
-void gbcc_camera_platform_capture_image(uint8_t image[GB_CAMERA_SENSOR_SIZE]) {
-	static bool initialised = false;
-	static uint8_t im[GB_CAMERA_SENSOR_SIZE];
+static uint8_t default_image[GB_CAMERA_SENSOR_SIZE];
 
-	if (initialised) {
-		memcpy(image, im, GB_CAMERA_SENSOR_SIZE);
-		return;
-	}
+void gbcc_camera_platform_capture_image(struct gbcc *gbc, uint8_t image[GB_CAMERA_SENSOR_SIZE])
+{
+	memcpy(image, default_image, GB_CAMERA_SENSOR_SIZE);
+}
 
+void gbcc_camera_platform_initialise(struct gbcc *gbc)
+{
 	FILE *fp = fopen(CAMERA_PATH, "rb");
 	uint8_t header[HEADER_BYTES];
 	if (!fp) {
@@ -77,7 +87,7 @@ void gbcc_camera_platform_capture_image(uint8_t image[GB_CAMERA_SENSOR_SIZE]) {
 	
 	png_bytepp row_pointers = calloc(GB_CAMERA_SENSOR_HEIGHT, sizeof(png_bytep));
 	for (uint32_t y = 0; y < GB_CAMERA_SENSOR_HEIGHT; y++) {
-		row_pointers[y] = (unsigned char *)&im[y * GB_CAMERA_SENSOR_WIDTH];
+		row_pointers[y] = (unsigned char *)&default_image[y * GB_CAMERA_SENSOR_WIDTH];
 	}
 
 	if (bit_depth < 8) {
@@ -89,8 +99,9 @@ void gbcc_camera_platform_capture_image(uint8_t image[GB_CAMERA_SENSOR_SIZE]) {
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	free(row_pointers);
 	fclose(fp);
+}
 
-	memcpy(image, im, GB_CAMERA_SENSOR_SIZE);
-	initialised = true;
-	return;
+void gbcc_camera_platform_destroy(struct gbcc *gbc)
+{
+	(void)gbc;
 }

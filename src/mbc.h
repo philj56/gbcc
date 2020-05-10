@@ -76,6 +76,7 @@ struct gbcc_mbc {
 	} eeprom;
 	struct gbcc_camera {
 		uint32_t capture_timer;
+		bool capture_request;
 		bool mapped;
 		uint8_t filter_mode;
 		uint8_t matrix[4][4][3];

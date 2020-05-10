@@ -1,7 +1,17 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "camera.h"
-#include "../bit_utils.h"
-#include "../debug.h"
-#include "../gbcc.h"
+#include "bit_utils.h"
+#include "debug.h"
+#include "gbcc.h"
 #include <string.h>
 
 #define GB_CAMERA_WIDTH 128
@@ -41,13 +51,44 @@ static const int8_t filter_kernel[3][3][3] = {
 
 static void write_tile_data(struct gbcc_core *gbc, uint8_t image[GB_CAMERA_SENSOR_SIZE]);
 
-void gbcc_camera_capture_image(struct gbcc_core *gbc)
+void gbcc_camera_initialise(struct gbcc *gbc) {
+	if (gbc->core.cart.mbc.type == CAMERA) {
+		gbcc_camera_platform_initialise(gbc);
+	}
+}
+
+void gbcc_camera_destroy(struct gbcc *gbc) {
+	if (gbc->core.cart.mbc.type == CAMERA) {
+		gbcc_camera_platform_destroy(gbc);
+	}
+}
+
+void gbcc_camera_clock(struct gbcc *gbc) {
+	struct gbcc_mbc *mbc = &gbc->core.cart.mbc;
+	if (mbc->type != CAMERA) {
+		return;
+	}
+	if (mbc->camera.capture_request) {
+		gbcc_camera_capture_image(gbc);
+		mbc->camera.capture_request = false;
+	}
+
+	/* camera.capture_timer is in "Game Boy clocks", i.e. 1MHz */
+	if (gbc->core.cpu.clock != 0) {
+		return;
+	}
+	if (mbc->camera.capture_timer > 0) {
+		mbc->camera.capture_timer--;
+	}
+}
+
+void gbcc_camera_capture_image(struct gbcc *gbc)
 {
-	struct gbcc_camera *cam = &gbc->cart.mbc.camera;
+	struct gbcc_camera *cam = &gbc->core.cart.mbc.camera;
 	uint8_t *sensor_image = calloc(GB_CAMERA_SENSOR_SIZE, sizeof(*sensor_image));
 	uint8_t *buffer1 = calloc(GB_CAMERA_SENSOR_SIZE, sizeof(*buffer1));
 
-	gbcc_camera_platform_capture_image(sensor_image);
+	gbcc_camera_platform_capture_image(gbc, sensor_image);
 
 	/* Set the image processing registers */
 	cam->reg.z = (cam->reg0 & 0xC0u) >> 6;
@@ -64,6 +105,7 @@ void gbcc_camera_capture_image(struct gbcc_core *gbc)
 	cam->reg.v = cam->reg7 & 0x07u;
 
 	/* Fake exposure time */
+	cam->capture_timer = 32446 + cam->reg.n * 512 + 16 * cam->reg.exposure_steps;
 	for (int i = 0; i < GB_CAMERA_SENSOR_SIZE; i++) {
 		/*
 		 * Some minor magic to make the image look correct.
@@ -159,7 +201,7 @@ void gbcc_camera_capture_image(struct gbcc_core *gbc)
 	
 
 
-	write_tile_data(gbc, buffer1);
+	write_tile_data(&gbc->core, buffer1);
 
 	free(buffer1);
 	free(sensor_image);

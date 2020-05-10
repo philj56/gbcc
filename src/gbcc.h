@@ -19,6 +19,7 @@
 
 #include "audio.h"
 #include "core.h"
+#include "camera.h"
 #include "menu.h"
 #include "window.h"
 #include "vram_window.h"
@@ -29,6 +30,7 @@ struct gbcc {
 	struct gbcc_vram_window vram_window;
 	struct gbcc_audio audio;
 	struct gbcc_menu menu;
+	struct gbcc_camera_platform camera;
 	
 	const char *save_directory;
 	float turbo_speed;

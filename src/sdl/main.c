@@ -12,6 +12,7 @@
 #include "../apu.h"
 #include "../args.h"
 #include "../audio.h"
+#include "../camera.h"
 #include "../config.h"
 #include "../cpu.h"
 #include "../debug.h"
@@ -67,6 +68,8 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	gbcc_camera_initialise(gbc);
+
 	pthread_t emu_thread;
 	pthread_create(&emu_thread, NULL, gbcc_emulation_loop, gbc);
 	pthread_setname_np(emu_thread, "EmulationThread");
@@ -76,12 +79,14 @@ int main(int argc, char **argv)
 		gbcc_sdl_process_input(&sdl);
 	}
 	sem_post(&gbc->core.ppu.vsync_semaphore);
+	if (!force_quit) {
+		pthread_join(emu_thread, NULL);
+	}
+	gbcc_audio_destroy(gbc);
+	gbcc_camera_destroy(gbc);
 	if (force_quit) {
-		gbcc_audio_destroy(gbc);
 		exit(EXIT_FAILURE);
 	}
-	pthread_join(emu_thread, NULL);
-	gbcc_audio_destroy(gbc);
 
 	gbc->save_state = 0;
 	gbcc_save_state(gbc);

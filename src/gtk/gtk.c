@@ -9,6 +9,7 @@
  */
 
 #include "../gbcc.h"
+#include "../camera.h"
 #include "../debug.h"
 #include "../input.h"
 #include "../nelem.h"
@@ -610,6 +611,7 @@ void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
 	gtk->filename = malloc(len);
 	strncpy(gtk->filename, file, len);
 	gbcc_initialise(&gbc->core, gtk->filename);
+	gbcc_camera_initialise(gbc);
 	pthread_create(&gtk->emulation_thread, NULL, gbcc_emulation_loop, gbc);
 	pthread_setname_np(gtk->emulation_thread, "EmulationThread");
 }
@@ -623,6 +625,7 @@ void stop_emulation_thread(struct gbcc_gtk *gtk)
 	gbc->quit = true;
 	sem_post(&gbc->core.ppu.vsync_semaphore);
 	pthread_join(gtk->emulation_thread, NULL);
+	gbcc_camera_destroy(gbc);
 	gbc->save_state = 0;
 	gbcc_save_state(gbc);
 	gbcc_free(&gbc->core);

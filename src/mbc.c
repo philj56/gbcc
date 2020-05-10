@@ -8,7 +8,6 @@
  *
  */
 
-#include "camera/camera.h"
 #include "core.h"
 #include "bit_utils.h"
 #include "debug.h"
@@ -899,7 +898,7 @@ void gbcc_mbc_cam_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 				/* reg6 = reg.x is always 1 */
 				cam->reg6 = 0x01u;
 				if (check_bit(val, 0)) {
-					gbcc_camera_capture_image(gbc);
+					cam->capture_request = true;
 				}
 			} else if (addr == 0xA001u) {
 				cam->reg1 = val;
