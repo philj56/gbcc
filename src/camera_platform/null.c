@@ -23,13 +23,16 @@
 
 static uint8_t default_image[GB_CAMERA_SENSOR_SIZE];
 
-void gbcc_camera_platform_capture_image(struct gbcc *gbc, uint8_t image[GB_CAMERA_SENSOR_SIZE])
+void gbcc_camera_platform_capture_image(struct gbcc_camera_platform *platform,
+		uint8_t image[GB_CAMERA_SENSOR_SIZE])
 {
+	(void) platform;
 	memcpy(image, default_image, GB_CAMERA_SENSOR_SIZE);
 }
 
-void gbcc_camera_platform_initialise(struct gbcc *gbc)
+void gbcc_camera_platform_initialise(struct gbcc_camera_platform *platform)
 {
+	(void) platform;
 	FILE *fp = fopen(CAMERA_PATH, "rb");
 	uint8_t header[HEADER_BYTES];
 	if (!fp) {
@@ -101,7 +104,7 @@ void gbcc_camera_platform_initialise(struct gbcc *gbc)
 	fclose(fp);
 }
 
-void gbcc_camera_platform_destroy(struct gbcc *gbc)
+void gbcc_camera_platform_destroy(struct gbcc_camera_platform *platform)
 {
-	(void)gbc;
+	(void) platform;
 }

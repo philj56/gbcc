@@ -89,6 +89,12 @@ add_project_arguments(
   language: 'c'
 )
 
+if target_machine.system() == 'linux'
+  camera_platform = 'src/camera_platform/v4l2.c'
+else
+  camera_platform = 'src/camera_platform/null.c'
+endif
+
 common_sources = files(
   'src/apu.c',
   'src/args.c',
@@ -96,7 +102,7 @@ common_sources = files(
   'src/audio_platform/openal.c',
   'src/bit_utils.c',
   'src/camera.c',
-  'src/camera_platform/null.c',
+  camera_platform,
   'src/colour.c',
   'src/config.c',
   'src/cpu.c',

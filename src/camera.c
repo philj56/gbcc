@@ -53,13 +53,13 @@ static void write_tile_data(struct gbcc_core *gbc, uint8_t image[GB_CAMERA_SENSO
 
 void gbcc_camera_initialise(struct gbcc *gbc) {
 	if (gbc->core.cart.mbc.type == CAMERA) {
-		gbcc_camera_platform_initialise(gbc);
+		gbcc_camera_platform_initialise(&gbc->camera);
 	}
 }
 
 void gbcc_camera_destroy(struct gbcc *gbc) {
 	if (gbc->core.cart.mbc.type == CAMERA) {
-		gbcc_camera_platform_destroy(gbc);
+		gbcc_camera_platform_destroy(&gbc->camera);
 	}
 }
 
@@ -88,7 +88,7 @@ void gbcc_camera_capture_image(struct gbcc *gbc)
 	uint8_t *sensor_image = calloc(GB_CAMERA_SENSOR_SIZE, sizeof(*sensor_image));
 	uint8_t *buffer1 = calloc(GB_CAMERA_SENSOR_SIZE, sizeof(*buffer1));
 
-	gbcc_camera_platform_capture_image(gbc, sensor_image);
+	gbcc_camera_platform_capture_image(&gbc->camera, sensor_image);
 
 	/* Set the image processing registers */
 	cam->reg.z = (cam->reg0 & 0xC0u) >> 6;
