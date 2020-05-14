@@ -56,6 +56,9 @@ void gbcc_menu_update(struct gbcc *gbc)
 		gbcc_log_error("Menu not initialised!\n");
 		return;
 	}
+	if (!gbc->core.initialised) {
+		return;
+	}
 
 	const char *link_text;
 	switch (gbc->core.link_cable.state) {
