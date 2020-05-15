@@ -92,14 +92,15 @@ void gbcc_load(struct gbcc *gbc)
 		return;
 	}
 	gbcc_log_info("Loading %s...\n", fname);
-	if (fread(core->cart.ram, 1, core->cart.ram_size, sav) == 0) {
-		gbcc_log_error("Failed to read save data: %s\n", fname);
-		fclose(sav);
-		return;
-	}
 	if (core->cart.mbc.type == MBC7) {
 		if (fread(core->cart.mbc.eeprom.data, 2, 128, sav) == 0) {
 			gbcc_log_error("Failed to read eeprom data: %s\n", fname);
+			fclose(sav);
+			return;
+		}
+	} else {
+		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) == 0) {
+			gbcc_log_error("Failed to read save data: %s\n", fname);
 			fclose(sav);
 			return;
 		}
