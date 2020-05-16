@@ -15,9 +15,10 @@
 #include <stdint.h>
 
 #define GBCC_NUM_PALETTES 14
+#define GBCC_MAX_PALETTE_NAME_LEN 16
 
 struct palette {
-	const char *name;
+	char name[GBCC_MAX_PALETTE_NAME_LEN];
 	uint32_t background[4];
 	uint32_t sprite1[4];
 	uint32_t sprite2[4];
