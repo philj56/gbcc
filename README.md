@@ -1,7 +1,7 @@
-# [GBCC](https://philj56.github.io/gbcc/)
+# [GBCC](https://gbcc.github.io)
 GBCC is a cross-platform Game Boy and Game Boy Color emulator written in C,
-with a focus on accuracy. See the [website](https://philj56.github.io/gbcc/)
-or the [manpage](https://philj56.github.io/gbcc/manpage.html) for details.
+with a focus on accuracy. See the [website](https://gbcc.github.io)
+or the [manpage](https://gbcc.github.io/manpage) for details.
 
 ## Table of Contents
 * [Install](#install)
@@ -108,4 +108,6 @@ packages](#prebuilt-packages-)). It can be enabled by passing `--with-gtk` to
 the `msys2.sh` script mentioned above.
 
 ### Android
-Coming soon™
+You can get GBCC on
+[Google Play](https://play.google.com/store/apps/details?id=com.philj56.gbcc),
+or from the [project repo](https://github.com/philj56/gbcc-android/).

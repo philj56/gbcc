@@ -19,7 +19,7 @@ struct gbcc_fontmap {
 	uint8_t *bitmap;
 };
 
-void gbcc_fontmap_load(struct gbcc_fontmap *fontmap, const char *filename);
+void gbcc_fontmap_load(struct gbcc_fontmap *fontmap);
 void gbcc_fontmap_destroy(struct gbcc_fontmap *fontmap);
 
 #endif /* GBCC_FONTMAP_H */

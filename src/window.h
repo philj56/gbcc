@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #ifndef GBCC_WINDOW_H
 #define GBCC_WINDOW_H
 
@@ -27,7 +37,6 @@ struct fps_counter {
 	float fps;
 	float previous[5];
 	int idx;
-	bool show;
 };
 
 struct gbcc_window {
@@ -45,6 +54,7 @@ struct gbcc_window {
 		GLuint ebo;
 		GLuint fbo;
 		GLuint fbo_texture;
+		GLuint last_frame_texture;
 		GLuint rbo;
 		GLuint texture;
 		GLuint lut_texture;
@@ -60,9 +70,6 @@ struct gbcc_window {
 	} msg;
 	bool screenshot;
 	bool raw_screenshot;
-	bool fractional_scaling;
-	bool frame_blending;
-	bool vram_display;
 	bool initialised;
 };
 

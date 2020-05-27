@@ -100,6 +100,7 @@ mkdir -p dist
 files=(
 	"build/gbcc.exe"
 	"../tileset.png"
+	"../camera.png"
 	"../print.wav"
 	"../LICENSE"
 	"../shaders"

@@ -13,15 +13,19 @@
 
 #include "../gbcc.h"
 #include <SDL2/SDL.h>
+#include <stdbool.h>
+#include <time.h>
 
 struct gbcc_sdl {
 	struct gbcc gbc;
+	bool fullscreen;
 	SDL_Window *window;
 	SDL_Window *vram_window;
 	SDL_GLContext context;
 	SDL_GLContext vram_context;
 	SDL_GameController *game_controller;
 	SDL_Haptic *haptic;
+	struct timespec last_cursor_move;
 };
 
 void gbcc_sdl_initialise(struct gbcc_sdl *sdl);

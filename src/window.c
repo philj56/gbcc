@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "gbcc.h"
 #include "colour.h"
 #include "constants.h"
@@ -14,16 +24,11 @@
 #else
 #include <epoxy/gl.h>
 #endif
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
-
-#ifndef TILESET_PATH
-#define TILESET_PATH "tileset.png"
-#endif
 
 #ifndef SHADER_PATH
 #define SHADER_PATH "shaders/"
@@ -32,11 +37,12 @@
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
 static void render_box(struct gbcc_window *win, uint8_t x, uint8_t y);
-static void update_text(struct gbcc *gbc);
+static void update_timers(struct gbcc *gbc);
 
 void gbcc_window_initialise(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	*win = (struct gbcc_window){0};
 
 	GLint read_framebuffer = 0;
 	GLint draw_framebuffer = 0;
@@ -44,7 +50,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
 	clock_gettime(CLOCK_REALTIME, &win->fps.last_time);
-	gbcc_fontmap_load(&win->font, TILESET_PATH);
+	gbcc_fontmap_load(&win->font);
 
 	/* Compile and link the shader programs */
 	win->gl.base_shader = gbcc_create_shader_program(
@@ -64,16 +70,16 @@ void gbcc_window_initialise(struct gbcc *gbc)
 			SHADER_PATH "subpixel.frag"
 			);
 
-	win->gl.shaders[2].name = "Nothing";
+	win->gl.shaders[2].name = "Dot Matrix";
 	win->gl.shaders[2].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
-			SHADER_PATH "nothing.frag"
+			SHADER_PATH "dotmatrix.frag"
 			);
 
-	win->gl.shaders[3].name = "Dot Matrix";
+	win->gl.shaders[3].name = "Nothing";
 	win->gl.shaders[3].program = gbcc_create_shader_program(
 			SHADER_PATH "vert.vert",
-			SHADER_PATH "dotmatrix.frag"
+			SHADER_PATH "nothing.frag"
 			);
 
 
@@ -128,6 +134,19 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	/* Copy of framebuffer for frameblending */
+	glGenTextures(1, &win->gl.last_frame_texture);
+	glBindTexture(GL_TEXTURE_2D, win->gl.last_frame_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0 + 2);
+	glBindTexture(GL_TEXTURE_2D, win->gl.last_frame_texture);
+	glActiveTexture(GL_TEXTURE0);
+
 	glGenFramebuffers(1, &win->gl.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, win->gl.fbo_texture, 0);
@@ -152,7 +171,7 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	 * before post-processing */
 	glGenTextures(1, &win->gl.texture);
 	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GBC_SCREEN_WIDTH * 2, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, 0, GL_RGBA,
 			GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -193,6 +212,10 @@ void gbcc_window_initialise(struct gbcc *gbc)
 void gbcc_window_deinitialise(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!win->initialised) {
+		gbcc_log_error("Can't destroy window: Window not initialised!\n");
+		return;
+	}
 	win->initialised = false;
 
 	gbcc_fontmap_destroy(&win->font);
@@ -219,28 +242,37 @@ void gbcc_window_clear()
 void gbcc_window_update(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!win->initialised) {
+		gbcc_log_error("Can't update window: Window not initialised!\n");
+		return;
+	}
+	if (!gbc->menu.show) {
+		update_timers(gbc);
+	}
 	GLint read_framebuffer = 0;
 	GLint draw_framebuffer = 0;
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_framebuffer);
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_framebuffer);
 
-	uint32_t *screen = gbc->core.ppu.screen.sdl;
 	bool screenshot = win->screenshot || win->raw_screenshot;
 
-	if (win->frame_blending) {
-		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
+	memcpy(win->buffer, gbc->core.ppu.screen.sdl, GBC_SCREEN_SIZE * sizeof(win->buffer[0]));
+	{
+		int val = 0;
+		sem_getvalue(&gbc->core.ppu.vsync_semaphore, &val);
+		if (!val) {
+			sem_post(&gbc->core.ppu.vsync_semaphore);
+		}
 	}
-	memcpy(win->buffer, screen, GBC_SCREEN_SIZE * sizeof(*screen));
 
 	if (gbc->menu.show) {
 		uint32_t tw = win->font.tile_width;
 		uint32_t th = win->font.tile_height;
 		render_text(win, gbc->menu.text, 0, 0);
-		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 2 + 1);
-		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 3 + 1);
+		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 1 + 1);
+		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 2 + 1);
 	} else {
-		update_text(gbc);
-		if (win->fps.show && !screenshot) {
+		if (gbc->show_fps && !screenshot) {
 			char fps_text[16];
 			snprintf(fps_text, 16, " FPS: %.0f ", win->fps.fps);
 			render_text(win, fps_text, 0, 0);
@@ -258,30 +290,9 @@ void gbcc_window_update(struct gbcc *gbc)
 				| (tmp & 0xFF000000u) >> 24u;
 	}
 
-	if (!win->frame_blending) {
-		memcpy(win->last_buffer, win->buffer, GBC_SCREEN_SIZE * sizeof(*screen));
-	}
-
-	/* First pass - render the gbc screen to the framebuffer */
-	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
-	glViewport(0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT);
-	glClearColor(0.0, 0.0, 0.0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
-			GL_UNSIGNED_BYTE, (GLvoid *)win->buffer);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, GBC_SCREEN_WIDTH, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
-			GL_UNSIGNED_BYTE, (GLvoid *)win->last_buffer);
-	glUseProgram(win->gl.base_shader);
-	glUniform1i( glGetUniformLocation( win->gl.base_shader, "tex"), 0);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-	/* Second pass - render the framebuffer to the screen */
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
-
-	if (win->fractional_scaling) {
-		win->scale = min((double)win->width / GBC_SCREEN_WIDTH, (double)win->height / GBC_SCREEN_HEIGHT);
+	/* Setup - resize our screen textures if needed */
+	if (gbc->fractional_scaling) {
+		win->scale = min((float)win->width / GBC_SCREEN_WIDTH, (float)win->height / GBC_SCREEN_HEIGHT);
 	} else {
 		win->scale = min(win->width / GBC_SCREEN_WIDTH, win->height / GBC_SCREEN_HEIGHT);
 	}
@@ -289,14 +300,52 @@ void gbcc_window_update(struct gbcc *gbc)
 	int height = win->scale * GBC_SCREEN_HEIGHT;
 	win->x = (win->width - width) / 2;
 	win->y = (win->height - height) / 2;
+
+	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, win->gl.last_frame_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glBindRenderbuffer(GL_RENDERBUFFER, win->gl.rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	/* First pass - render the gbc screen to the framebuffer */
+	glBindFramebuffer(GL_FRAMEBUFFER, win->gl.fbo);
+	glViewport(0, 0, width, height);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glBindTexture(GL_TEXTURE_2D, win->gl.texture);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT, GL_RGBA,
+			GL_UNSIGNED_BYTE, (GLvoid *)win->buffer);
+	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
+	glUniform1i(glGetUniformLocation(win->gl.shaders[win->gl.cur_shader].program, "tex"), 0);
+	glUniform1i(glGetUniformLocation(win->gl.shaders[win->gl.cur_shader].program, "lut"), 1);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	/* Second pass - render the framebuffer to the screen */
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
 	glViewport(win->x, win->y, width, height);
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
-	glUseProgram(win->gl.shaders[win->gl.cur_shader].program);
-	glUniform1i( glGetUniformLocation( win->gl.shaders[win->gl.cur_shader].program, "tex"), 0);
-	glUniform1i( glGetUniformLocation( win->gl.shaders[win->gl.cur_shader].program, "lut"), 1);
+	glUseProgram(win->gl.base_shader);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "tex"), 0);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "last_tex"), 2);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "odd_frame"), gbc->core.ppu.frame & 1);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "interlacing"), gbc->interlacing);
+	glUniform1i(glGetUniformLocation(win->gl.base_shader, "frameblending"), gbc->frame_blending);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	/* Copy the intermediate frame texture for frameblending next time */
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, win->gl.fbo);
+	glBindTexture(GL_TEXTURE_2D, win->gl.last_frame_texture);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, width, height, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
 
 	if (screenshot) {
 		gbcc_screenshot(gbc);
@@ -363,6 +412,10 @@ GLuint gbcc_create_shader_program(const char *vert, const char *frag)
 void gbcc_window_use_shader(struct gbcc *gbc, const char *name)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!win->initialised) {
+		gbcc_log_error("Can't load shader: Window not initialised!\n");
+		return;
+	}
 	int num_shaders = N_ELEM(win->gl.shaders);
 	int s;
 	for (s = 0; s < num_shaders; s++) {
@@ -380,13 +433,17 @@ void gbcc_window_use_shader(struct gbcc *gbc, const char *name)
 void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bool pad)
 {
 	struct gbcc_window *win = &gbc->window;
+	if (!win->initialised) {
+		gbcc_log_error("Can't show message: window not initialised!\n");
+		return;
+	}
 	if (pad) {
 		snprintf(win->msg.text, MSG_BUF_SIZE, " %s ", msg);
 	} else {
 		strncpy(win->msg.text, msg, MSG_BUF_SIZE);
 	}
 	win->msg.lines = 1 + strlen(win->msg.text) / (GBC_SCREEN_WIDTH / win->font.tile_width);
-	win->msg.time_left = seconds * 1000000000;
+	win->msg.time_left = seconds * SECOND;
 }
 
 void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y)
@@ -448,18 +505,23 @@ void render_box(struct gbcc_window *win, uint8_t x, uint8_t y)
 	}
 }
 
-void update_text(struct gbcc *gbc)
+void update_timers(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
 	struct fps_counter *fps = &win->fps;
 	struct timespec cur_time;
 	clock_gettime(CLOCK_REALTIME, &cur_time);
-	double dt = gbcc_time_diff(&cur_time, &fps->last_time);
+	float dt = gbcc_time_diff(&cur_time, &fps->last_time);
+	dt /= GBC_FRAME_PERIOD;
+	const float alpha = 0.001;
+	if (dt < 1.1 && dt > 0.9) {
+		gbc->audio.scale = alpha * dt + (1 - alpha) * gbc->audio.scale;
+	}
 
 	/* Update FPS counter */
 	fps->last_time = cur_time;
 	float df = gbc->core.ppu.frame - fps->last_frame;
-	uint8_t ly = gbcc_memory_read(&gbc->core, LY, true);
+	uint8_t ly = gbcc_memory_read_force(&gbc->core, LY);
 	uint8_t tmp = ly;
 	if (ly < fps->last_ly) {
 		df -= 1;
@@ -470,7 +532,7 @@ void update_text(struct gbcc *gbc)
 	df += ly / 154.0;
 	fps->last_frame = gbc->core.ppu.frame;
 	fps->last_ly = tmp;
-	fps->previous[fps->idx] = df / (dt / 1e9);
+	fps->previous[fps->idx] = df / (dt * GBC_FRAME_PERIOD / 1e9);
 	fps->idx++;
 	fps->idx %= N_ELEM(fps->previous);
 	float avg = 0;
@@ -481,6 +543,6 @@ void update_text(struct gbcc *gbc)
 
 	/* Update message timer */
 	if (win->msg.time_left > 0) {
-		win->msg.time_left -= (int64_t)dt;
+		win->msg.time_left -= (int64_t)(dt * GBC_FRAME_PERIOD);
 	}
 }

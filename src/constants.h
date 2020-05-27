@@ -167,6 +167,8 @@
 #define GBC_SCREEN_WIDTH 160	/* Screen width in pixels */
 #define GBC_SCREEN_HEIGHT 144	/* Screen height in pixels */
 #define GBC_SCREEN_SIZE (GBC_SCREEN_WIDTH * GBC_SCREEN_HEIGHT)	/* Total number of pixels */
+#define GBC_FRAME_CLOCKS 70224	/* CPU clocks per frame */
+#define GBC_FRAME_PERIOD 16742706	/* Frame period in ns */
 
 /* Miscellaneous */
 #define GBC_LCD_MODE_PERIOD 76 /* How long one "state unit" is in clocks */
@@ -177,7 +179,7 @@
 #define DMA_TIMER 160 /* How long DMG DMA takes in m-cycles */
 
 
-enum MBC { NONE, MBC1, MBC2, MBC3, MBC5, MBC6, MBC7, HUC1, HUC3, MMM01 };
+enum MBC { NONE, MBC1, MBC2, MBC3, MBC5, MBC6, MBC7, HUC1, HUC3, MMM01, CAMERA };
 enum EEPROM_COMMAND {
 	GBCC_EEPROM_NONE,
 	GBCC_EEPROM_READ,

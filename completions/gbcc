@@ -13,7 +13,7 @@ _gbcc()
         COMPREPLY=()
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
-        opts="--autoresume --autosave --background --config --fractional --frame-blending --help --interlace --palette --shader --turbo --vsync --vram-window"
+        opts="--autoresume --autosave --background --config --fractional --frame-blending --help --interlacing --palette --shader --save-dir --turbo --vsync --vram-window"
         palettes="blue brown dark-blue dark-brown dark-green green grey invert monochrome orange pastel red yellow"
         shaders="nothing colour\ correct subpixel dot\ matrix"
 
@@ -42,6 +42,13 @@ _gbcc()
                         return 0
                         ;;
                 --config|-c)
+                        _filedir
+                        return 0
+                        ;;
+		--save-dir|-S)
+			# Really it'd be nice to just use fallthrough for this,
+			# but macOS provides a bash version from 2007, which
+			# doesn't support the ;& syntax.
                         _filedir
                         return 0
                         ;;

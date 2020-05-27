@@ -12,11 +12,11 @@
 #include "../debug.h"
 #include "../input.h"
 #include "../nelem.h"
+#include "../time_diff.h"
 #include "../window.h"
 #include "sdl.h"
 #include "vram_window.h"
 #include <errno.h>
-#include <math.h>
 #include <png.h>
 #include <pthread.h>
 #include <SDL2/SDL.h>
@@ -30,7 +30,7 @@
 
 #define HEADER_BYTES 8
 
-static const SDL_Scancode keymap[33] = {
+static const SDL_Scancode keymap[35] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -42,8 +42,8 @@ static const SDL_Scancode keymap[33] = {
 	SDL_SCANCODE_RSHIFT, 	/* Turbo */
 	SDL_SCANCODE_S, 	/* Screenshot */
 	SDL_SCANCODE_P, 	/* Pause */
-	SDL_SCANCODE_F, 	/* FPS Counter */
-	SDL_SCANCODE_V, 	/* Switch shader */
+	SDL_SCANCODE_F, 	/* FPS Counter / frame blending */
+	SDL_SCANCODE_V, 	/* Vsync / VRAM display */
 	SDL_SCANCODE_1, 	/* Toggle background */
 	SDL_SCANCODE_2, 	/* Toggle window */
 	SDL_SCANCODE_3, 	/* Toggle sprites */
@@ -51,6 +51,8 @@ static const SDL_Scancode keymap[33] = {
 	SDL_SCANCODE_A, 	/* Toggle autosave */
 	SDL_SCANCODE_B, 	/* Toggle background playback */
 	SDL_SCANCODE_ESCAPE, 	/* Toggle menu */
+	SDL_SCANCODE_I,         /* Toggle interlacing */
+	SDL_SCANCODE_O,         /* Cycle through shaders */
 	SDL_SCANCODE_KP_2, 	/* MBC7 accelerometer down */
 	SDL_SCANCODE_KP_4, 	/* MBC7 accelerometer left */
 	SDL_SCANCODE_KP_6, 	/* MBC7 accelerometer right */
@@ -114,7 +116,7 @@ void gbcc_sdl_initialise(struct gbcc_sdl *sdl)
 			SDL_WINDOWPOS_UNDEFINED,   // initial y position
 			GBC_SCREEN_WIDTH,      // width, in pixels
 			GBC_SCREEN_HEIGHT,     // height, in pixels
-			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE // flags
+			SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI// flags
 			);
 
 	if (sdl->window == NULL) {
@@ -148,7 +150,15 @@ void gbcc_sdl_update(struct gbcc_sdl *sdl)
 {
 	struct gbcc *gbc = &sdl->gbc;
 	struct gbcc_window *win = &gbc->window;
-	if (win->vram_display) {
+
+	/* Hide the cursor after 2 seconds of inactivity */
+	struct timespec cur_time;
+	clock_gettime(CLOCK_REALTIME, &cur_time);
+	if (gbcc_time_diff(&cur_time, &sdl->last_cursor_move) > 2 * SECOND) {
+		SDL_ShowCursor(SDL_DISABLE);
+	}
+
+	if (gbc->vram_display) {
 		if (!gbc->vram_window.initialised) {
 			gbcc_sdl_vram_window_initialise(sdl);
 
@@ -198,12 +208,26 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			} else {
 				continue;
 			}
+		} else if (e.type == SDL_MOUSEMOTION) {
+			clock_gettime(CLOCK_REALTIME, &sdl->last_cursor_move);
+			SDL_ShowCursor(SDL_ENABLE);
+			continue;
 		} else {
 			continue;
+		}
+		if (val && e.key.keysym.scancode == SDL_SCANCODE_F11) {
+			sdl->fullscreen = !sdl->fullscreen;
+			if (sdl->fullscreen) {
+				SDL_SetWindowFullscreen(sdl->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			} else {
+				SDL_SetWindowFullscreen(sdl->window, 0);
+			}
 		}
 
 		switch(key) {
 			case -2:
+				gbc->quit = true;
+				gbcc_sdl_destroy(sdl);
 				return;
 			case 0:
 				emulator_key = GBCC_KEY_A;
@@ -257,7 +281,7 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_VRAM;
 				} else {
-					emulator_key = GBCC_KEY_SHADER;
+					emulator_key = GBCC_KEY_VSYNC;
 				}
 				break;
 			case 13:
@@ -282,35 +306,39 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 				emulator_key = GBCC_KEY_MENU;
 				break;
 			case 20:
+				emulator_key = GBCC_KEY_INTERLACE;
+				break;
+			case 21:
+				emulator_key = GBCC_KEY_SHADER;
+				break;
+			case 22:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_DOWN;
 				} else {
 					continue;
 				}
 				break;
-			case 21:
+			case 23:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_LEFT;
 				} else {
 					continue;
 				}
 				break;
-			case 22:
+			case 24:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_RIGHT;
 				} else {
 					continue;
 				}
 				break;
-			case 23:
+			case 25:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_UP;
 				} else {
 					continue;
 				}
 				break;
-			case 24:
-			case 25:
 			case 26:
 			case 27:
 			case 28:
@@ -318,10 +346,13 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			case 30:
 			case 31:
 			case 32:
+			case 33:
+			case 34:
+			case 35:
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 24);
+					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 26);
 				} else {
-					emulator_key = GBCC_KEY_LOAD_STATE_1 + (int8_t)(key - 24);
+					emulator_key = GBCC_KEY_LOAD_STATE_1 + (int8_t)(key - 26);
 				}
 				break;
 			default:
@@ -372,11 +403,9 @@ int process_input(struct gbcc_sdl *sdl, const SDL_Event *e)
 		if (e->window.event == SDL_WINDOWEVENT_CLOSE) {
 			uint32_t id = e->window.windowID;
 			if (id == SDL_GetWindowID(sdl->window)) {
-				gbc->quit = true;
-				gbcc_sdl_destroy(sdl);
 				return -2;
 			} else if (id == SDL_GetWindowID(sdl->vram_window)) {
-				gbc->window.vram_display = false;
+				gbc->vram_display = false;
 			} else {
 				gbcc_log_error("Unknown window ID %u\n", id);
 			}
@@ -442,6 +471,9 @@ void process_game_controller(struct gbcc_sdl *sdl)
 		}
 	}
 
+	if (sdl->haptic == NULL) {
+		return;
+	}
 	if (sdl->gbc.core.cart.rumble_state) {
 		if (SDL_HapticRumblePlay(sdl->haptic, 0.1, 100) != 0) {
 			printf("%s\n", SDL_GetError());

@@ -12,6 +12,7 @@
 #include "../apu.h"
 #include "../args.h"
 #include "../audio.h"
+#include "../camera.h"
 #include "../config.h"
 #include "../cpu.h"
 #include "../debug.h"
@@ -22,11 +23,12 @@
 #include "../time_diff.h"
 #include "sdl.h"
 #include "vram_window.h"
+#include <pthread.h>
+#include <semaphore.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -58,7 +60,7 @@ int main(int argc, char **argv)
 
 	struct gbcc_sdl sdl = {0};
 	struct gbcc *gbc = &sdl.gbc;
-	gbcc_audio_initialise(gbc);
+	gbcc_audio_initialise(gbc, 96000, 2048);
 	gbcc_sdl_initialise(&sdl);
 
 	if (!gbcc_parse_args(gbc, true, argc, argv)) {
@@ -66,29 +68,25 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	gbcc_camera_initialise(gbc);
+
 	pthread_t emu_thread;
 	pthread_create(&emu_thread, NULL, gbcc_emulation_loop, gbc);
 	pthread_setname_np(emu_thread, "EmulationThread");
 
-	struct timespec t1;
-	struct timespec t2;
-	int time_to_sleep;
 	while (!gbc->quit && !force_quit) {
-		clock_gettime(CLOCK_REALTIME, &t2);
 		gbcc_sdl_update(&sdl);
 		gbcc_sdl_process_input(&sdl);
-		clock_gettime(CLOCK_REALTIME, &t1);
-		time_to_sleep = 8 - (int)(gbcc_time_diff(&t1, &t2) / 1e6);
-		if (time_to_sleep > 0 && time_to_sleep < 16) {
-			SDL_Delay(time_to_sleep);
-		}
 	}
+	sem_post(&gbc->core.ppu.vsync_semaphore);
+	if (!force_quit) {
+		pthread_join(emu_thread, NULL);
+	}
+	gbcc_audio_destroy(gbc);
+	gbcc_camera_destroy(gbc);
 	if (force_quit) {
-		gbcc_audio_destroy(gbc);
 		exit(EXIT_FAILURE);
 	}
-	pthread_join(emu_thread, NULL);
-	gbcc_audio_destroy(gbc);
 
 	gbc->save_state = 0;
 	gbcc_save_state(gbc);

@@ -27,12 +27,13 @@ static void usage()
 	       "  -f, --fractional      Enable fractional scaling.\n"
 	       "  -F, --frame-blending  Enable simple frame blending.\n"
 	       "  -h, --help            Print this message and exit.\n"
-	       "  -i, --interlace       Enable interlacing (experimental).\n"
+	       "  -i, --interlacing     Enable interlacing.\n"
 	       "  -p, --palette=NAME    Select the colour palette (DMG mode only).\n"
 	       "  -s, --shader=NAME     Select the initial shader to use.\n"
+	       "  -S, --save-dir=PATH   Path to use for save files.\n"
 	       "  -t, --turbo=NUM    	Set a fractional speed limit for turbo mode\n"
 	       "                        (0 = unlimited).\n"
-	       "  -v, --vsync           Enable VSync (currently ineffective).\n"
+	       "  -v, --vsync           Enable VSync (experimental).\n"
 	       "  -V, --vram-window     Display a window with all vram tile data.\n"
 	      );
 }
@@ -49,14 +50,15 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"fractional", no_argument, NULL, 'f'},
 		{"frame-blending", no_argument, NULL, 'F'},
 		{"help", no_argument, NULL, 'h'},
-		{"interlace", no_argument, NULL, 'i'},
+		{"interlacing", no_argument, NULL, 'i'},
 		{"palette", required_argument, NULL, 'p'},
 		{"shader", required_argument, NULL, 's'},
+		{"save-dir", required_argument, NULL, 'S'},
 		{"turbo", required_argument, NULL, 't'},
 		{"vsync", no_argument, NULL, 'v'},
 		{"vram-window", no_argument, NULL, 'V'}
 	};
-	const char *short_options = "aAbc:fFhip:s:t:vV";
+	const char *short_options = "aAbc:fFhip:s:S:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -71,6 +73,9 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		}
 	} else {
 		gbcc_initialise(&gbc->core, argv[optind]);
+		if (gbc->core.error) {
+			return false;
+		}
 	}
 
 	char *config = NULL;
@@ -97,16 +102,16 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 			case 'c':
 				break;
 			case 'f':
-				gbc->window.fractional_scaling = true;
+				gbc->fractional_scaling = true;
 				break;
 			case 'F':
-				gbc->window.frame_blending = true;
+				gbc->frame_blending = true;
 				break;
 			case 'h':
 				usage();
 				return false;
 			case 'i':
-				gbc->interlace = true;
+				gbc->interlacing = true;
 				break;
 			case 'p':
 				gbc->core.ppu.palette = gbcc_get_palette(optarg);
@@ -115,15 +120,18 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 			case 's':
 				gbcc_window_use_shader(gbc, optarg);
 				break;
+			case 'S':
+				gbc->save_directory = optarg;
+				break;
 			case 't':
 				/* TODO: error check */
-				gbc->core.turbo_speed = strtod(optarg, NULL);
+				gbc->turbo_speed = strtod(optarg, NULL);
 				break;
 			case 'v':
-				/* TODO */
+				gbc->core.sync_to_video = true;
 				break;
 			case 'V':
-				gbc->window.vram_display = true;
+				gbc->vram_display = true;
 				break;
 			case '?':
 				if (optopt == 'p' || optopt == 't') {

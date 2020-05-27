@@ -9,10 +9,12 @@
  */
 
 #include "../gbcc.h"
+#include "../camera.h"
 #include "../debug.h"
 #include "../input.h"
 #include "../nelem.h"
 #include "../save.h"
+#include "../time_diff.h"
 #include "gtk.h"
 #include "input.h"
 #include <gdk/gdk.h>
@@ -33,6 +35,7 @@ static void on_vram_realise(GtkGLArea *gl_area, void *data);
 static gboolean on_vram_render(GtkGLArea *gl_area, GdkGLContext *context, void *data);
 static void on_destroy(GtkWidget *window, void *data);
 static void on_window_state_change(GtkWidget *window, GdkEvent *event, void *data);
+static void mouse_motion(GtkWidget *widget, GdkEvent *event, void *data);
 static void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data);
 static void load_rom(GtkWidget *widget, void *data);
 static void stop(GtkWidget *widget, void *data);
@@ -52,6 +55,8 @@ static void toggle_autosave(GtkCheckMenuItem *widget, void *data);
 static void toggle_background_playback(GtkCheckMenuItem *widget, void *data);
 static void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data);
 static void toggle_frame_blending(GtkCheckMenuItem *widget, void *data);
+static void toggle_vsync(GtkCheckMenuItem *widget, void *data);
+static void toggle_interlacing(GtkCheckMenuItem *widget, void *data);
 static void turbo_speed(GtkCheckMenuItem *widget, void *data);
 static void show_turbo_dialog(GtkWidget *widget, void *data);
 static void select_turbo_text(GtkWidget *widget, void *data);
@@ -115,16 +120,19 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	g_signal_connect(G_OBJECT(gtk->window), "window-state-event", G_CALLBACK(on_window_state_change), gtk);
 
 	gtk->gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "gl_area"));
-	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK);
+	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK | GDK_POINTER_MOTION_MASK);
 	g_signal_connect(G_OBJECT(gtk->gl_area), "realize", G_CALLBACK(on_realise), gtk);
 	g_signal_connect(G_OBJECT(gtk->gl_area), "render", G_CALLBACK(on_render), gtk);
-	g_signal_connect(G_OBJECT(gtk->gl_area), "key_press_event", G_CALLBACK(on_keypress), gtk);
-	g_signal_connect(G_OBJECT(gtk->gl_area), "key_release_event", G_CALLBACK(on_keypress), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "key-press-event", G_CALLBACK(on_keypress), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "key-release-event", G_CALLBACK(on_keypress), gtk);
+	g_signal_connect(G_OBJECT(gtk->gl_area), "motion-notify-event", G_CALLBACK(mouse_motion), gtk);
 	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->gl_area), 3, 2);
 	
 	gtk->vram_gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "vram_gl_area"));
+	gtk_widget_add_events(gtk->vram_gl_area, GDK_POINTER_MOTION_MASK);
 	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "realize", G_CALLBACK(on_vram_realise), gtk);
 	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "render", G_CALLBACK(on_vram_render), gtk);
+	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "motion-notify-event", G_CALLBACK(mouse_motion), gtk);
 	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->vram_gl_area), 3, 2);
 	
 	gtk->menu.bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
@@ -145,6 +153,8 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk->menu.turbo_speed = GTK_WIDGET(gtk_builder_get_object(builder, "turbo_speed"));
 	gtk->menu.turbo_custom = GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "turbo_custom"));
 	gtk->menu.custom_turbo_speed = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "turbo_speed_val"));
+	gtk->menu.vsync = GTK_WIDGET(gtk_builder_get_object(builder, "vsync"));
+	gtk->menu.interlacing = GTK_WIDGET(gtk_builder_get_object(builder, "interlacing"));
 	gtk_spin_button_set_range(gtk->menu.custom_turbo_speed, 0, 100);
 	gtk_spin_button_set_increments(gtk->menu.custom_turbo_speed, 0.1, 1);
 	g_signal_connect_swapped(gtk->turbo_dialog, "response", G_CALLBACK(gtk_widget_hide), gtk->turbo_dialog);
@@ -175,6 +185,8 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_builder_add_callback_symbol(builder, "toggle_background_playback", G_CALLBACK(toggle_background_playback));
 	gtk_builder_add_callback_symbol(builder, "toggle_fractional_scaling", G_CALLBACK(toggle_fractional_scaling));
 	gtk_builder_add_callback_symbol(builder, "toggle_frame_blending", G_CALLBACK(toggle_frame_blending));
+	gtk_builder_add_callback_symbol(builder, "toggle_vsync", G_CALLBACK(toggle_vsync));
+	gtk_builder_add_callback_symbol(builder, "toggle_interlacing", G_CALLBACK(toggle_interlacing));
 	gtk_builder_add_callback_symbol(builder, "turbo_speed", G_CALLBACK(turbo_speed));
 	gtk_builder_add_callback_symbol(builder, "show_turbo_dialog", G_CALLBACK(show_turbo_dialog));
 	gtk_builder_add_callback_symbol(builder, "select_turbo_text", G_CALLBACK(select_turbo_text));
@@ -184,6 +196,10 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	gtk_widget_show_all(GTK_WIDGET(gtk->window));
 	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), false);
 	gtk_window_set_focus(gtk->window, gtk->gl_area);
+
+	GdkDisplay *display = gtk_widget_get_display(GTK_WIDGET(gtk->window));
+	gtk->default_cursor = gdk_cursor_new_from_name(display, "default");
+	gtk->blank_cursor = gdk_cursor_new_from_name(display, "none");
 
 	{
 		/*
@@ -262,8 +278,17 @@ gboolean on_render(GtkGLArea *gl_area, GdkGLContext *context, void *data)
 	gbc->window.width = gtk_widget_get_allocated_width(GTK_WIDGET(gl_area)) * scale;
 	gbc->window.height = gtk_widget_get_allocated_height(GTK_WIDGET(gl_area)) * scale;
 	gbcc_window_update(gbc);
-	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), gbc->window.vram_display);
+	gtk_widget_set_visible(GTK_WIDGET(gtk->vram_gl_area), gbc->vram_display);
 	gbcc_gtk_process_input(gtk);
+	
+
+	/* Hide the cursor after 2 seconds of inactivity */
+	struct timespec cur_time;
+	clock_gettime(CLOCK_REALTIME, &cur_time);
+	if (gbcc_time_diff(&cur_time, &gtk->last_cursor_move) > 2 * SECOND) {
+		GdkWindow* win = gtk_widget_get_window(GTK_WIDGET(gtk->window));
+		gdk_window_set_cursor(win, gtk->blank_cursor);
+	}
 
 	return true;
 }
@@ -421,12 +446,16 @@ void check_settings_options(GtkWidget *widget, void *data)
 	gtk_widget_set_sensitive(gtk->menu.fractional_scaling, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.frame_blending, gbc->core.initialised);
 	gtk_widget_set_sensitive(gtk->menu.turbo_speed, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.vsync, gbc->core.initialised);
+	gtk_widget_set_sensitive(gtk->menu.interlacing, gbc->core.initialised);
 
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.autosave), gbc->autosave);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.background_playback), gbc->background_play);
 	if (gbc->core.initialised) {
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.fractional_scaling), gbc->window.fractional_scaling);
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.frame_blending), gbc->window.frame_blending);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.fractional_scaling), gbc->fractional_scaling);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.frame_blending), gbc->frame_blending);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.vsync), gbc->core.sync_to_video);
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gtk->menu.interlacing), gbc->interlacing);
 	}
 }
 
@@ -491,7 +520,7 @@ void change_palette(GtkWidget *widget, void *data)
 void toggle_vram_display(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	gtk->gbc.window.vram_display = gtk_check_menu_item_get_active(widget);
+	gtk->gbc.vram_display = gtk_check_menu_item_get_active(widget);
 }
 
 void toggle_autosave(GtkCheckMenuItem *widget, void *data)
@@ -509,13 +538,25 @@ void toggle_background_playback(GtkCheckMenuItem *widget, void *data)
 void toggle_fractional_scaling(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	gtk->gbc.window.fractional_scaling = gtk_check_menu_item_get_active(widget);
+	gtk->gbc.fractional_scaling = gtk_check_menu_item_get_active(widget);
 }
 
 void toggle_frame_blending(GtkCheckMenuItem *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	gtk->gbc.window.frame_blending = gtk_check_menu_item_get_active(widget);
+	gtk->gbc.frame_blending = gtk_check_menu_item_get_active(widget);
+}
+
+void toggle_vsync(GtkCheckMenuItem *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk->gbc.core.sync_to_video = gtk_check_menu_item_get_active(widget);
+}
+
+void toggle_interlacing(GtkCheckMenuItem *widget, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	gtk->gbc.interlacing = gtk_check_menu_item_get_active(widget);
 }
 
 void turbo_speed(GtkCheckMenuItem *widget, void *data)
@@ -526,11 +567,11 @@ void turbo_speed(GtkCheckMenuItem *widget, void *data)
 	}
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
 	if (!strncmp(name, "_Unlimited", 9)) {
-		gtk->gbc.core.turbo_speed = 0;
+		gtk->gbc.turbo_speed = 0;
 	} else {
-		gtk->gbc.core.turbo_speed = strtod(strstr(name, "_") + 1, NULL);
-		if (gtk->gbc.core.turbo_speed == 0) {
-			gtk->gbc.core.turbo_speed = 10;
+		gtk->gbc.turbo_speed = strtod(strstr(name, "_") + 1, NULL);
+		if (gtk->gbc.turbo_speed == 0) {
+			gtk->gbc.turbo_speed = 10;
 		}
 	}
 }
@@ -553,9 +594,9 @@ void select_turbo_text(GtkWidget *widget, void *data)
 void custom_turbo_speed(GtkSpinButton *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	double val = 0;
+	float val = 0;
 	g_object_get(widget, "value", &val, NULL);
-	gtk->gbc.core.turbo_speed = val;
+	gtk->gbc.turbo_speed = val;
 }
 
 void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
@@ -570,6 +611,7 @@ void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
 	gtk->filename = malloc(len);
 	strncpy(gtk->filename, file, len);
 	gbcc_initialise(&gbc->core, gtk->filename);
+	gbcc_camera_initialise(gbc);
 	pthread_create(&gtk->emulation_thread, NULL, gbcc_emulation_loop, gbc);
 	pthread_setname_np(gtk->emulation_thread, "EmulationThread");
 }
@@ -581,11 +623,21 @@ void stop_emulation_thread(struct gbcc_gtk *gtk)
 		return;
 	}
 	gbc->quit = true;
+	sem_post(&gbc->core.ppu.vsync_semaphore);
 	pthread_join(gtk->emulation_thread, NULL);
+	gbcc_camera_destroy(gbc);
 	gbc->save_state = 0;
 	gbcc_save_state(gbc);
 	gbcc_free(&gbc->core);
 	gbc->core = (struct gbcc_core){0};
+}
+
+void mouse_motion(GtkWidget *widget, GdkEvent *event, void *data)
+{
+	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
+	clock_gettime(CLOCK_REALTIME, &gtk->last_cursor_move);
+	GdkWindow* win = gtk_widget_get_window(GTK_WIDGET(gtk->window));
+	gdk_window_set_cursor(win, gtk->default_cursor);
 }
 
 void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
@@ -595,6 +647,14 @@ void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
 	bool val = false;
 	if (event->type == GDK_KEY_PRESS) {
 		val = true;
+	}
+	if (val && event->keyval == GDK_KEY_F11) {
+		gtk->fullscreen = !gtk->fullscreen;
+		if (gtk->fullscreen) {
+			gtk_window_fullscreen(gtk->window);
+		} else {
+			gtk_window_unfullscreen(gtk->window);
+		}
 	}
 	for (size_t i = 0; i < N_ELEM(gtk->keymap); i++) {
 		if (event->keyval == gtk->keymap[i]) {

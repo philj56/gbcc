@@ -139,18 +139,18 @@ void parse_option(struct gbcc *gbc, const char *option, const char *value)
 	} else if (strcmp(opt, "background") == 0) {
 		gbc->background_play = strtol(val, NULL, 0);
 	} else if (strcmp(opt, "fractional") == 0) {
-		gbc->window.fractional_scaling = strtol(val, NULL, 0);
-	} else if (strcmp(opt, "interlace") == 0) {
-		gbc->interlace = strtol(val, NULL, 0);
+		gbc->fractional_scaling = strtol(val, NULL, 0);
+	} else if (strcmp(opt, "interlacing") == 0) {
+		gbc->interlacing = strtol(val, NULL, 0);
 	} else if (strcmp(opt, "palette") == 0) {
 		gbc->core.ppu.palette = gbcc_get_palette(val);
 	} else if (strcmp(opt, "shader") == 0) {
 		gbcc_window_use_shader(gbc, val);
 	} else if (strcmp(opt, "turbo") == 0) {
-		gbc->core.turbo_speed = strtod(val, NULL);
+		gbc->turbo_speed = strtod(val, NULL);
 	} else if (strcmp(opt, "vsync") == 0) {
 	} else if (strcmp(opt, "vram-window") == 0) {
-		gbc->window.vram_display = strtol(val, NULL, 0);
+		gbc->vram_display = strtol(val, NULL, 0);
 	} else {
 		gbcc_log_warning("\tBad config file option \"%s\"\n", opt);
 	}

@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #version 150 core
 
 in vec2 Texcoord;
@@ -24,7 +34,7 @@ void main()
 	src.r = texture(tex, Texcoord + vec2(1.0 / 480.0, 0)).r;
 	src.g = texture(tex, Texcoord).g;
 	src.b = texture(tex, Texcoord - vec2(1.0 / 480.0, 0)).b;
-	vec3 x = mod(Texcoord.x * 160 * 7 + vec3(3, 1, 4), 7) - vec3(3, 3, 1);
+	vec3 x = mod(Texcoord.x * 160 * 7 + vec3(3, 1, 5), 7) - vec3(3, 3, 2);
 	vec3 weight = circ(x);
 	float y = mod(Texcoord.y * 144 * 7, 7);
 	vec3 dst = vec3(0);

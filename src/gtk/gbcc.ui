@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (C) 2017-2020 Philip Jones
+
+ Licensed under the MIT License.
+ See either the LICENSE file, or:
+
+ https://opensource.org/licenses/MIT
+-->
 <interface>
 	<requires lib="gtk+" version="3.10"/>
 
@@ -114,6 +122,22 @@
 				<property name="label">_Turbo speed</property>
 				<property name="submenu">turbo_menu</property>
 				<property name="use-underline">True</property>
+			</object>
+		</child>
+		<child>
+			<object class="GtkCheckMenuItem" id="vsync">
+				<property name="can_focus">False</property>
+				<property name="label">_Vsync</property>
+				<property name="use-underline">True</property>
+				<signal name="toggled" handler="toggle_vsync"/>
+			</object>
+		</child>
+		<child>
+			<object class="GtkCheckMenuItem" id="interlacing">
+				<property name="can_focus">False</property>
+				<property name="label">_Interlacing</property>
+				<property name="use-underline">True</property>
+				<signal name="toggled" handler="toggle_interlacing"/>
 			</object>
 		</child>
 	</object>

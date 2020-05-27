@@ -11,6 +11,8 @@
 #ifndef GBCC_CORE_H
 #define GBCC_CORE_H
 
+#define GBCC_SAVE_STATE_VERSION 6
+
 #include "apu.h"
 #include "constants.h"
 #include "cpu.h"
@@ -22,7 +24,17 @@
 #include <stdlib.h>
 #include <time.h>
 
+enum GBCC_LINK_CABLE_STATE {
+	GBCC_LINK_CABLE_STATE_DISCONNECTED,
+	GBCC_LINK_CABLE_STATE_LOOPBACK,
+	GBCC_LINK_CABLE_STATE_PRINTER,
+	GBCC_LINK_CABLE_STATE_NUM_STATES
+};
+
 struct gbcc_core {
+	/* Version number for checking save state compatibility */
+	uint32_t version;
+
 	/* Core emulator areas */
 	struct cpu cpu;
 	struct apu apu;
@@ -96,15 +108,19 @@ struct gbcc_core {
 		uint8_t current_bit;
 		uint16_t divider;
 		uint16_t clock;
+		enum GBCC_LINK_CABLE_STATE state;
 	} link_cable;
 
 	/* Settings */
-	float turbo_speed;
+	bool sync_to_video;
 	bool hide_background;
 	bool hide_window;
 	bool hide_sprites;
-	bool link_cable_loop;
+
+	/* Initialisation state */
 	bool initialised;
+	bool error;
+	const char *error_msg;
 };
 
 void gbcc_initialise(struct gbcc_core *gbc, const char *filename);

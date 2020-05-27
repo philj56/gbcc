@@ -1,11 +1,21 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "core.h"
 #include "bit_utils.h"
 #include "colour.h"
 #include "debug.h"
+#include "gbcc.h"
 #include "memory.h"
 #include "palettes.h"
 #include "ppu.h"
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -59,12 +69,15 @@ void gbcc_disable_lcd(struct gbcc_core *gbc)
 	}
 	ppu->lcd_disable = true;
 	ppu->ly = 0;
-	gbcc_memory_clear_bit(gbc, IF, 1, true);
-	gbcc_memory_write(gbc, LY, 0, true);
+	gbcc_memory_clear_bit(gbc, IF, 1);
+	gbcc_memory_write_force(gbc, LY, 0);
 	
-	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
+	uint8_t stat = gbcc_memory_read_force(gbc, STAT);
+	if (get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
+		gbcc_log_debug("LCD disabled outside of VBLANK.\n");
+	}
 	stat = set_video_mode(stat, GBC_LCD_MODE_HBLANK);
-	gbcc_memory_write(gbc, STAT, stat, true);
+	gbcc_memory_write_force(gbc, STAT, stat);
 }
 
 void gbcc_enable_lcd(struct gbcc_core *gbc)
@@ -83,13 +96,14 @@ void gbcc_enable_lcd(struct gbcc_core *gbc)
 	ppu->clock = 248;
 }
 
+ANDROID_INLINE
 void gbcc_ppu_clock(struct gbcc_core *gbc)
 {
 	struct ppu *ppu = &gbc->ppu;
 	if (ppu->lcd_disable) {
 		return;
 	}
-	uint8_t stat = gbcc_memory_read(gbc, STAT, true);
+	uint8_t stat = gbcc_memory_read_force(gbc, STAT);
 
 	/* Start of a new scanline */
 	if (ppu->clock == 0 && get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
@@ -103,19 +117,19 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		 * so we make copies of them here, and again just before
 		 * rendering starts.
 		 */
-		ppu->scy = gbcc_memory_read(gbc, SCY, true);
-		ppu->scx = gbcc_memory_read(gbc, SCX, true);
-		ppu->ly = gbcc_memory_read(gbc, LY, true);
-		ppu->lyc = gbcc_memory_read(gbc, LYC, true);
-		ppu->wy = gbcc_memory_read(gbc, WY, true);
-		ppu->wx = gbcc_memory_read(gbc, WX, true);
+		ppu->scy = gbcc_memory_read_force(gbc, SCY);
+		ppu->scx = gbcc_memory_read_force(gbc, SCX);
+		ppu->ly = gbcc_memory_read_force(gbc, LY);
+		ppu->lyc = gbcc_memory_read_force(gbc, LYC);
+		ppu->wy = gbcc_memory_read_force(gbc, WY);
+		ppu->wx = gbcc_memory_read_force(gbc, WX);
 		/*
 		 * The ppu doesn't really ignore writes to LCDC during a
 		 * scanline, however the behaviour is not well described
 		 * anywhere, and various games seem to rely on being able to
 		 * enable the window mid-scanline for the next line.
 		 */
-		ppu->lcdc = gbcc_memory_read(gbc, LCDC, true);
+		ppu->lcdc = gbcc_memory_read_force(gbc, LCDC);
 
 		/*
 		 * First off, we enter OAM scanning mode for 80 cycles. As the
@@ -127,8 +141,8 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		ppu->n_sprites = 0;
 		bool double_size = check_bit(ppu->lcdc, 2); /* 8x8 or 8x16 tiles */
 		for (uint16_t addr = OAM_START; addr < OAM_END; addr += 4) {
-			uint8_t y = gbcc_memory_read(gbc, addr, true);
-			uint8_t x = gbcc_memory_read(gbc, addr + 1, true);
+			uint8_t y = gbcc_memory_read_force(gbc, addr);
+			uint8_t x = gbcc_memory_read_force(gbc, addr + 1);
 			if (ppu->ly >= y || ppu->ly + 16 < y || (!double_size && ppu->ly + 8 >= y)) {
 				/* Sprite isn't on this line */
 				continue;
@@ -146,13 +160,13 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 	}
 	if (ppu->clock == 81 && get_video_mode(stat) != GBC_LCD_MODE_VBLANK) {
 		/* Final value of these variables for the rest of this line */
-		ppu->scy = gbcc_memory_read(gbc, SCY, true);
-		ppu->scx = gbcc_memory_read(gbc, SCX, true);
-		ppu->ly = gbcc_memory_read(gbc, LY, true);
-		ppu->lyc = gbcc_memory_read(gbc, LYC, true);
-		ppu->wy = gbcc_memory_read(gbc, WY, true);
-		ppu->wx = gbcc_memory_read(gbc, WX, true);
-		ppu->lcdc = gbcc_memory_read(gbc, LCDC, true);
+		ppu->scy = gbcc_memory_read_force(gbc, SCY);
+		ppu->scx = gbcc_memory_read_force(gbc, SCX);
+		ppu->ly = gbcc_memory_read_force(gbc, LY);
+		ppu->lyc = gbcc_memory_read_force(gbc, LYC);
+		ppu->wy = gbcc_memory_read_force(gbc, WY);
+		ppu->wx = gbcc_memory_read_force(gbc, WX);
+		ppu->lcdc = gbcc_memory_read_force(gbc, LCDC);
 
 		/* Start the actual rendering of this line */
 		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_VRAM_READ);
@@ -190,7 +204,7 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 	}
 	
 	/* LCDSTAT interrupt */
-	//printf("LYC: %u\n", gbcc_memory_read(gbc, LYC, true));
+	//printf("LYC: %u\n", gbcc_memory_read_force(gbc, LYC));
 	//printf("Clock = %u\tMode = %u\n", ppu->clock, get_video_mode(stat));
 	ppu->clock++;
 	if (ppu->clock == 456) {
@@ -206,7 +220,6 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		ppu->ly = 0;
 	}
 	if (ppu->ly == 1 && get_video_mode(stat) == GBC_LCD_MODE_VBLANK) {
-		ppu->frame++;
 		ppu->ly = 0;
 		stat = set_video_mode(stat, GBC_LCD_MODE_OAM_READ);
 	}
@@ -215,12 +228,18 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 	
 	/* VBLANK interrupt flag */
 	if (ppu->ly == 144 && ppu->clock == 0) {
-		gbcc_memory_set_bit(gbc, IF, 0, true);
+		gbcc_memory_set_bit(gbc, IF, 0);
 		stat = set_video_mode(stat, GBC_LCD_MODE_VBLANK);
+
+		if (gbc->sync_to_video && !gbc->keys.turbo) {
+			sem_wait(&ppu->vsync_semaphore);
+		}
 
 		uint32_t *tmp = ppu->screen.gbc;
 		ppu->screen.gbc = ppu->screen.sdl;
 		ppu->screen.sdl = tmp;
+
+		ppu->frame++;
 
 		/*
 		 * Apparently, the window "remembers" how many lines it drew
@@ -251,13 +270,13 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 			|| (check_bit(stat, 5) && get_video_mode(stat) == GBC_LCD_MODE_OAM_READ)) {
 		if (!ppu->last_stat) {
 			ppu->last_stat = true;
-			gbcc_memory_set_bit(gbc, IF, 1, true);
+			gbcc_memory_set_bit(gbc, IF, 1);
 		}
 	} else {
 		ppu->last_stat = false;
 	}
-	gbcc_memory_write(gbc, LY, ppu->ly, true);
-	gbcc_memory_write(gbc, STAT, stat, true);
+	gbcc_memory_write_force(gbc, LY, ppu->ly);
+	gbcc_memory_write_force(gbc, STAT, stat);
 }
 
 /* TODO: GBC BG-to-OAM Priority */
@@ -272,7 +291,7 @@ void draw_background_pixel(struct gbcc_core *gbc)
 	uint8_t colour = get_tile_pixel(t->hi, t->lo, t->x, check_bit(t->attr, 5));
 	uint8_t palette;
 	if (gbc->mode == DMG) {
-		palette = gbcc_memory_read(gbc, BGP, true);
+		palette = gbcc_memory_read_force(gbc, BGP);
 	} else {
 		palette = t->attr & 0x07u;
 	}
@@ -299,17 +318,22 @@ void draw_window_pixel(struct gbcc_core *gbc)
 	if (ppu->x + 7 < ppu->wx) {
 		return;
 	}
-	if (ppu->x + 7 == ppu->wx) {
+	/* Should only be true the first window pixel of each line */
+	if (ppu->x + MIN(7, ppu->wx) == ppu->wx) {
 		ppu->window_ly++;
 	}
 	if (t->x == 0) {
 		load_window_tile(gbc);
+		if (ppu->x == 0) {
+			/* Skip pixels to make wx=7 be at x=0 */
+			t->x += (7 - ppu->wx);
+		}
 	}
 
 	uint8_t colour = get_tile_pixel(t->hi, t->lo, t->x, check_bit(t->attr, 5));
 	uint8_t palette;
 	if (gbc->mode == DMG) {
-		palette = gbcc_memory_read(gbc, BGP, true);
+		palette = gbcc_memory_read_force(gbc, BGP);
 	} else {
 		palette = t->attr & 0x07u;
 	}
@@ -374,10 +398,10 @@ void draw_sprite_pixel(struct gbcc_core *gbc)
 		enum palette_flag pf;
 		if (gbc->mode == DMG) {
 			if (check_bit(s->tile.attr, 4)) {
-				palette = gbcc_memory_read(gbc, OBP1, true);
+				palette = gbcc_memory_read_force(gbc, OBP1);
 				pf = SPRITE_1;
 			} else {
-				palette = gbcc_memory_read(gbc, OBP0, true);
+				palette = gbcc_memory_read_force(gbc, OBP0);
 				pf = SPRITE_2;
 			}
 		} else {
@@ -493,9 +517,9 @@ uint32_t get_palette_colour(struct gbcc_core *gbc, uint8_t palette, uint8_t n, e
 	uint8_t g = ((lo & 0xE0u) >> 5u) | (uint8_t)((hi & 0x03u) << 3u);
 	uint8_t b = (hi & 0x7Cu) >> 2u;
 	uint32_t res = 0;
-	res |= (uint32_t)(r << 27u);
-	res |= (uint32_t)(g << 19u);
-	res |= (uint32_t)(b << 11u);
+	res |= ((uint32_t)r << 27u);
+	res |= ((uint32_t)g << 19u);
+	res |= ((uint32_t)b << 11u);
 	res |= 0xFFu;
 
 	return res;
@@ -517,15 +541,15 @@ void load_bg_tile(struct gbcc_core *gbc)
 	}
 
 	if (gbc->mode == DMG) {
-		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
+		uint8_t tile = gbcc_memory_read_force(gbc, map + 32 * ty + tx);
 		uint16_t tile_addr;
 		if (check_bit(ppu->lcdc, 4)) {
 			tile_addr = VRAM_START + 16 * tile;
 		} else {
 			tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
 		}
-		ppu->bg_tile.lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
-		ppu->bg_tile.hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
+		ppu->bg_tile.lo = gbcc_memory_read_force(gbc, tile_addr + line_offset);
+		ppu->bg_tile.hi = gbcc_memory_read_force(gbc, tile_addr + line_offset + 1);
 		ppu->bg_tile.attr = 0;
 	} else {
 		uint8_t tile = gbc->memory.vram_bank[0][map + 32 * ty + tx - VRAM_START];
@@ -569,15 +593,15 @@ void load_window_tile(struct gbcc_core *gbc)
 	}
 
 	if (gbc->mode == DMG) {
-		uint8_t tile = gbcc_memory_read(gbc, map + 32 * ty + tx, true);
+		uint8_t tile = gbcc_memory_read_force(gbc, map + 32 * ty + tx);
 		uint16_t tile_addr;
 		if (check_bit(ppu->lcdc, 4)) {
 			tile_addr = VRAM_START + 16 * tile;
 		} else {
 			tile_addr = (uint16_t)(0x9000 + 16 * (int8_t)tile);
 		}
-		ppu->window_tile.lo = gbcc_memory_read(gbc, tile_addr + line_offset, true);
-		ppu->window_tile.hi = gbcc_memory_read(gbc, tile_addr + line_offset + 1, true);
+		ppu->window_tile.lo = gbcc_memory_read_force(gbc, tile_addr + line_offset);
+		ppu->window_tile.hi = gbcc_memory_read_force(gbc, tile_addr + line_offset + 1);
 		ppu->window_tile.attr = 0;
 	} else {
 		uint8_t tile = gbc->memory.vram_bank[0][map + 32 * ty + tx - VRAM_START];
@@ -608,7 +632,7 @@ void load_window_tile(struct gbcc_core *gbc)
 void load_sprite_tile(struct gbcc_core *gbc, int n)
 {
 	struct ppu *ppu = &gbc->ppu;
-	uint8_t ly = gbcc_memory_read(gbc, LY, true);
+	uint8_t ly = gbcc_memory_read_force(gbc, LY);
 	bool double_size = check_bit(ppu->lcdc, 2); /* 1 or 2 8x8 tiles */
 	struct tile *t = &ppu->sprites[n].tile;
 	/* 
@@ -618,8 +642,8 @@ void load_sprite_tile(struct gbcc_core *gbc, int n)
 	 * TODO: Is this off-by-one true?
 	 */
 	uint8_t sy = ppu->sprites[n].y;
-	uint8_t tile = gbcc_memory_read(gbc, ppu->sprites[n].address + 2, true);
-	t->attr = gbcc_memory_read(gbc, ppu->sprites[n].address + 3, true);
+	uint8_t tile = gbcc_memory_read_force(gbc, ppu->sprites[n].address + 2);
+	t->attr = gbcc_memory_read_force(gbc, ppu->sprites[n].address + 3);
 	bool yflip = check_bit(t->attr, 6);
 	uint8_t sprite_line = sy - ly;
 	uint8_t *vram_bank;

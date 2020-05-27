@@ -16,10 +16,16 @@
 #include <gtk/gtk.h>
 #include <pthread.h>
 #include <SDL2/SDL.h>
+#include <stdbool.h>
+#include <time.h>
 
 struct gbcc_gtk {
 	struct gbcc gbc;
+	bool fullscreen;
 	pthread_t emulation_thread;
+	struct timespec last_cursor_move;
+	GdkCursor* blank_cursor;
+	GdkCursor* default_cursor;
 	SDL_GameController *game_controller;
 	SDL_Haptic *haptic;
 	GtkWindow *window;
@@ -37,6 +43,8 @@ struct gbcc_gtk {
 		GtkWidget *frame_blending;
 		GtkWidget *vram_display;
 		GtkWidget *turbo_speed;
+		GtkWidget *vsync;
+		GtkWidget *interlacing;
 		GtkCheckMenuItem *turbo_custom;
 		GtkSpinButton *custom_turbo_speed;
 		struct {

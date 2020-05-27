@@ -1,4 +1,15 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "gbcc.h"
+#include "debug.h"
 #include "input.h"
 #include "menu.h"
 #include "nelem.h"
@@ -16,6 +27,7 @@ static const float turbo_speeds[] = {0, 0.25, 0.5, 1.5, 2, 3, 4, 5, 10};
 void gbcc_menu_init(struct gbcc *gbc)
 {
 	struct gbcc_menu *menu = &gbc->menu;
+	*menu = (struct gbcc_menu){0};
 
 	menu->save_state = 1;
 	menu->load_state = 1;
@@ -23,30 +35,55 @@ void gbcc_menu_init(struct gbcc *gbc)
 	menu->width = GBC_SCREEN_WIDTH / gbc->window.font.tile_width;
 	menu->height = GBC_SCREEN_HEIGHT / gbc->window.font.tile_height;
 	menu->text = calloc(menu->width * menu->height + 1, 1);
+	menu->initialised = true;
+}
+
+void gbcc_menu_destroy(struct gbcc *gbc)
+{
+	struct gbcc_menu *menu = &gbc->menu;
+	if (!menu->initialised) {
+		gbcc_log_error("Menu not initialised!\n");
+		return;
+	}
+	free(menu->text);
+	menu->initialised = false;
 }
 
 void gbcc_menu_update(struct gbcc *gbc)
 {
 	struct gbcc_menu *menu = &gbc->menu;
+	if (!menu->initialised) {
+		gbcc_log_error("Menu not initialised!\n");
+		return;
+	}
+	if (!gbc->core.initialised) {
+		return;
+	}
 
 	const char *link_text;
-	if (gbc->core.link_cable_loop) {
-		link_text = "Loopback";
-	} else if (gbc->core.printer.connected) {
-		link_text = "Printer";
-	} else {
-		link_text = "Disconnected";
+	switch (gbc->core.link_cable.state) {
+		case GBCC_LINK_CABLE_STATE_DISCONNECTED:
+			link_text = "Disconnected";
+			break;
+		case GBCC_LINK_CABLE_STATE_LOOPBACK:
+			link_text = "Loopback";
+			break;
+		case GBCC_LINK_CABLE_STATE_PRINTER:
+			link_text = "Printer";
+			break;
+		default:
+			link_text = "";
+			break;
 	}
 
 	char turbo_text[10];
-	if (gbc->core.turbo_speed == 0) {
+	if (gbc->turbo_speed == 0) {
 		strncpy(turbo_text, "Unlimited", sizeof(turbo_text));
 	} else {
-		snprintf(turbo_text, sizeof(turbo_text), "%gx", gbc->core.turbo_speed);
+		snprintf(turbo_text, sizeof(turbo_text), "%gx", gbc->turbo_speed);
 	}
 
 	snprintf(menu->text, menu->width * menu->height + 1,
-			"                                "
 			"                                "
 			"%cSave state:  1 2 3 4 5 6 7 8 9 "
 			"%cLoad state:  1 2 3 4 5 6 7 8 9 "
@@ -55,21 +92,30 @@ void gbcc_menu_update(struct gbcc *gbc)
 			"%cLink cable:  %-18s"
 			"%cShader:      %-18s"
 			"%cTurbo mult:  %-18s"
-			"                                "
-			"                                "
-			"                                ",
+			"%cVsync:       %-18s"
+			"%cInterlacing: %-18s"
+			"%cFPS counter: %-18s"
+			"%cPalette:     %-18s",
 			selected(menu, GBCC_MENU_ENTRY_SAVE_STATE),
 			selected(menu, GBCC_MENU_ENTRY_LOAD_STATE),
 			selected(menu, GBCC_MENU_ENTRY_AUTOSAVE),
 			bool2str(gbc->autosave),
 			selected(menu, GBCC_MENU_ENTRY_FRAMEBLEND),
-			bool2str(gbc->window.frame_blending),
+			bool2str(gbc->frame_blending),
 			selected(menu, GBCC_MENU_ENTRY_LINK_CABLE),
 			link_text,
 			selected(menu, GBCC_MENU_ENTRY_SHADER),
 			gbc->window.gl.shaders[gbc->window.gl.cur_shader].name,
 			selected(menu, GBCC_MENU_ENTRY_TURBO_MULT),
-			turbo_text
+			turbo_text,
+			selected(menu, GBCC_MENU_ENTRY_VSYNC),
+			bool2str(gbc->core.sync_to_video),
+			selected(menu, GBCC_MENU_ENTRY_INTERLACING),
+			bool2str(gbc->interlacing),
+			selected(menu, GBCC_MENU_ENTRY_FPS_COUNTER),
+			bool2str(gbc->show_fps),
+			selected(menu, GBCC_MENU_ENTRY_PALETTE),
+			gbc->core.ppu.palette.name
 	);
 }
 
@@ -80,11 +126,13 @@ void gbcc_menu_process_key(struct gbcc *gbc, enum gbcc_key key)
 	switch (key) {
 		case GBCC_KEY_UP:
 			menu->selection--;
-			menu->selection = modulo(menu->selection, 7);
+			menu->selection = modulo(menu->selection,
+					GBCC_MENU_ENTRY_NUM_ENTRIES);
 			break;
 		case GBCC_KEY_DOWN:
 			menu->selection++;
-			menu->selection = modulo(menu->selection, 7);
+			menu->selection = modulo(menu->selection,
+					GBCC_MENU_ENTRY_NUM_ENTRIES);
 			break;
 		case GBCC_KEY_LEFT:
 		case GBCC_KEY_RIGHT:
@@ -93,6 +141,7 @@ void gbcc_menu_process_key(struct gbcc *gbc, enum gbcc_key key)
 			toggle_option(gbc, key);
 			break;
 		case GBCC_KEY_MENU:
+		case GBCC_KEY_B:
 			menu->show = false;
 		default:
 			break;
@@ -131,18 +180,18 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			gbc->autosave ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_FRAMEBLEND:
-			gbc->window.frame_blending ^= 1;
+			gbc->frame_blending ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_LINK_CABLE:
 			if (key == GBCC_KEY_LEFT) {
-				bool tmp = gbc->core.link_cable_loop;
-				gbc->core.link_cable_loop = gbc->core.printer.connected;
-				gbc->core.printer.connected = !(tmp | gbc->core.link_cable_loop);
+				gbc->core.link_cable.state--;
 			} else {
-				bool tmp = gbc->core.printer.connected;
-				gbc->core.printer.connected = gbc->core.link_cable_loop;
-				gbc->core.link_cable_loop = !(tmp | gbc->core.printer.connected);
+				gbc->core.link_cable.state++;
 			}
+			if (gbc->core.link_cable.state < 0) {
+				gbc->core.link_cable.state += GBCC_LINK_CABLE_STATE_NUM_STATES;
+			}
+			gbc->core.link_cable.state %= GBCC_LINK_CABLE_STATE_NUM_STATES;
 			break;
 		case GBCC_MENU_ENTRY_SHADER:
 			if (key == GBCC_KEY_LEFT) {
@@ -160,6 +209,28 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			} else {
 				turbo_index(gbc, true);
 			}
+			break;
+		case GBCC_MENU_ENTRY_VSYNC:
+			gbc->core.sync_to_video ^= 1;
+			break;
+		case GBCC_MENU_ENTRY_INTERLACING:
+			gbc->interlacing ^= 1;
+			break;
+		case GBCC_MENU_ENTRY_FPS_COUNTER:
+			gbc->show_fps ^= 1;
+			break;
+		case GBCC_MENU_ENTRY_PALETTE:
+			{
+				unsigned int p_idx = gbcc_get_palette_index(gbc->core.ppu.palette.name);
+				if (key == GBCC_KEY_LEFT) {
+					p_idx++;
+				} else {
+					p_idx = p_idx + GBCC_NUM_PALETTES - 1;
+				}
+				gbc->core.ppu.palette = gbcc_get_palette_by_index(p_idx % GBCC_NUM_PALETTES);
+			}
+			break;
+		case GBCC_MENU_ENTRY_NUM_ENTRIES:
 			break;
 	}
 }
@@ -181,7 +252,7 @@ int modulo(int x, int n)
 
 void turbo_index(struct gbcc *gbc, bool inc)
 {
-	const float mult = gbc->core.turbo_speed;
+	const float mult = gbc->turbo_speed;
 	const size_t len = N_ELEM(turbo_speeds);
 	size_t idx;
 	if (inc) {
@@ -192,5 +263,5 @@ void turbo_index(struct gbcc *gbc, bool inc)
 		idx--;
 	}
 	idx = modulo(idx, len);
-	gbc->core.turbo_speed = turbo_speeds[idx];
+	gbc->turbo_speed = turbo_speeds[idx];
 }

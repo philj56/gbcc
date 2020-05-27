@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #ifndef GBCC_PRINTER_H
 #define GBCC_PRINTER_H
 
@@ -32,7 +42,6 @@ struct printer {
 	uint8_t status;
 	bool magic; 	/* Flag for detecting magic bytes that start a packet */
 	bool in_packet;
-	bool connected;
 	uint16_t print_byte;
 	uint8_t print_line;
 	pthread_t print_thread;

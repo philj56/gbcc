@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #include "gbcc.h"
 #include "bit_utils.h"
 #include "constants.h"
@@ -17,10 +27,6 @@
 #include <string.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
-
-#ifndef TILESET_PATH
-#define TILESET_PATH "tileset.png"
-#endif
 
 #ifndef SHADER_PATH
 #define SHADER_PATH "shaders/"

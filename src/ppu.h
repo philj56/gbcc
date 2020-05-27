@@ -1,8 +1,19 @@
+/*
+ * Copyright (C) 2017-2020 Philip Jones
+ *
+ * Licensed under the MIT License.
+ * See either the LICENSE file, or:
+ *
+ * https://opensource.org/licenses/MIT
+ *
+ */
+
 #ifndef GBCC_PPU_H
 #define GBCC_PPU_H
 
 #include "constants.h"
 #include "palettes.h"
+#include <semaphore.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -44,6 +55,7 @@ struct ppu {
 		uint32_t *gbc;
 		uint32_t *sdl;
 	} screen;
+	sem_t vsync_semaphore;
 
 	/* Copies of IOREG data */
 	uint8_t scy;

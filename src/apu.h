@@ -27,6 +27,7 @@ struct duty {
 	uint8_t counter;
 	uint8_t cycle;
 	uint16_t freq;
+	bool enabled;
 };
 
 struct sweep {
@@ -76,9 +77,8 @@ struct channel {
 };
 
 struct apu {
-	uint64_t sync_clock;
-	uint64_t sample;
-	size_t index;
+	uint16_t sync_clock;
+	uint16_t sample;
 	uint8_t left_vol;
 	uint8_t right_vol;
 	bool disabled;

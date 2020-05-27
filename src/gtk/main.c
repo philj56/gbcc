@@ -11,6 +11,7 @@
 #include "../gbcc.h"
 #include "../args.h"
 #include "../audio.h"
+#include "../camera.h"
 #include "../paths.h"
 #include "../save.h"
 #include "gtk.h"
@@ -45,7 +46,7 @@ int main(int argc, char **argv)
 	struct gbcc_gtk gtk = {0};
 	struct gbcc *gbc = &gtk.gbc;
 
-	gbcc_audio_initialise(gbc);
+	gbcc_audio_initialise(gbc, 96000, 2048);
 	gbcc_gtk_initialise(&gtk, &argc, &argv);
 
 	if (!gbcc_parse_args(gbc, false, argc, argv)) {
@@ -54,6 +55,7 @@ int main(int argc, char **argv)
 	}
 
 	if (gbc->core.initialised) {
+		gbcc_camera_initialise(gbc);
 		pthread_create(&gtk.emulation_thread, NULL, gbcc_emulation_loop, gbc);
 		pthread_setname_np(gtk.emulation_thread, "EmulationThread");
 	}

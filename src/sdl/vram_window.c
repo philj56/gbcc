@@ -15,7 +15,6 @@
 #include "../vram_window.h"
 #include "sdl.h"
 #include "vram_window.h"
-#include <math.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,8 +53,8 @@ void gbcc_sdl_vram_window_destroy(struct gbcc_sdl *sdl)
 {
 	SDL_GL_MakeCurrent(sdl->vram_window, sdl->vram_context);
 	gbcc_vram_window_deinitialise(&sdl->gbc);
-	SDL_GL_DeleteContext(sdl->context);
-	SDL_DestroyWindow(sdl->window);
+	SDL_GL_DeleteContext(sdl->vram_context);
+	SDL_DestroyWindow(sdl->vram_window);
 }
 
 void gbcc_sdl_vram_window_update(struct gbcc_sdl *sdl)
@@ -63,5 +62,5 @@ void gbcc_sdl_vram_window_update(struct gbcc_sdl *sdl)
 	SDL_GL_MakeCurrent(sdl->vram_window, sdl->vram_context);
 	SDL_GL_GetDrawableSize(sdl->vram_window, &sdl->gbc.vram_window.width, &sdl->gbc.vram_window.height);
 	gbcc_vram_window_update(&sdl->gbc);
-	SDL_GL_SwapWindow(sdl->window);
+	SDL_GL_SwapWindow(sdl->vram_window);
 }

@@ -9,6 +9,7 @@
  */
 
 #include "gbcc.h"
+#include "camera.h"
 #include "save.h"
 
 void *gbcc_emulation_loop(void *_gbc)
@@ -21,6 +22,7 @@ void *gbcc_emulation_loop(void *_gbc)
 			 * every 1000 cycles */
 			gbcc_emulate_cycle(&gbc->core);
 			gbcc_audio_update(gbc);
+			gbcc_camera_clock(gbc);
 		}
 		if (gbc->load_state > 0) {
 			gbcc_load_state(gbc);

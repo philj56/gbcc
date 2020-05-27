@@ -41,6 +41,11 @@ printer_sound_location = join_paths(
   'print.wav'
 )
 
+camera_location = join_paths(
+  debug ? '' : data_location,
+  'camera.png'
+)
+
 gtk_ui_location = join_paths(
   debug ? 'src/gtk' : data_location,
   'gbcc.ui'
@@ -75,6 +80,7 @@ add_project_arguments(
     '-DTILESET_PATH="@0@"'.format(tileset_location),
     '-DPRINTER_SOUND_PATH="@0@"'.format(printer_sound_location),
     '-DGTK_UI_PATH="@0@"'.format(gtk_ui_location),
+    '-DCAMERA_PATH="@0@"'.format(camera_location),
     '-DSHADER_PATH="@0@"'.format(shader_location),
     '-DICON_PATH="@0@"'.format(icon_location),
     #'-fprofile-instr-use',
@@ -83,11 +89,20 @@ add_project_arguments(
   language: 'c'
 )
 
+if target_machine.system() == 'linux'
+  camera_platform = 'src/camera_platform/v4l2.c'
+else
+  camera_platform = 'src/camera_platform/null.c'
+endif
+
 common_sources = files(
   'src/apu.c',
   'src/args.c',
   'src/audio.c',
+  'src/audio_platform/openal.c',
   'src/bit_utils.c',
+  'src/camera.c',
+  camera_platform,
   'src/colour.c',
   'src/config.c',
   'src/cpu.c',
@@ -181,6 +196,10 @@ install_data(
 
 install_data(
   'print.wav'
+)
+
+install_data(
+  'camera.png'
 )
 
 install_subdir(

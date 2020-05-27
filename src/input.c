@@ -24,38 +24,39 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 	switch(key) {
 		case GBCC_KEY_A:
 			gbc->core.keys.a = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			gbcc_memory_set_bit(&gbc->core, IF, 4);
 			break;
 		case GBCC_KEY_B:
 			gbc->core.keys.b = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			gbcc_memory_set_bit(&gbc->core, IF, 4);
 			break;
 		case GBCC_KEY_START:
 			gbc->core.keys.start = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			gbcc_memory_set_bit(&gbc->core, IF, 4);
 			break;
 		case GBCC_KEY_SELECT:
 			gbc->core.keys.select = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			gbcc_memory_set_bit(&gbc->core, IF, 4);
 			break;
 		case GBCC_KEY_UP:
 			gbc->core.keys.dpad.up = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			gbcc_memory_set_bit(&gbc->core, IF, 4);
 			break;
 		case GBCC_KEY_DOWN:
 			gbc->core.keys.dpad.down = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			gbcc_memory_set_bit(&gbc->core, IF, 4);
 			break;
 		case GBCC_KEY_LEFT:
 			gbc->core.keys.dpad.left = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			gbcc_memory_set_bit(&gbc->core, IF, 4);
 			break;
 		case GBCC_KEY_RIGHT:
 			gbc->core.keys.dpad.right = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4, true);
+			gbcc_memory_set_bit(&gbc->core, IF, 4);
 			break;
 		case GBCC_KEY_TURBO:
 			gbc->core.keys.turbo ^= pressed;
+			gbc->audio.index *= pressed;
 			break;
 		case GBCC_KEY_SCREENSHOT:
 			gbc->window.screenshot ^= pressed;
@@ -67,33 +68,44 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			gbc->pause ^= pressed;
 			break;
 		case GBCC_KEY_PRINTER:
-			gbc->core.printer.connected ^= pressed;
-			if (gbc->core.printer.connected) {
+			if (pressed) {
+				if (gbc->core.link_cable.state == GBCC_LINK_CABLE_STATE_PRINTER) {
+					gbc->core.link_cable.state = GBCC_LINK_CABLE_STATE_DISCONNECTED;
+				} else{
+					gbc->core.link_cable.state = GBCC_LINK_CABLE_STATE_PRINTER;
+				}
+			}
+			if (gbc->core.link_cable.state == GBCC_LINK_CABLE_STATE_PRINTER) {
 				gbcc_window_show_message(gbc, "Printer connected", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Printer disconnected", 1, true);
 			}
 			break;
 		case GBCC_KEY_FPS:
-			gbc->window.fps.show ^= pressed;
+			gbc->show_fps ^= pressed;
 			break;
 		case GBCC_KEY_FRAME_BLENDING:
-			gbc->window.frame_blending ^= pressed;
-			if (gbc->window.frame_blending) {
+			gbc->frame_blending ^= pressed;
+			if (gbc->frame_blending) {
 				gbcc_window_show_message(gbc, "Frame blending enabled", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Frame blending disabled", 1, true);
 			}
 			break;
-		case GBCC_KEY_SHADER:
-			if (pressed) {
-				gbc->window.gl.cur_shader++;
-				gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);
-				gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
+		case GBCC_KEY_VSYNC:
+			gbc->core.sync_to_video ^= pressed;
+			if (!pressed) {
+				break;
+			}
+			gbc->audio.index = 0;
+			if (gbc->core.sync_to_video) {
+				gbcc_window_show_message(gbc, "Vsync enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Vsync disabled", 1, true);
 			}
 			break;
 		case GBCC_KEY_VRAM:
-			gbc->window.vram_display ^= pressed;
+			gbc->vram_display ^= pressed;
 			break;
 		case GBCC_KEY_DISPLAY_BACKGROUND:
 			gbc->core.hide_background ^= pressed;
@@ -129,11 +141,14 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			}
 			break;
 		case GBCC_KEY_LINK_CABLE:
-			gbc->core.link_cable_loop ^= pressed;
-			if (!pressed) {
-				break;
+			if (pressed) {
+				if (gbc->core.link_cable.state == GBCC_LINK_CABLE_STATE_LOOPBACK) {
+					gbc->core.link_cable.state = GBCC_LINK_CABLE_STATE_DISCONNECTED;
+				} else{
+					gbc->core.link_cable.state = GBCC_LINK_CABLE_STATE_LOOPBACK;
+				}
 			}
-			if (gbc->core.link_cable_loop) {
+			if (gbc->core.link_cable.state == GBCC_LINK_CABLE_STATE_LOOPBACK) {
 				gbcc_window_show_message(gbc, "Link cable connected", 1, true);
 			} else {
 				gbcc_window_show_message(gbc, "Link cable disconnected", 1, true);
@@ -165,6 +180,24 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 			gbc->menu.show = pressed;
 			if (pressed) {
 				gbcc_menu_update(gbc);
+			}
+			break;
+		case GBCC_KEY_INTERLACE:
+			gbc->interlacing ^= pressed;
+			if (!pressed) {
+				break;
+			}
+			if (gbc->interlacing) {
+				gbcc_window_show_message(gbc, "Interlacing enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Interlacing disabled", 1, true);
+			}
+			break;
+		case GBCC_KEY_SHADER:
+			if (pressed) {
+				gbc->window.gl.cur_shader++;
+				gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);
+				gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
 			}
 			break;
 		case GBCC_KEY_ACCELEROMETER_UP:

@@ -17,6 +17,8 @@
 #include "nelem.h"
 #include "palettes.h"
 #include "save.h"
+#include <errno.h>
+#include <semaphore.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +50,8 @@ static void init_ioreg(struct gbcc_core *gbc);
 void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 {
 	*gbc = (const struct gbcc_core){0};
+	gbc->error_msg = NULL;
+	gbc->version = GBCC_SAVE_STATE_VERSION;
 	gbc->cart.filename = filename;
 	gbc->cart.mbc.type = NONE;
 	gbc->cart.mbc.romx_bank = 0x01u;
@@ -63,7 +67,13 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 	gbc->ppu.screen.gbc = gbc->ppu.screen.buffer_0;
 	gbc->ppu.screen.sdl = gbc->ppu.screen.buffer_1;
 	load_rom(gbc, filename);
+	if (gbc->error) {
+		return;
+	}
 	parse_header(gbc);
+	if (gbc->error) {
+		return;
+	}
 	init_mmap(gbc);
 	init_ioreg(gbc);
 	gbcc_apu_init(gbc);
@@ -77,6 +87,7 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 		gbc->memory.hram[i] = rand();
 	}
 
+	sem_init(&gbc->ppu.vsync_semaphore, 0, 0);
 	gbc->initialised = true;
 }
 
@@ -85,6 +96,7 @@ void gbcc_free(struct gbcc_core *gbc)
 	if (!gbc->initialised) {
 		return;
 	}
+	sem_destroy(&gbc->ppu.vsync_semaphore);
 	free(gbc->cart.rom);
 	if (gbc->cart.ram_size > 0) {
 		free(gbc->cart.ram);
@@ -101,15 +113,19 @@ void load_rom(struct gbcc_core *gbc, const char *filename)
 	FILE *rom = fopen(filename, "rb");
 	if (rom == NULL)
 	{
-		gbcc_log_error("Error opening file: %s\n", filename);
-		exit(EXIT_FAILURE);
+		gbcc_log_error("Error opening file %s: %s\n", filename, strerror(errno));
+		gbc->error = true;
+		gbc->error_msg = "Couldn't read ROM file.\n";
+		return;
 	}
 
 	fseek(rom, 0, SEEK_END);
 	if (ferror(rom)) {
-		gbcc_log_error("Error seeking in file: %s\n", filename);
+		gbcc_log_error("Error seeking in file %s: %s\n", filename, strerror(errno));
 		fclose(rom);
-		exit(EXIT_FAILURE);
+		gbc->error = true;
+		gbc->error_msg = "Couldn't read ROM file.\n";
+		return;
 	}
 
 	gbc->cart.rom_size = ftell(rom);
@@ -117,25 +133,37 @@ void load_rom(struct gbcc_core *gbc, const char *filename)
 	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
 	gbcc_log_info("\tCartridge size: 0x%zX bytes (%zu banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
 
-	gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
+	if (gbc->cart.rom_banks < 2) {
+		gbcc_log_warning("ROM smaller than minimum size of 2 banks\n");
+		gbc->cart.rom = (uint8_t *) calloc(ROMX_END, 1);
+		gbc->cart.rom_banks = 2;
+	} else {
+		gbc->cart.rom = (uint8_t *) calloc(gbc->cart.rom_size, 1);
+	}
 	if (gbc->cart.rom == NULL) {
 		gbcc_log_error("Error allocating ROM.\n");
 		fclose(rom);
-		exit(EXIT_FAILURE);
+		gbc->error = true;
+		gbc->error_msg = "Couldn't read ROM file.\n";
+		return;
 	}
 
 
 	if (fseek(rom, 0, SEEK_SET) != 0) {
-		gbcc_log_error("Error seeking in file: %s\n", filename);
+		gbcc_log_error("Error seeking in file %s: %s\n", filename, strerror(errno));
 		fclose(rom);
-		exit(EXIT_FAILURE);
+		gbc->error = true;
+		gbc->error_msg = "Couldn't read ROM file.\n";
+		return;
 	}
 
 	read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
 	if (read == 0) {
-		gbcc_log_error("Error reading from file: %s\n", filename);
+		gbcc_log_error("Error reading from file %s: %s\n", filename, strerror(errno));
 		fclose(rom);
-		exit(EXIT_FAILURE);
+		gbc->error = true;
+		gbc->error_msg = "Couldn't read ROM file.\n";
+		return;
 	}
 
 	fclose(rom);
@@ -173,8 +201,17 @@ void parse_header(struct gbcc_core *gbc)
 	print_licensee_code(gbc);
 	init_mode(gbc);
 	get_cartridge_hardware(gbc);
+	if (gbc->error) {
+		return;
+	}
 	init_ram(gbc);
+	if (gbc->error) {
+		return;
+	}
 	print_destination_code(gbc);
+	if (gbc->error) {
+		return;
+	}
 	init_registers(gbc);
 	gbcc_log_info("\tHeader parsed.\n");
 }
@@ -363,7 +400,9 @@ void get_cartridge_hardware(struct gbcc_core *gbc)
 			break;
 		case 0x20u: 	/* MBC6 */
 			gbcc_log_error("MBC6 not yet supported.\n");
-			exit(EXIT_FAILURE);
+			gbc->error = true;
+			gbc->error_msg = "MBC6 not yet supported.\n";
+			break;
 		case 0x22u: 	/* MBC7 + SENSOR + RUMBLE + RAM + BATTERY */
 			gbc->cart.mbc.type = MBC7;
 			gbc->cart.rumble = true;
@@ -371,11 +410,15 @@ void get_cartridge_hardware(struct gbcc_core *gbc)
 			gbcc_log_info("\tHardware: MBC7 + Tilt Sensor + Rumble + RAM + Battery\n");
 			break;
 		case 0xFCu: 	/* Pocket Camera */
-			gbcc_log_error("Pocket Camera not yet supported.\n");
-			exit(EXIT_FAILURE);
+			gbc->cart.mbc.type = CAMERA;
+			gbc->cart.battery = true;
+			gbcc_log_info("\tHardware: Pocket Camera\n");
+			break;
 		case 0xFDu: 	/* Bandai TAMA5 */
 			gbcc_log_error("Bandai TAMA5 not yet supported.\n");
-			exit(EXIT_FAILURE);
+			gbc->error = true;
+			gbc->error_msg = "Bandai TAMA5 not yet supported.\n";
+			break;
 		case 0xFEu: 	/* HuC3 */
 			gbc->cart.mbc.type = HUC3;
 			gbcc_log_info("\tHardware: HuC3\n");
@@ -416,16 +459,30 @@ void init_ram(struct gbcc_core *gbc)
 			break;
 		default:
 			gbcc_log_error("Unknown ram size flag: %u\n", ram_size_flag);
-			exit(EXIT_FAILURE);
+			gbc->error = true;
+			gbc->error_msg = "Invalid ram size.\n";
+			return;
 	}
 
 	if (gbc->cart.ram_size > 0) {
 		gbc->cart.ram_banks = gbc->cart.ram_size / SRAM_SIZE;
 		gbcc_log_info("\tCartridge RAM: 0x%0zX bytes (%zu banks)\n", gbc->cart.ram_size, gbc->cart.ram_banks);
-		gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
+		if (gbc->cart.ram_banks < 1) {
+			/* 
+			 * Allocate a minimum of 1 ram bank, to prevent
+			 * crashing if invalid ram size is specified
+			 */
+			gbc->cart.ram = (uint8_t *) calloc(SRAM_SIZE, 1);
+			gbc->cart.ram_banks = 1;
+		} else {
+			gbc->cart.ram = (uint8_t *) calloc(gbc->cart.ram_size, 1);
+		}
+
 		if (gbc->cart.ram == NULL) {
 			gbcc_log_error("Error allocating RAM.\n");
-			exit(EXIT_FAILURE);
+			gbc->error = true;
+			gbc->error_msg = "Couldn't allocate cartridge RAM.\n";
+			return;
 		}
 	}
 }
@@ -442,7 +499,9 @@ void print_destination_code(struct gbcc_core *gbc)
 			break;
 		default:
 			gbcc_log_error("Unrecognised region code: 0x%02X\n", dest_code);
-			exit(EXIT_FAILURE);
+			gbc->error = true;
+			gbc->error_msg = "Unrecognised region code.\n";
+			return;
 	}
 }
 

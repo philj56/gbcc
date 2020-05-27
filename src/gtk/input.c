@@ -36,6 +36,8 @@ guint default_keymap[53] = {
 	GDK_KEY_A,
 	GDK_KEY_b,
 	GDK_KEY_Escape,
+	GDK_KEY_i,
+	GDK_KEY_o,
 	GDK_KEY_KP_8,
 	GDK_KEY_KP_2,
 	GDK_KEY_KP_4,
