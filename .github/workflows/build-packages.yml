@@ -53,16 +53,20 @@ jobs:
 
     runs-on: windows-latest
 
+    env:
+      MSYSTEM: "MINGW64"
+      CHERE_INVOKING: 1
+
     steps:
       - name: Checkout main repo
         uses: actions/checkout@v2
 
-      - name: Install MSYS2
-        uses: philj56/setup-msys2@49cba27
-        with:
-          update: true
+      - name: Setup shell
+        shell: pwsh
+        run: echo ::add-path::C:\msys64\usr\bin\
 
       - name: Build package
+        shell: bash.exe --login -eo pipefail "{0}"
         run: |
           cd windows
           msys2do ./msys2.sh --install-deps
