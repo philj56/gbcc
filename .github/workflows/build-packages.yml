@@ -69,7 +69,7 @@ jobs:
         shell: bash.exe --login -eo pipefail "{0}"
         run: |
           cd windows
-          msys2do ./msys2.sh --install-deps
+          ./msys2.sh --install-deps
           mkdir ..\package
           move dist ..\package\gbcc
 
