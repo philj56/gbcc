@@ -70,8 +70,8 @@ jobs:
         run: |
           cd windows
           ./msys2.sh --install-deps
-          mkdir ..\package
-          move dist ..\package\gbcc
+          mkdir ../package
+          mv dist ../package/gbcc
 
       - name: Upload package
         uses: actions/upload-artifact@v1
