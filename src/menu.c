@@ -223,9 +223,9 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			{
 				unsigned int p_idx = gbcc_get_palette_index(gbc->core.ppu.palette.name);
 				if (key == GBCC_KEY_LEFT) {
-					p_idx++;
-				} else {
 					p_idx = p_idx + GBCC_NUM_PALETTES - 1;
+				} else {
+					p_idx++;
 				}
 				gbc->core.ppu.palette = gbcc_get_palette_by_index(p_idx % GBCC_NUM_PALETTES);
 			}
