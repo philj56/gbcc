@@ -180,6 +180,11 @@ void clock_div(struct gbcc_core *gbc)
 
 void check_interrupts(struct gbcc_core *gbc)
 {
+	if (gbc->keys.interrupt) {
+		gbcc_memory_set_bit(gbc, IF, 4);
+		gbc->keys.interrupt = false;
+	}
+
 	struct cpu *cpu = &gbc->cpu;
 	uint8_t iereg = gbcc_memory_read(gbc, IE);
 	uint8_t ifreg = gbcc_memory_read(gbc, IF);

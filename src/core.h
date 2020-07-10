@@ -11,7 +11,7 @@
 #ifndef GBCC_CORE_H
 #define GBCC_CORE_H
 
-#define GBCC_SAVE_STATE_VERSION 6
+#define GBCC_SAVE_STATE_VERSION 7
 
 #include "apu.h"
 #include "constants.h"
@@ -99,6 +99,7 @@ struct gbcc_core {
 			bool right;
 		} dpad;
 		bool turbo;
+		bool interrupt;
 	} keys;
 
 	struct printer printer;
