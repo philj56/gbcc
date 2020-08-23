@@ -216,12 +216,10 @@ void INTERRUPT(struct gbcc_core *gbc)
 
 /* Miscellaneous */
 
-__attribute__((noreturn))
 void INVALID(struct gbcc_core *gbc)
 {
-	struct cpu *cpu = &gbc->cpu;
-	gbcc_log_error("Invalid opcode: 0x%02X\n", cpu->opcode);
-	exit(EXIT_FAILURE);
+	gbc->error = true;
+	gbc->error_msg = "Invalid opcode encountered.";
 }
 
 void NOP(struct gbcc_core *gbc)
