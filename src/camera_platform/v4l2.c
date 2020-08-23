@@ -40,7 +40,7 @@
 
 static bool initialise_v4l2(struct gbcc_camera_platform *camera);
 static void log_errno(const char *s);
-static int xioctl(int fh, int request, void *arg);
+static int xioctl(int fh, unsigned long request, void *arg);
 static void process_image(struct gbcc_camera_platform *camera,
 		uint8_t image[GB_CAMERA_SENSOR_SIZE],
 		size_t buffer_index);
@@ -316,7 +316,7 @@ void log_errno(const char *s)
         gbcc_log_error("%s error %d, %s\n", s, errno, strerror(errno));
 }
 
-int xioctl(int fd, int request, void *arg)
+int xioctl(int fd, unsigned long request, void *arg)
 {
         int r;
 
