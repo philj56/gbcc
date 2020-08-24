@@ -24,6 +24,7 @@ void *gbcc_emulation_loop(void *_gbc)
 			gbcc_emulate_cycle(&gbc->core);
 			if (gbc->core.error) {
 				gbcc_log_error("Invalid opcode: 0x%02X\n", gbc->core.cpu.opcode);
+				gbcc_print_registers(&gbc->core, false);
 				gbc->quit = true;
 				return 0;
 			}

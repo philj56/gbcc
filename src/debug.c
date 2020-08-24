@@ -17,10 +17,10 @@
 
 #ifdef __ANDROID__
 #include <android/log.h>
-#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__)
-#define vprintf(...) __android_log_vprint(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__)
-#define fprintf(file, ...) __android_log_print(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__)
-#define vfprintf(file, ...) __android_log_vprint(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__)
+#define printf(...) {__android_log_print(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__); printf(__VA_ARGS__);}
+#define vprintf(...) {__android_log_vprint(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__); vprintf(__VA_ARGS__);}
+#define fprintf(file, ...) {__android_log_print(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__); fprintf((stdout), __VA_ARGS__);}
+#define vfprintf(file, ...) {__android_log_vprint(ANDROID_LOG_DEBUG, "GBCC", __VA_ARGS__); vfprintf((stdout), __VA_ARGS__);}
 #endif
 
 /* Instruction sizes, in bytes. 0 means invalid instruction */
@@ -213,19 +213,23 @@ static const char* const ioreg_names[0x80] = {
 /* 0xFF7C */ 	NULL, 		NULL, 		NULL, 		NULL,
 };
 
-void gbcc_print_registers(struct gbcc_core *gbc)
+void gbcc_print_registers(struct gbcc_core *gbc, bool debug)
 {
 	struct cpu *cpu = &gbc->cpu;
-	gbcc_log_debug("Registers:\n");
-	gbcc_log_debug("\ta: %u\t\taf: %04X\n", cpu->reg.a, cpu->reg.af);
-	gbcc_log_debug("\tb: %u\t\tbc: %04X\n", cpu->reg.b, cpu->reg.bc);
-	gbcc_log_debug("\tc: %u\t\tde: %04X\n", cpu->reg.c, cpu->reg.de);
-	gbcc_log_debug("\td: %u\t\thl: %04X\n", cpu->reg.d, cpu->reg.hl);
-	gbcc_log_debug("\te: %u\t\tz: %u\n", cpu->reg.e, !!(cpu->reg.f & ZF));
-	gbcc_log_debug("\th: %u\t\tn: %u\n", cpu->reg.h, !!(cpu->reg.f & NF));
-	gbcc_log_debug("\tl: %u\t\th: %u\n", cpu->reg.l, !!(cpu->reg.f & HF));
-	gbcc_log_debug("\tsp: %04X\tc: %u\n", cpu->reg.sp, !!(cpu->reg.f & CF));
-	gbcc_log_debug("\tpc: %04X\n", cpu->reg.pc);
+	void (*print_fn)(const char *, ...) = gbcc_log_info;
+	if (debug) {
+		print_fn = gbcc_log_debug;
+	}
+	print_fn("Registers:\n");
+	print_fn("\ta: %u\t\taf: %04X\n", cpu->reg.a, cpu->reg.af);
+	print_fn("\tb: %u\t\tbc: %04X\n", cpu->reg.b, cpu->reg.bc);
+	print_fn("\tc: %u\t\tde: %04X\n", cpu->reg.c, cpu->reg.de);
+	print_fn("\td: %u\t\thl: %04X\n", cpu->reg.d, cpu->reg.hl);
+	print_fn("\te: %u\t\tz: %u\n", cpu->reg.e, !!(cpu->reg.f & ZF));
+	print_fn("\th: %u\t\tn: %u\n", cpu->reg.h, !!(cpu->reg.f & NF));
+	print_fn("\tl: %u\t\th: %u\n", cpu->reg.l, !!(cpu->reg.f & HF));
+	print_fn("\tsp: %04X\tc: %u\n", cpu->reg.sp, !!(cpu->reg.f & CF));
+	print_fn("\tpc: %04X\n", cpu->reg.pc);
 }
 
 void gbcc_print_op(struct gbcc_core *gbc)
@@ -261,7 +265,7 @@ void gbcc_print_op(struct gbcc_core *gbc)
 	}
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__ANDROID__)
 #define RED   ""
 #define YEL   ""
 #define BLU   ""
@@ -367,9 +371,13 @@ void gbcc_vram_dump(struct gbcc_core *gbc, const char *filename)
 	fclose(fp);
 }
 
-void gbcc_sram_dump(struct gbcc_core *gbc, const char* filename)
+void gbcc_sram_dump(struct gbcc_core *gbc, const char *filename)
 {
 	FILE *fp = fopen(filename, "wb");
+	if (!fp) {
+		return;
+	}
+
 	fwrite(gbc->cart.ram, 1, gbc->cart.ram_size, fp);
 	fclose(fp);
 }

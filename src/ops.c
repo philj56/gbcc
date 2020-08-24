@@ -353,7 +353,7 @@ void LD_REG_REG(struct gbcc_core *gbc)
 {
 	if (gbc->cpu.opcode == 0x52) {
 		/* Use ld d,d as a debug statement */
-		gbcc_print_registers(gbc);
+		gbcc_print_registers(gbc, true);
 	}
 	WRITE_OPERAND_DIV(gbc, 0x40u, READ_OPERAND_MOD(gbc));
 	done(&gbc->cpu);
