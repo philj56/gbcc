@@ -14,6 +14,7 @@
 #include "gbcc.h"
 #include "save.h"
 #include <ctype.h>
+#include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
 
@@ -56,7 +57,8 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"save-dir", required_argument, NULL, 'S'},
 		{"turbo", required_argument, NULL, 't'},
 		{"vsync", no_argument, NULL, 'v'},
-		{"vram-window", no_argument, NULL, 'V'}
+		{"vram-window", no_argument, NULL, 'V'},
+		{0, 0, 0, 0}
 	};
 	const char *short_options = "aAbc:fFhip:s:S:t:vV";
 
@@ -76,6 +78,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		if (gbc->core.error) {
 			return false;
 		}
+		argc -= 1;
 	}
 
 	char *config = NULL;
@@ -124,8 +127,10 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbc->save_directory = optarg;
 				break;
 			case 't':
-				/* TODO: error check */
-				gbc->turbo_speed = strtod(optarg, NULL);
+				errno = 0;
+				if (!sscanf(optarg, "%f", &gbc->turbo_speed) || errno) {
+					gbcc_log_error("Failed to parse turbo multiplier '%s'.\n", optarg);
+				}
 				break;
 			case 'v':
 				gbc->core.sync_to_video = true;
@@ -134,10 +139,16 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbc->vram_display = true;
 				break;
 			case '?':
-				if (optopt == 'p' || optopt == 't') {
+				if (optopt == 'c'
+						|| optopt == 'p'
+						|| optopt == 's'
+						|| optopt == 'S'
+						|| optopt == 't') {
 					gbcc_log_error("Option -%c requires an argument.\n", optopt);
 				} else if (isprint(optopt)) {
 					gbcc_log_error("Unknown option `-%c'.\n", optopt);
+				} else if (optopt == 0) {
+					gbcc_log_error("Unknown option `%s'.\n", argv[optind - 1]);
 				} else {
 					gbcc_log_error("Unknown option character `\\x%x'.\n", optopt);
 				}
