@@ -73,8 +73,9 @@ completion_location = join_paths(
 add_project_arguments(
   [
     '-pedantic',
+    '-Wconversion',
+    '-Wshadow',
     '-Wno-unused-parameter',
-    '-Wno-missing-braces',
     '-D_POSIX_C_SOURCE=200809L',
     '-D_GNU_SOURCE',
     '-DTILESET_PATH="@0@"'.format(tileset_location),

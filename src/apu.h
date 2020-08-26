@@ -35,7 +35,7 @@ struct sweep {
 	uint16_t freq;
 	uint16_t period;
 	uint8_t shift;
-	int8_t dir;
+	bool decreasing;
 	bool enabled;
 	bool calculated;
 };
