@@ -519,6 +519,10 @@ void ioreg_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			}
 			*dest = tmp | (uint8_t)(val & mask);
 			break;
+		case LYC:
+			*dest = tmp | (uint8_t)(val & mask);
+			gbc->ppu.lyc = val;
+			break;
 		case DMA:
 			gbc->cpu.dma.new_source = (uint16_t)val << 8u;
 			if (gbc->cpu.dma.new_source > WRAMX_END) {
