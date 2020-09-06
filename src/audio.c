@@ -31,6 +31,7 @@ void gbcc_audio_initialise(struct gbcc *gbc, size_t sample_rate, size_t buffer_s
 	audio->buffer_bytes = buffer_samples * 2 * sizeof(*audio->mix_buffer);
 	audio->clocks_per_sample = (float)GBC_CLOCK_FREQ / sample_rate;
 	audio->mix_buffer = calloc(buffer_samples * 2, sizeof(*audio->mix_buffer));
+	audio->volume = 1.0f;
 	gbcc_audio_platform_initialise(gbc);
 }
 
@@ -84,8 +85,8 @@ void gbcc_audio_update(struct gbcc *gbc)
 		ch2_update(gbc);
 		ch3_update(gbc);
 		ch4_update(gbc);
-		audio->mix_buffer[audio->index] *= (1 + gbc->core.apu.left_vol);
-		audio->mix_buffer[audio->index + 1] *= (1 + gbc->core.apu.right_vol);
+		audio->mix_buffer[audio->index] *= (1 + gbc->core.apu.left_vol) * audio->volume;
+		audio->mix_buffer[audio->index + 1] *= (1 + gbc->core.apu.right_vol) * audio->volume;
 		audio->index += 2;
 	}
 }
