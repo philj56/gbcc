@@ -69,7 +69,6 @@ void gbcc_disable_lcd(struct gbcc_core *gbc)
 	}
 	ppu->lcd_disable = true;
 	ppu->ly = 0;
-	gbcc_memory_clear_bit(gbc, IF, 1);
 	gbcc_memory_write_force(gbc, LY, 0);
 	
 	uint8_t stat = gbcc_memory_read_force(gbc, STAT);
