@@ -374,7 +374,7 @@ void gbcc_load_shader(GLuint shader, const char *filename)
 	}
 	GLchar *source = malloc(size);
 	rewind(fp);
-	if (fread(source, 1, size, fp) == 0) {
+	if (fread(source, 1, size, fp) != size) {
 		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
 		fclose(fp);
 		exit(EXIT_FAILURE);
@@ -452,6 +452,7 @@ void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bo
 		snprintf(win->msg.text, MSG_BUF_SIZE, " %s ", msg);
 	} else {
 		strncpy(win->msg.text, msg, MSG_BUF_SIZE);
+		win->msg.text[MSG_BUF_SIZE - 1] = '\0';
 	}
 	win->msg.lines = 1 + strlen(win->msg.text) / (GBC_SCREEN_WIDTH / win->font.tile_width);
 	win->msg.time_left = seconds * SECOND;

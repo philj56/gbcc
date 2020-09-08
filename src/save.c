@@ -93,13 +93,13 @@ void gbcc_load(struct gbcc *gbc)
 	}
 	gbcc_log_info("Loading %s...\n", fname);
 	if (core->cart.mbc.type == MBC7) {
-		if (fread(core->cart.mbc.eeprom.data, 2, 128, sav) == 0) {
+		if (fread(core->cart.mbc.eeprom.data, 2, 128, sav) != 128) {
 			gbcc_log_error("Failed to read eeprom data: %s\n", fname);
 			fclose(sav);
 			return;
 		}
 	} else {
-		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) == 0) {
+		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) != core->cart.ram_size) {
 			gbcc_log_error("Failed to read save data: %s\n", fname);
 			fclose(sav);
 			return;
@@ -189,7 +189,7 @@ void gbcc_load_state(struct gbcc *gbc)
 	}
 	{
 		struct gbcc_core tmp_core;
-		if (fread(&tmp_core, sizeof(struct gbcc_core), 1, sav) == 0) {
+		if (fread(&tmp_core, sizeof(struct gbcc_core), 1, sav) != sizeof(struct gbcc_core)) {
 			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
 			gbc->save_state = 0;
 			gbc->load_state = 0;

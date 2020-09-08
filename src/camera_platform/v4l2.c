@@ -795,8 +795,8 @@ void initialise_default_image()
 		gbcc_log_error("Couldn't open %s\n", CAMERA_PATH);
 		return;
 	}
-	if (fread(header, 1, HEADER_BYTES, fp) == 0) {
-		gbcc_log_error("Failed to read fontmap data: %s\n", CAMERA_PATH);
+	if (fread(header, 1, HEADER_BYTES, fp) != HEADER_BYTES) {
+		gbcc_log_error("Failed to read camera data: %s\n", CAMERA_PATH);
 		fclose(fp);
 		return;
 	}

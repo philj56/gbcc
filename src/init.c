@@ -108,7 +108,6 @@ void gbcc_free(struct gbcc_core *gbc)
 void load_rom(struct gbcc_core *gbc, const char *filename)
 {
 	gbcc_log_info("Loading %s...\n", filename);
-	size_t read;
 
 	FILE *rom = fopen(filename, "rb");
 	if (rom == NULL)
@@ -128,7 +127,15 @@ void load_rom(struct gbcc_core *gbc, const char *filename)
 		return;
 	}
 
-	gbc->cart.rom_size = ftell(rom);
+	long pos = ftell(rom);
+	if (pos <= 0) {
+		gbcc_log_error("Error seeking in file %s: %s\n", filename, strerror(errno));
+		fclose(rom);
+		gbc->error = true;
+		gbc->error_msg = "Couldn't read ROM file.\n";
+		return;
+	}
+	gbc->cart.rom_size = pos;
 
 	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
 	gbcc_log_info("\tCartridge size: 0x%zX bytes (%zu banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
@@ -157,7 +164,7 @@ void load_rom(struct gbcc_core *gbc, const char *filename)
 		return;
 	}
 
-	read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
+	size_t read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
 	if (read == 0) {
 		gbcc_log_error("Error reading from file %s: %s\n", filename, strerror(errno));
 		fclose(rom);

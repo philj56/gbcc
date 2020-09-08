@@ -501,8 +501,8 @@ void set_icon(SDL_Window *win, const char *filename)
 		gbcc_log_error("Couldn't open %s: %s\n", filename, strerror(errno));
 		return;
 	}
-	if (fread(header, 1, HEADER_BYTES, fp) == 0) {
-		gbcc_log_error("Failed to read fontmap data: %s\n", filename);
+	if (fread(header, 1, HEADER_BYTES, fp) != HEADER_BYTES) {
+		gbcc_log_error("Failed to read icon data: %s\n", filename);
 		fclose(fp);
 		return;
 	}

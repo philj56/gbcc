@@ -220,7 +220,7 @@ void *wav_thread(void *filename) {
 		fclose(wav);
 		goto CLEANUP_SOURCE;
 	}
-	if (fread(data, 1, header.Subchunk2Size, wav) == 0) {
+	if (fread(data, 1, header.Subchunk2Size, wav) != header.Subchunk2Size) {
 		gbcc_log_error("Failed to read print audio data.\n");
 		fclose(wav);
 		goto CLEANUP_ALL;

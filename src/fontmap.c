@@ -31,7 +31,7 @@ void gbcc_fontmap_load(struct gbcc_fontmap *fontmap)
 		gbcc_log_error("Couldn't open %s: %s\n", filename, strerror(errno));
 		return;
 	}
-	if (fread(header, 1, HEADER_BYTES, fp) == 0) {
+	if (fread(header, 1, HEADER_BYTES, fp) != HEADER_BYTES) {
 		gbcc_log_error("Failed to read fontmap data: %s\n", filename);
 		fclose(fp);
 		return;

@@ -90,12 +90,14 @@ void gbcc_screenshot(struct gbcc *gbc)
 	png_bytepp row_pointers = png_malloc(png_ptr, height * sizeof(png_bytep));
 	if (!row_pointers) {
 		gbcc_log_error("Couldn't allocate row pointers.\n");
+		fclose(fp);
 		return;
 	}
 	for (uint32_t y = 0; y < height; y++) {
 		png_bytep row = png_malloc(png_ptr, width * 3);
 		if (!row) {
 			gbcc_log_error("Couldn't allocate row pointer.\n");
+			fclose(fp);
 			return;
 		}
 		row_pointers[y] = row;
