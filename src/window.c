@@ -24,6 +24,7 @@
 #else
 #include <epoxy/gl.h>
 #endif
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -354,17 +355,27 @@ void gbcc_window_update(struct gbcc *gbc)
 
 void gbcc_load_shader(GLuint shader, const char *filename)
 {
+	errno = 0;
 	FILE *fp = fopen(filename, "rb");
 	if (!fp) {
-		gbcc_log_error("Failed to load shader %s.\n", filename);
+		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-	fseek(fp, 0, SEEK_END);
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
+		fclose(fp);
+		exit(EXIT_FAILURE);
+	}
 	int size = ftell(fp);
+	if (size <= 0) {
+		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
+		fclose(fp);
+		exit(EXIT_FAILURE);
+	}
 	GLchar *source = malloc(size);
 	rewind(fp);
 	if (fread(source, 1, size, fp) == 0) {
-		gbcc_log_error("Error loading shader: %s\n", filename);
+		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
 		fclose(fp);
 		exit(EXIT_FAILURE);
 	}
