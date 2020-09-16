@@ -189,7 +189,7 @@ void gbcc_load_state(struct gbcc *gbc)
 	}
 	{
 		struct gbcc_core tmp_core;
-		if (fread(&tmp_core, sizeof(struct gbcc_core), 1, sav) != sizeof(struct gbcc_core)) {
+		if (fread(&tmp_core, sizeof(struct gbcc_core), 1, sav) != 1) {
 			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
 			gbc->save_state = 0;
 			gbc->load_state = 0;
