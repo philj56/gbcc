@@ -84,7 +84,6 @@ void gbcc_menu_update(struct gbcc *gbc)
 	}
 
 	snprintf(menu->text, menu->width * menu->height + 1,
-			"                                "
 			"%cSave state:  1 2 3 4 5 6 7 8 9 "
 			"%cLoad state:  1 2 3 4 5 6 7 8 9 "
 			"%cAutosave:    %-18s"
@@ -95,6 +94,7 @@ void gbcc_menu_update(struct gbcc *gbc)
 			"%cVsync:       %-18s"
 			"%cInterlacing: %-18s"
 			"%cFPS counter: %-18s"
+			"%cCheats:      %-18s"
 			"%cPalette:     %-18s",
 			selected(menu, GBCC_MENU_ENTRY_SAVE_STATE),
 			selected(menu, GBCC_MENU_ENTRY_LOAD_STATE),
@@ -114,6 +114,8 @@ void gbcc_menu_update(struct gbcc *gbc)
 			bool2str(gbc->interlacing),
 			selected(menu, GBCC_MENU_ENTRY_FPS_COUNTER),
 			bool2str(gbc->show_fps),
+			selected(menu, GBCC_MENU_ENTRY_CHEATS),
+			bool2str(gbc->core.cheats.enabled),
 			selected(menu, GBCC_MENU_ENTRY_PALETTE),
 			gbc->core.ppu.palette.name
 	);
@@ -229,6 +231,9 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 				}
 				gbc->core.ppu.palette = gbcc_get_palette_by_index(p_idx % GBCC_NUM_PALETTES);
 			}
+			break;
+		case GBCC_MENU_ENTRY_CHEATS:
+			gbc->core.cheats.enabled ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_NUM_ENTRIES:
 			break;

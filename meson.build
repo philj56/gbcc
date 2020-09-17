@@ -104,6 +104,7 @@ common_sources = files(
   'src/bit_utils.c',
   'src/camera.c',
   camera_platform,
+  'src/cheats.c',
   'src/colour.c',
   'src/config.c',
   'src/cpu.c',

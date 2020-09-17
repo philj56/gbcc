@@ -13,6 +13,7 @@
 #include "../args.h"
 #include "../audio.h"
 #include "../camera.h"
+#include "../cheats.h"
 #include "../config.h"
 #include "../cpu.h"
 #include "../debug.h"

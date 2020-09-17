@@ -6,8 +6,8 @@ gbcc - Game Boy Color emulator written in C
 
 # SYNOPSIS
 
-*gbcc* [-aAbfFhivV] [-c _config_file_] [-p _palette_] [-s _shader_]\
-[-t _speed_] rom
+*gbcc* [-aAbfFhivV] [-c _config_file_] [-C _cheat_] [-p _palette_]\
+[-s _shader_] [-t _speed_] rom
 
 # DESCRIPTION
 
@@ -28,7 +28,11 @@ emulator development and writing a large project in C. Development is ongoing
 	Enable playback while unfocused.
 
 *-c, --config*=_path_
-	Specify path to custom config file.
+	Specify path to custom config file (currently not recommended).
+
+*-C, --cheat*=_code_
+	Add a GameGenie or GameShark cheat code. Dashes are ignored. Can be specified
+	multiple times for multiple cheats.
 
 *-f, --fractional*
 	Enable fractional scaling (default is integer).

@@ -200,6 +200,17 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 				gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
 			}
 			break;
+		case GBCC_KEY_CHEATS:
+			gbc->core.cheats.enabled ^= pressed;
+			if (!pressed) {
+				break;
+			}
+			if (gbc->core.cheats.enabled) {
+				gbcc_window_show_message(gbc, "Cheats enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Cheats disabled", 1, true);
+			}
+			break;
 		case GBCC_KEY_ACCELEROMETER_UP:
 			gbc->core.cart.mbc.accelerometer.tilt.up = pressed;
 			break;

@@ -131,30 +131,46 @@ uint8_t gbcc_memory_read_force(struct gbcc_core *gbc, uint16_t addr) {
 uint8_t gbcc_memory_read(struct gbcc_core *gbc, uint16_t addr)
 {
 	if (addr < ROMX_END || (addr >= SRAM_START && addr < SRAM_END)) {
+		uint8_t ret;
 		switch (gbc->cart.mbc.type) {
 			case NONE:
-				return gbcc_mbc_none_read(gbc, addr);
+				ret = gbcc_mbc_none_read(gbc, addr);
+				break;
 			case MBC1:
-				return gbcc_mbc_mbc1_read(gbc, addr);
+				ret = gbcc_mbc_mbc1_read(gbc, addr);
+				break;
 			case MBC2:
-				return gbcc_mbc_mbc2_read(gbc, addr);
+				ret = gbcc_mbc_mbc2_read(gbc, addr);
+				break;
 			case MBC3:
-				return gbcc_mbc_mbc3_read(gbc, addr);
+				ret = gbcc_mbc_mbc3_read(gbc, addr);
+				break;
 			case MBC5:
-				return gbcc_mbc_mbc5_read(gbc, addr);
+				ret = gbcc_mbc_mbc5_read(gbc, addr);
+				break;
 			case MBC6:
-				return gbcc_mbc_mbc6_read(gbc, addr);
+				ret = gbcc_mbc_mbc6_read(gbc, addr);
+				break;
 			case MBC7:
-				return gbcc_mbc_mbc7_read(gbc, addr);
+				ret = gbcc_mbc_mbc7_read(gbc, addr);
+				break;
 			case HUC1:
-				return gbcc_mbc_huc1_read(gbc, addr);
+				ret = gbcc_mbc_huc1_read(gbc, addr);
+				break;
 			case HUC3:
-				return gbcc_mbc_huc3_read(gbc, addr);
+				ret = gbcc_mbc_huc3_read(gbc, addr);
+				break;
 			case MMM01:
-				return gbcc_mbc_mmm01_read(gbc, addr);
+				ret = gbcc_mbc_mmm01_read(gbc, addr);
+				break;
 			case CAMERA:
-				return gbcc_mbc_cam_read(gbc, addr);
+				ret = gbcc_mbc_cam_read(gbc, addr);
+				break;
 		}
+		if (addr < ROMX_END && gbc->cheats.enabled) {
+			return gbcc_cheats_gamegenie_read(gbc, addr, ret);
+		}
+		return ret;
 	}
 	if (addr >= VRAM_START && addr < VRAM_END) {
 		return vram_read(gbc, addr);

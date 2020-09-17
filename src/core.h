@@ -11,9 +11,10 @@
 #ifndef GBCC_CORE_H
 #define GBCC_CORE_H
 
-#define GBCC_SAVE_STATE_VERSION 7
+#define GBCC_SAVE_STATE_VERSION 8
 
 #include "apu.h"
+#include "cheats.h"
 #include "constants.h"
 #include "cpu.h"
 #include "mbc.h"
@@ -111,6 +112,14 @@ struct gbcc_core {
 		uint16_t clock;
 		enum GBCC_LINK_CABLE_STATE state;
 	} link_cable;
+
+	struct {
+		struct gbcc_gamegenie_cheat gamegenie[32];
+		struct gbcc_gameshark_cheat gameshark[32];
+		uint8_t num_genie_cheats;
+		uint8_t num_shark_cheats;
+		bool enabled;
+	} cheats;
 
 	/* Settings */
 	bool sync_to_video;

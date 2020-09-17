@@ -30,7 +30,7 @@
 
 #define HEADER_BYTES 8
 
-static const SDL_Scancode keymap[35] = {
+static const SDL_Scancode keymap[36] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -53,6 +53,7 @@ static const SDL_Scancode keymap[35] = {
 	SDL_SCANCODE_ESCAPE, 	/* Toggle menu */
 	SDL_SCANCODE_I,         /* Toggle interlacing */
 	SDL_SCANCODE_O,         /* Cycle through shaders */
+	SDL_SCANCODE_C,         /* Toggle cheats */
 	SDL_SCANCODE_KP_2, 	/* MBC7 accelerometer down */
 	SDL_SCANCODE_KP_4, 	/* MBC7 accelerometer left */
 	SDL_SCANCODE_KP_6, 	/* MBC7 accelerometer right */
@@ -312,34 +313,36 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 				emulator_key = GBCC_KEY_SHADER;
 				break;
 			case 22:
+				emulator_key = GBCC_KEY_CHEATS;
+				break;
+			case 23:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_DOWN;
 				} else {
 					continue;
 				}
 				break;
-			case 23:
+			case 24:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_LEFT;
 				} else {
 					continue;
 				}
 				break;
-			case 24:
+			case 25:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_RIGHT;
 				} else {
 					continue;
 				}
 				break;
-			case 25:
+			case 26:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_UP;
 				} else {
 					continue;
 				}
 				break;
-			case 26:
 			case 27:
 			case 28:
 			case 29:
@@ -349,10 +352,11 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			case 33:
 			case 34:
 			case 35:
+			case 36:
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 26);
+					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 27);
 				} else {
-					emulator_key = GBCC_KEY_LOAD_STATE_1 + (int8_t)(key - 26);
+					emulator_key = GBCC_KEY_LOAD_STATE_1 + (int8_t)(key - 27);
 				}
 				break;
 			default:

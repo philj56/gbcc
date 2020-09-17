@@ -25,6 +25,7 @@ static void usage()
 	       "  -A, --autosave        Automatically save SRAM after last write.\n"
 	       "  -b, --background      Enable playback while unfocused.\n"
 	       "  -c, --config=PATH     Path to custom config file.\n"
+	       "  -C, --cheat=CODE      Cheat code to apply.\n"
 	       "  -f, --fractional      Enable fractional scaling.\n"
 	       "  -F, --frame-blending  Enable simple frame blending.\n"
 	       "  -h, --help            Print this message and exit.\n"
@@ -48,6 +49,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"autosave", no_argument, NULL, 'A'},
 		{"background", no_argument, NULL, 'b'},
 		{"config", required_argument, NULL, 'c'},
+		{"cheat", required_argument, NULL, 'C'},
 		{"fractional", no_argument, NULL, 'f'},
 		{"frame-blending", no_argument, NULL, 'F'},
 		{"help", no_argument, NULL, 'h'},
@@ -60,7 +62,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"vram-window", no_argument, NULL, 'V'},
 		{0, 0, 0, 0}
 	};
-	const char *short_options = "aAbc:fFhip:s:S:t:vV";
+	const char *short_options = "aAbc:C:fFhip:s:S:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -103,6 +105,10 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbc->background_play = true;
 				break;
 			case 'c':
+				break;
+			case 'C':
+				gbcc_cheats_add_fuzzy(&gbc->core, optarg);
+				gbc->core.cheats.enabled = true;
 				break;
 			case 'f':
 				gbc->fractional_scaling = true;

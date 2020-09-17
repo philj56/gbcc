@@ -10,6 +10,7 @@
 
 #include "core.h"
 #include "bit_utils.h"
+#include "cheats.h"
 #include "cpu.h"
 #include "debug.h"
 #include "memory.h"
@@ -194,6 +195,14 @@ void INTERRUPT(struct gbcc_core *gbc)
 	switch (cpu->interrupt.addr) {
 		case INT_VBLANK:
 			gbcc_memory_clear_bit(gbc, IF, 0);
+			/*
+			 * The GameShark apparently hooks the vblank interrupt
+			 * & applies any codes. This is meant to take some cpu
+			 * time, but here I just complete it instantaneously.
+			 */
+			if (gbc->cheats.enabled) {
+				gbcc_cheats_gameshark_update(gbc);
+			}
 			break;
 		case INT_LCDSTAT:
 			gbcc_memory_clear_bit(gbc, IF, 1);
