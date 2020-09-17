@@ -5,11 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 
-static struct gbcc_gamegenie_cheat parse_gamegenie_code(const char code[static 9]);
-static struct gbcc_gameshark_cheat parse_gameshark_code(const char code[static 8]);
+static struct gbcc_gamegenie_cheat parse_gamegenie_code(const char *code);
+static struct gbcc_gameshark_cheat parse_gameshark_code(const char *code);
 static uint8_t hex2int(char c);
 
-void gbcc_cheats_add_fuzzy(struct gbcc_core *gbc, const char code[static 8])
+void gbcc_cheats_add_fuzzy(struct gbcc_core *gbc, const char *code)
 {	
 	char cheat[10];
 	int j = 0;
@@ -33,7 +33,7 @@ void gbcc_cheats_add_fuzzy(struct gbcc_core *gbc, const char code[static 8])
 
 }
 
-void gbcc_cheats_add_gamegenie(struct gbcc_core *gbc, const char code[static 9])
+void gbcc_cheats_add_gamegenie(struct gbcc_core *gbc, const char *code)
 {
 	uint8_t n = gbc->cheats.num_genie_cheats;
 	if (n >= N_ELEM(gbc->cheats.gamegenie)) {
@@ -43,7 +43,7 @@ void gbcc_cheats_add_gamegenie(struct gbcc_core *gbc, const char code[static 9])
 	gbc->cheats.num_genie_cheats = n+1;
 }
 
-void gbcc_cheats_add_gameshark(struct gbcc_core *gbc, const char code[static 9])
+void gbcc_cheats_add_gameshark(struct gbcc_core *gbc, const char *code)
 {
 	uint8_t n = gbc->cheats.num_shark_cheats;
 	if (n >= N_ELEM(gbc->cheats.gameshark)) {

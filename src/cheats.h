@@ -18,9 +18,9 @@ struct gbcc_gameshark_cheat {
 	uint8_t new_data;
 };
 
-void gbcc_cheats_add_fuzzy(struct gbcc_core *gbc, const char code[static 8]);
-void gbcc_cheats_add_gamegenie(struct gbcc_core *gbc, const char code[static 9]);
-void gbcc_cheats_add_gameshark(struct gbcc_core *gbc, const char code[static 8]);
+void gbcc_cheats_add_fuzzy(struct gbcc_core *gbc, const char *code);
+void gbcc_cheats_add_gamegenie(struct gbcc_core *gbc, const char *code);
+void gbcc_cheats_add_gameshark(struct gbcc_core *gbc, const char *code);
 uint8_t gbcc_cheats_gamegenie_read(struct gbcc_core *gbc, uint16_t addr, uint8_t val);
 void gbcc_cheats_gameshark_update(struct gbcc_core *gbc);
 

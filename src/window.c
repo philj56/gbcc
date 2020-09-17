@@ -270,8 +270,8 @@ void gbcc_window_update(struct gbcc *gbc)
 		uint32_t tw = win->font.tile_width;
 		uint32_t th = win->font.tile_height;
 		render_text(win, gbc->menu.text, 0, 0);
-		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 1 + 1);
-		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 2 + 1);
+		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 0 + 1);
+		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 1 + 1);
 	} else {
 		if (gbc->show_fps && !screenshot) {
 			char fps_text[16];
