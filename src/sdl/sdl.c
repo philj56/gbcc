@@ -354,9 +354,9 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			case 35:
 			case 36:
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 27);
+					emulator_key = GBCC_KEY_SAVE_STATE_1 + (uint8_t)(key - 27);
 				} else {
-					emulator_key = GBCC_KEY_LOAD_STATE_1 + (int8_t)(key - 27);
+					emulator_key = GBCC_KEY_LOAD_STATE_1 + (uint8_t)(key - 27);
 				}
 				break;
 			default:
@@ -479,7 +479,7 @@ void process_game_controller(struct gbcc_sdl *sdl)
 		return;
 	}
 	if (sdl->gbc.core.cart.rumble_state) {
-		if (SDL_HapticRumblePlay(sdl->haptic, 0.1, 100) != 0) {
+		if (SDL_HapticRumblePlay(sdl->haptic, 0.1f, 100) != 0) {
 			printf("%s\n", SDL_GetError());
 		}
 	} else {
@@ -567,10 +567,10 @@ void set_icon(SDL_Window *win, const char *filename)
 
 	SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormatFrom(
 			bitmap,
-			width,
-			height,
+			(int)width,
+			(int)height,
 			32,
-			width * 4,
+			(int)width * 4,
 			SDL_PIXELFORMAT_RGBA32);
 
 	if (surface == NULL) {
