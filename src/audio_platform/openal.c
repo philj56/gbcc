@@ -35,7 +35,7 @@ static void *wav_thread(void *filename);
 void gbcc_audio_platform_initialise(struct gbcc *gbc)
 {
 	struct gbcc_audio *audio = &gbc->audio;
-	audio->scale = 0.9955;
+	audio->scale = 0.9955f;
 	audio->platform.device = alcOpenDevice(NULL);
 	if (!audio->platform.device) {
 		gbcc_log_error("Failed to open audio device.\n");
@@ -87,8 +87,8 @@ void gbcc_audio_platform_initialise(struct gbcc *gbc)
 				audio->platform.buffers[i],
 				AL_FORMAT_STEREO16,
 				audio->mix_buffer,
-				audio->buffer_bytes,
-				audio->sample_rate
+				(ALsizei)audio->buffer_bytes,
+				(ALsizei)audio->sample_rate
 			    );
 	}
 	alSourceQueueBuffers(audio->platform.source, N_ELEM(audio->platform.buffers), audio->platform.buffers);
@@ -118,7 +118,7 @@ void gbcc_audio_platform_queue_buffer(struct gbcc *gbc)
 	ALuint buffer;
 	alSourceUnqueueBuffers(audio->platform.source, 1, &buffer);
 	check_openal_error("Failed to unqueue buffer.\n");
-	alBufferData(buffer, AL_FORMAT_STEREO16, audio->mix_buffer, audio->buffer_bytes, audio->sample_rate);
+	alBufferData(buffer, AL_FORMAT_STEREO16, audio->mix_buffer, (ALsizei)audio->buffer_bytes, (ALsizei)audio->sample_rate);
 	check_openal_error("Failed to fill buffer.\n");
 	alSourceQueueBuffers(audio->platform.source, 1, &buffer);
 	check_openal_error("Failed to queue buffer.\n");
@@ -227,11 +227,11 @@ void *wav_thread(void *filename) {
 	}
 	fclose(wav);
 
-	alBufferData(buffer, AL_FORMAT_MONO8, data, header.Subchunk2Size, header.SampleRate);
+	alBufferData(buffer, AL_FORMAT_MONO8, data, (ALsizei)header.Subchunk2Size, (ALsizei)header.SampleRate);
 	if (check_openal_error("Failed to set buffer data.\n")) {
 		goto CLEANUP_ALL;
 	}
-	alSourcei(source, AL_BUFFER, buffer);
+	alSourcei(source, AL_BUFFER, (ALint)buffer);
 	if (check_openal_error("Failed to set source buffer.\n")) {
 		goto CLEANUP_ALL;
 	}
