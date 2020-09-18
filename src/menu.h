@@ -37,8 +37,8 @@ enum GBCC_MENU_ENTRY {
 struct gbcc_menu {
 	bool initialised;
 	bool show;
-	int save_state;
-	int load_state;
+	int8_t save_state;
+	int8_t load_state;
 	unsigned int width;
 	unsigned int height;
 	enum GBCC_MENU_ENTRY selection;
