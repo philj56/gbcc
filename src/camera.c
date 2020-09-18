@@ -21,6 +21,7 @@
 
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
+#define CLAMP_UINT8(x) ((uint8_t)(MIN(MAX((x), 0), UINT8_MAX)))
 
 /*
  * 3x3 matrix filtering kernels, applied as part of the edge control.
@@ -96,7 +97,7 @@ void gbcc_camera_capture_image(struct gbcc *gbc)
 	cam->reg.n = check_bit(cam->reg1, 7);
 	cam->reg.vh = (cam->reg1 & 0x70u) >> 5;
 	cam->reg.g = cam->reg1 & 0x1Fu;
-	cam->reg.exposure_steps = (cam->reg2 << 8) | cam->reg3;
+	cam->reg.exposure_steps = cat_bytes(cam->reg3, cam->reg2);
 	cam->reg.p = cam->reg4;
 	cam->reg.m = cam->reg5;
 	cam->reg.x = cam->reg6;
@@ -115,7 +116,7 @@ void gbcc_camera_capture_image(struct gbcc *gbc)
 		 * 220-ish for a normal exposure.
 		 */
 		int tmp = 128 + sensor_image[i] * cam->reg.exposure_steps / 0x2000u;
-		sensor_image[i] = MIN(MAX(tmp, 0), 0xFF);
+		sensor_image[i] = CLAMP_UINT8(tmp);
 	}
 
 	if (cam->reg.i) {
@@ -128,8 +129,8 @@ void gbcc_camera_capture_image(struct gbcc *gbc)
 	if (cam->reg.vh) {
 		uint8_t vh = cam->reg.vh;
 
-		float edge_enhancement_ratio = 0.5;
-		edge_enhancement_ratio += 0.25 * (cam->reg.e & 0x03u);
+		float edge_enhancement_ratio = 0.5f;
+		edge_enhancement_ratio += 0.25f * (cam->reg.e & 0x03u);
 		if (check_bit(cam->reg.e, 2)) {
 			edge_enhancement_ratio *= 4;
 		}
@@ -145,18 +146,18 @@ void gbcc_camera_capture_image(struct gbcc *gbc)
 		for (int y = 3; y < GB_CAMERA_SENSOR_HEIGHT - 3; y++) {
 			for (int x = 0; x < GB_CAMERA_SENSOR_WIDTH; x++) {
 				int idx = y * GB_CAMERA_SENSOR_WIDTH + x;
-				int res = 0;
+				int16_t res = 0;
 				for (int ky = 0; ky < 3; ky++) {
 					for (int kx = 0; kx < 3; kx++) {
 						int k_idx = (ky - 1) * GB_CAMERA_SENSOR_WIDTH + (kx - 1);
 						res += sensor_image[idx + k_idx] * filter_kernel[vh - 1][ky][kx];
 					}
 				}
-				res *= edge_enhancement_ratio;
+				res = (int16_t)(res * edge_enhancement_ratio);
 				if (!check_bit(cam->reg.e, 3)) {
 					res += sensor_image[idx];
 				}
-				buffer1[idx] = MIN(MAX(res, 0), 0xFF);
+				buffer1[idx] = CLAMP_UINT8(res);
 			}
 		}
 	} else {
@@ -176,7 +177,7 @@ void gbcc_camera_capture_image(struct gbcc *gbc)
 				int res = 0;
 				res += buffer1[idx] * (p0 - m0);
 				res += buffer1[idx1] * (p1 - m1);
-				buffer1[idx] = MIN(MAX(res, 0), 0xFF);
+				buffer1[idx] = CLAMP_UINT8(res);
 			}
 		}
 	}
