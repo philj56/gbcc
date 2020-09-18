@@ -540,7 +540,7 @@ void ioreg_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			gbc->ppu.lyc = val;
 			break;
 		case DMA:
-			gbc->cpu.dma.new_source = (uint16_t)val << 8u;
+			gbc->cpu.dma.new_source = (uint16_t)(val << 8u);
 			if (gbc->cpu.dma.new_source > WRAMX_END) {
 				/* Can't DMA from ECHO or IOREG areas */
 				gbc->cpu.dma.new_source -= 0x2000u;

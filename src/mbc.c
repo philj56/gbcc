@@ -155,7 +155,7 @@ void gbcc_mbc_mbc1_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 		 * Some weirdness here; in RAM banking mode, as well as
 		 * controlling the RAM bank, ROMB1 moves ROM0 around!
 		 */
-		mbc->rom0_bank = mbc->romb1 << 5u;
+		mbc->rom0_bank = (uint16_t)(mbc->romb1 << 5u);
 		mbc->romx_bank |= mbc->romb1 << 5u;
 	}
 
@@ -852,7 +852,7 @@ uint8_t gbcc_mbc_cam_read(struct gbcc_core *gbc, uint16_t addr)
 		 */
 		if (cam->mapped) {
 			if (addr == 0xA000u) {
-				return (cam->capture_timer > 0) | (cam->filter_mode << 1);
+				return (cam->capture_timer > 0) | (uint8_t)(cam->filter_mode << 1u);
 			}
 			return 0x00u;
 		}
@@ -911,7 +911,7 @@ void gbcc_mbc_cam_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			} else if (addr == 0xA005u) {
 				cam->reg0 = val;
 			} else if (addr < 0xA036u) {
-				uint8_t idx = addr - 0xA006u;
+				uint8_t idx = (uint8_t)(addr - 0xA006u);
 				uint8_t n = idx % 3;
 				uint8_t x = (idx / 3) % 4;
 				uint8_t y = idx / (3 * 4);
