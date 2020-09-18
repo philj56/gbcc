@@ -239,13 +239,13 @@ bool print_strip(struct printer *p)
 	}
 	unsigned int line;
 	for (line = 0; (line < PRINTER_STRIP_HEIGHT) && (p->print_byte < p->image_buffer.length); line++) {
-		uint8_t ty = (line + p->print_line) / 8;
+		uint8_t ty = (uint8_t)((line + p->print_line) / 8);
 		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {
-			uint16_t idx = ty * PRINTER_WIDTH_TILES * 16 + tx * 16 + (line + p->print_line - ty * 8) * 2;
+			uint16_t idx = ty * PRINTER_WIDTH_TILES * 16 + tx * 16 + (uint8_t)(line + p->print_line - ty * 8) * 2;
 			uint8_t lo = p->image_buffer.data[idx];
 			uint8_t hi = p->image_buffer.data[idx + 1];
 			for (uint8_t x = 0; x < 8; x++) {
-				switch (get_palette_colour(p, (check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x))) {
+				switch (get_palette_colour(p, (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x))) {
 					case 0:
 						printf("█");
 						break;
