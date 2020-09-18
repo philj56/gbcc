@@ -75,8 +75,8 @@ void gbcc_screenshot(struct gbcc *gbc)
 	uint32_t height = GBC_SCREEN_HEIGHT;
 	uint8_t *buffer = NULL;
 	if (!win->raw_screenshot) {
-		width *= win->scale;
-		height *= win->scale;
+		width = (uint32_t)((float)width * win->scale);
+		height = (uint32_t)((float)height * win->scale);
 		buffer = malloc(width * height * 4 * sizeof(*buffer));
 		if (!buffer) {
 			gbcc_log_error("Couldn't malloc screenshot buffer.\n");

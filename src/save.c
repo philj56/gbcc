@@ -85,7 +85,7 @@ void gbcc_load(struct gbcc *gbc)
 	sav = fopen(fname, "rb");
 	if (sav == NULL) {
 		for (size_t i = 0; i < core->cart.ram_size; i++) {
-			core->cart.ram[i] = rand();
+			core->cart.ram[i] = (uint8_t)rand();
 		}
 		if (core->cart.mbc.type == MBC3) {
 			clock_gettime(CLOCK_REALTIME, &core->cart.mbc.rtc.base_time);
