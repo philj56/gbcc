@@ -561,12 +561,12 @@ bool init_userptr(struct gbcc_camera_platform *camera)
 			}
 
 			/* Attempt to clear our requested buffers. */
-			struct v4l2_requestbuffers req = {
+			struct v4l2_requestbuffers err_req = {
 				.count = 0,
 				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 				.memory = V4L2_MEMORY_USERPTR
 			};
-			xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+			xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 			return false;
 		}
 	}
@@ -582,12 +582,12 @@ bool init_userptr(struct gbcc_camera_platform *camera)
 		}
 
 		/* Attempt to clear our requested buffers. */
-		struct v4l2_requestbuffers req = {
+		struct v4l2_requestbuffers err_req = {
 			.count = 0,
 			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			.memory = V4L2_MEMORY_USERPTR
 		};
-		xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+		xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 		return false;
 	}
 
@@ -641,12 +641,12 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 		gbcc_log_error("Insufficient buffer memory on %s\n",
 				camera->device_name);
 		/* Attempt to clear our requested buffers. */
-		struct v4l2_requestbuffers req = {
+		struct v4l2_requestbuffers err_req = {
 			.count = 0,
 			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			.memory = V4L2_MEMORY_MMAP
 		};
-		xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+		xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 		return false;
 	}
 
@@ -671,12 +671,12 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 			}
 
 			/* Attempt to clear our requested buffers. */
-			struct v4l2_requestbuffers req = {
+			struct v4l2_requestbuffers err_req = {
 				.count = 0,
 				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 				.memory = V4L2_MEMORY_MMAP
 			};
-			xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+			xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 			return false;
 		}
 
@@ -699,12 +699,12 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 			}
 
 			/* Attempt to clear our requested buffers. */
-			struct v4l2_requestbuffers req = {
+			struct v4l2_requestbuffers err_req = {
 				.count = 0,
 				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 				.memory = V4L2_MEMORY_MMAP
 			};
-			xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+			xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 			return false;
 		}
 
@@ -719,12 +719,12 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 			}
 
 			/* Attempt to clear our requested buffers. */
-			struct v4l2_requestbuffers req = {
+			struct v4l2_requestbuffers err_req = {
 				.count = 0,
 				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 				.memory = V4L2_MEMORY_MMAP
 			};
-			xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+			xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 			return false;
 		}
 	}
@@ -741,12 +741,12 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 		}
 
 		/* Attempt to clear our requested buffers. */
-		struct v4l2_requestbuffers req = {
+		struct v4l2_requestbuffers err_req = {
 			.count = 0,
 			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			.memory = V4L2_MEMORY_MMAP
 		};
-		xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+		xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 		return false;
 	}
 

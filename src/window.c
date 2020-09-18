@@ -366,21 +366,23 @@ void gbcc_load_shader(GLuint shader, const char *filename)
 		fclose(fp);
 		exit(EXIT_FAILURE);
 	}
-	int size = ftell(fp);
+	long size = ftell(fp);
 	if (size <= 0) {
 		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
 		fclose(fp);
 		exit(EXIT_FAILURE);
 	}
-	GLchar *source = malloc(size);
+	unsigned long usize = (unsigned long) size;
+	GLchar *source = malloc(usize + 1);
 	rewind(fp);
-	if (fread(source, 1, size, fp) != size) {
+	if (fread(source, 1, usize, fp) != usize) {
 		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
 		fclose(fp);
 		exit(EXIT_FAILURE);
 	}
 	fclose(fp);
-	glShaderSource(shader, 1, (const GLchar *const *)&source, &size);
+	source[usize] = '\0';
+	glShaderSource(shader, 1, (const GLchar *const *)&source, NULL);
 	free(source);
 
 	glCompileShader(shader);
@@ -393,7 +395,7 @@ void gbcc_load_shader(GLuint shader, const char *filename)
 		GLint info_length = 0;
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_length);
 		if (info_length > 1) {
-			char *log = malloc(info_length * sizeof(*log));
+			char *log = malloc((unsigned)info_length * sizeof(*log));
 			glGetShaderInfoLog(shader, info_length, NULL, log);
 			gbcc_log_append_error("%s\n", log);
 			free(log);
