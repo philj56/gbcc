@@ -161,6 +161,7 @@ void gbcc_save_state(struct gbcc *gbc)
 void gbcc_load_state(struct gbcc *gbc)
 {
 	struct gbcc_core *core = &gbc->core;
+	size_t ram_size = core->cart.ram_size;
 	uint8_t *rom = core->cart.rom;
 	uint8_t *ram = core->cart.ram;
 	uint8_t wram_bank;
@@ -241,8 +242,8 @@ void gbcc_load_state(struct gbcc *gbc)
 	core->cart.ram = ram;
 	core->cart.filename = name;
 	
-	if (core->cart.ram_size > 0) {
-		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) == 0) {
+	if (ram_size > 0) {
+		if (fread(core->cart.ram, 1, ram_size, sav) != ram_size) {
 			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
 			gbc->save_state = 0;
 			gbc->load_state = 0;

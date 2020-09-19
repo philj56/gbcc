@@ -140,21 +140,6 @@ bool initialise_v4l2(struct gbcc_camera_platform *camera)
 	camera->device_name = "/dev/video0";
 	camera->method = GBCC_CAMERA_IO_METHOD_NONE;
 
-	/* Check that the specified path is a character device */
-	{
-		struct stat st;
-		if (stat(camera->device_name, &st) == -1) {
-			gbcc_log_debug("Cannot identify '%s': %d, %s\n",
-					camera->device_name, errno, strerror(errno));
-			return false;
-		}
-
-		if (!S_ISCHR(st.st_mode)) {
-			gbcc_log_debug("%s is not a device\n", camera->device_name);
-			return false;
-		}
-	}
-
 	/* Open the device */
         camera->fd = open(camera->device_name, O_RDWR /* required */ | O_NONBLOCK, 0);
 
@@ -163,6 +148,26 @@ bool initialise_v4l2(struct gbcc_camera_platform *camera)
                          camera->device_name, errno, strerror(errno));
 		return false;
         }
+
+	/* Check that the specified path is a character device */
+	{
+		struct stat st;
+		if (stat(camera->device_name, &st) == -1) {
+			gbcc_log_error("Cannot identify '%s': %d, %s\n",
+					camera->device_name, errno, strerror(errno));
+			close(camera->fd);
+			camera->fd = -1;
+			return false;
+		}
+
+		if (!S_ISCHR(st.st_mode)) {
+			gbcc_log_error("%s is not a device\n", camera->device_name);
+			close(camera->fd);
+			camera->fd = -1;
+			return false;
+		}
+	}
+
 
 	/* Initialise v4l2 */
         struct v4l2_capability cap = {0};
