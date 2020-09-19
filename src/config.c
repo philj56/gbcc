@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 /* Maximum number of config file errors before we give up */
 #define MAX_ERRORS 5
@@ -189,13 +190,16 @@ char *strip(const char *str)
 	while (start <= end && isspace(str[start])) {
 		start++;
 	}
-	while (end > start && isspace(str[end])) {
-		end--;
-	}
-	if (end <= start) {
+	if (start == end) {
 		return NULL;
 	}
-	size_t len = end - start;
+	while (end > start && (isspace(str[end]) || str[end] == '\0')) {
+		end--;
+	}
+	if (end < start) {
+		return NULL;
+	}
+	size_t len = end - start + 1;
 	char *buf = calloc(len + 1, 1);
 	strncpy(buf, str + start, len);
 	buf[len] = '\0';
@@ -205,37 +209,37 @@ char *strip(const char *str)
 bool parse_option(struct gbcc *gbc, size_t lineno, const char *option, const char *value)
 {
 	bool err = false;
-	if (strcmp(option, "autoresume") == 0) {
+	if (strcasecmp(option, "autoresume") == 0) {
 		gbc->autoresume = parse_bool(lineno, value, &err);
-	} else if (strcmp(option, "autosave") == 0) {
+	} else if (strcasecmp(option, "autosave") == 0) {
 		gbc->autosave = parse_bool(lineno, value, &err);
-	} else if (strcmp(option, "background") == 0) {
+	} else if (strcasecmp(option, "background") == 0) {
 		gbc->background_play = parse_bool(lineno, value, &err);
-	} else if (strcmp(option, "cheat") == 0) {
+	} else if (strcasecmp(option, "cheat") == 0) {
 		gbcc_cheats_add_fuzzy(&gbc->core, value);
 		gbc->core.cheats.enabled = true;
-	} else if (strcmp(option, "fractional") == 0) {
+	} else if (strcasecmp(option, "fractional") == 0) {
 		gbc->fractional_scaling = parse_bool(lineno, value, &err);
-	} else if (strcmp(option, "frame-blending") == 0) {
+	} else if (strcasecmp(option, "frame-blending") == 0) {
 		gbc->frame_blending = parse_bool(lineno, value, &err);
-	} else if (strcmp(option, "interlacing") == 0) {
+	} else if (strcasecmp(option, "interlacing") == 0) {
 		gbc->interlacing = parse_bool(lineno, value, &err);
-	} else if (strcmp(option, "palette") == 0) {
+	} else if (strcasecmp(option, "palette") == 0) {
 		gbc->core.ppu.palette = gbcc_get_palette(value);
-	} else if (strcmp(option, "shader") == 0) {
+	} else if (strcasecmp(option, "shader") == 0) {
 		gbcc_window_use_shader(gbc, value);
-	} else if (strcmp(option, "save-dir") == 0) {
+	} else if (strcasecmp(option, "save-dir") == 0) {
 		strncpy(gbc->save_directory, value, sizeof(gbc->save_directory));
 		gbc->save_directory[N_ELEM(gbc->save_directory) - 1] = '\0';
-	} else if (strcmp(option, "turbo") == 0) {
+	} else if (strcasecmp(option, "turbo") == 0) {
 		char *endptr;
 		gbc->turbo_speed = strtof(value, &endptr);
 		if (endptr == value) {
 			PARSE_ERROR(lineno, "Failed to parse \"%s\" as float.\n", value);
 		}
-	} else if (strcmp(option, "vsync") == 0) {
+	} else if (strcasecmp(option, "vsync") == 0) {
 		gbc->core.sync_to_video = parse_bool(lineno, value, &err);
-	} else if (strcmp(option, "vram-window") == 0) {
+	} else if (strcasecmp(option, "vram-window") == 0) {
 		gbc->vram_display = parse_bool(lineno, value, &err);
 	} else {
 		PARSE_ERROR(lineno, "Bad config file option \"%s\"\n", option);
@@ -265,9 +269,9 @@ char *get_config_path()
 
 bool parse_bool(size_t lineno, const char *str, bool *err)
 {
-	if (strcmp(str, "true") == 0) {
+	if (strcasecmp(str, "true") == 0) {
 		return true;
-	} else if (strcmp(str, "false") == 0) {
+	} else if (strcasecmp(str, "false") == 0) {
 		return false;
 	}
 	PARSE_ERROR(lineno, "Invalid boolean value \"%s\".\n", str);
