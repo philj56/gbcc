@@ -11,6 +11,7 @@
 #include "core.h"
 #include "config.h"
 #include "debug.h"
+#include "nelem.h"
 #include "save.h"
 #include "window.h"
 #include <ctype.h>
@@ -19,9 +20,28 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Maximum number of config file errors before we give up */
+#define MAX_ERRORS 5
+
+/* Anyone with a 100M config file is doing something very wrong */
+#define MAX_CONFIG_SIZE (100*1024*1024)
+
 static char *strip(const char *str);
-static void parse_option(struct gbcc *gbc, const char *option, const char *value);
+static bool parse_option(struct gbcc *gbc, size_t lineno, const char *option, const char *value);
 static char *get_config_path(void);
+
+bool parse_bool(size_t lineno, const char *str, bool *err);
+
+/*
+ * Function-like macro. Yuck.
+ */
+#define PARSE_ERROR_NO_ARGS(lineno, fmt) \
+		gbcc_log_error("\tLine %zu: ", (lineno));\
+		gbcc_log_append_error((fmt));
+
+#define PARSE_ERROR(lineno, fmt, ...) \
+		gbcc_log_error("\tLine %zu: ", (lineno));\
+		gbcc_log_append_error((fmt), __VA_ARGS__);
 
 void gbcc_load_config(struct gbcc *gbc, char *filename)
 {
@@ -29,69 +49,134 @@ void gbcc_load_config(struct gbcc *gbc, char *filename)
 	if (!filename) {
 		default_filename = true;
 		filename = get_config_path();
-	}
-	char *config;
-	int size;
-	FILE *fp = fopen(filename, "rb");
-	if (!fp) {
-		if (errno == ENOENT) {
-			if (default_filename) {
-				free(filename);
-			}
+		if (!filename) {
 			return;
 		}
-		gbcc_log_error("Failed to open config file %s\n", filename);
-		if (default_filename) {
-			free(filename);
-		}
-		return;
 	}
-	fseek(fp, 0, SEEK_END);
-	size = ftell(fp);
+	char *config;
+	FILE *fp = fopen(filename, "rb");
+	if (!fp) {
+		if (!default_filename || errno != ENOENT) {
+			gbcc_log_error("Failed to open config file %s: %s\n", filename, strerror(errno));
+		}
+		goto CLEANUP_FILENAME;
+	}
+	if (fseek(fp, 0, SEEK_END)) {
+		gbcc_log_error("Failed to seek in config file: %s\n", strerror(errno));
+		fclose(fp);
+		goto CLEANUP_FILENAME;
+	}
+	size_t size;
+	{
+		long ssize = ftell(fp);
+		if (ssize < 0) {
+			gbcc_log_error("Failed to determine config file size: %s\n", strerror(errno));
+			fclose(fp);
+			goto CLEANUP_FILENAME;
+		}
+		if (ssize > MAX_CONFIG_SIZE) {
+			gbcc_log_error("Config file too big (> %d MiB)! Are you sure it's a file?\n", MAX_CONFIG_SIZE / 1024 / 1024);
+			fclose(fp);
+			goto CLEANUP_FILENAME;
+		}
+		size = (size_t)ssize;
+	}
 	config = malloc(size + 1);
 	if (!config) {
-		gbcc_log_error("Failed to malloc buffer for %s\n", filename);
+		gbcc_log_error("Failed to malloc buffer for config file.\n");
 		fclose(fp);
-		if (default_filename) {
-			free(filename);
-		}
-		return;
+		goto CLEANUP_FILENAME;
 	}
 	rewind(fp);
-	fread(config, 1, size, fp);
+	if (fread(config, 1, size, fp) != size) {
+		gbcc_log_error("Failed to read config file: %s\n", strerror(errno));
+		fclose(fp);
+		goto CLEANUP_ALL;
+	}
 	fclose(fp);
 	config[size] = '\0';
 	
 	gbcc_log_info("Loading config from %s...\n", filename);
 	
-	char *str1;
-	char *line;
-	char *option;
-	char *value;
-	char *saveptr1;
-	char *saveptr2;
+	char *str1 = config;
+	char *saveptr1 = NULL;
+	char *saveptr2 = NULL;
 
-	for (str1 = config; ; str1 = NULL) {
-		line = strtok_r(str1, "\r\n", &saveptr1);
-		if (!line) {
+	size_t num_errs = 0;
+	for (size_t lineno = 1; ; lineno++, str1 = NULL, saveptr2 = NULL) {
+		if (num_errs > MAX_ERRORS) {
+			gbcc_log_error("Too many config file errors (>%u), giving up.\n", MAX_ERRORS);
 			break;
 		}
-		if (line[0] == '#') {
+		char *line = strtok_r(str1, "\r\n", &saveptr1);
+		if (!line) {
+			/* We're done here */
+			break;
+		}
+		{
+			char *line_stripped = strip(line);
+			if (!line_stripped) {
+				/* Skip blank lines */
+				continue;
+			}
+			/*
+			 * Comment characters.
+			 * N.B. treating section headers as comments for now.
+			 */
+			switch (line_stripped[0]) {
+				case '#':
+				case ';':
+				case '[':
+					free(line_stripped);
+					continue;
+			}
+			free(line_stripped);
+		}
+		if (line[0] == '=') {
+			PARSE_ERROR_NO_ARGS(lineno, "Missing option.\n");
+			num_errs++;
 			continue;
 		}
-		option = strtok_r(line, "=", &saveptr2);
+		char *option = strtok_r(line, "=", &saveptr2);
 		if (!option) {
-			gbcc_log_warning("\tBad config line \"%s\"\n", line);
+			char *tmp = strip(line);
+			PARSE_ERROR(lineno, "Config option \"%s\" missing value.\n", tmp);
+			num_errs++;
+			free(tmp);
 			continue;
 		}
-		value = strtok_r(NULL, "\r\n", &saveptr2);
+		char *option_stripped = strip(option);
+		if (!option_stripped) {
+			PARSE_ERROR_NO_ARGS(lineno, "Missing option.\n");
+			num_errs++;
+			continue;
+		}
+		char *value = strtok_r(NULL, "\r\n", &saveptr2);
 		if (!value) {
-			gbcc_log_warning("\tBad config line \"%s\"\n", line);
+			PARSE_ERROR(lineno, "Config option \"%s\" missing value.\n", option_stripped);
+			num_errs++;
+			free(option_stripped);
 			continue;
 		}
-		parse_option(gbc, option, value);
+		char *value_stripped = strip(value);
+		if (!value_stripped) {
+			PARSE_ERROR(lineno, "Config option \"%s\" missing value.\n", option_stripped);
+			num_errs++;
+			free(option_stripped);
+			continue;
+		}
+		if (!parse_option(gbc, lineno, option_stripped, value_stripped)) {
+			num_errs++;
+		}
+
+		/* Cleanup */
+		free(value_stripped);
+		free(option_stripped);
 	}
+
+CLEANUP_ALL:
 	free(config);
+CLEANUP_FILENAME:
 	if (default_filename) {
 		free(filename);
 	}
@@ -99,63 +184,64 @@ void gbcc_load_config(struct gbcc *gbc, char *filename)
 
 char *strip(const char *str)
 {
-	char *buf = calloc(strlen(str) + 1, 1);
-	int start = 0;
-	int end = strlen(str) - 1;
-	while (isspace(str[start])) {
+	size_t start = 0;
+	size_t end = strlen(str);
+	while (start <= end && isspace(str[start])) {
 		start++;
 	}
-	while (isspace(str[end])) {
+	while (end > start && isspace(str[end])) {
 		end--;
 	}
-	if (end < start) {
-		free(buf);
+	if (end <= start) {
 		return NULL;
 	}
-	strncpy(buf, str + start, (end + 1) - start);
+	size_t len = end - start;
+	char *buf = calloc(len + 1, 1);
+	strncpy(buf, str + start, len);
+	buf[len] = '\0';
 	return buf;
 }
 
-/* TODO: Lots */
-void parse_option(struct gbcc *gbc, const char *option, const char *value)
+bool parse_option(struct gbcc *gbc, size_t lineno, const char *option, const char *value)
 {
-	char *opt = strip(option);
-	if (!opt) {
-		gbcc_log_warning("\tBad config line \"%s=%s\"\n", option, value);
-		return;
-	}
-
-	char *val = strip(value);
-	if (!val) {
-		gbcc_log_warning("\tBad config line \"%s=%s\"\n", option, value);
-		free(opt);
-		return;
-	}
-
-	if (strcmp(opt, "autoresume") == 0) {
-		if (strtol(val, NULL, 0)) {
-			gbcc_load_state(gbc);
+	bool err = false;
+	if (strcmp(option, "autoresume") == 0) {
+		gbc->autoresume = parse_bool(lineno, value, &err);
+	} else if (strcmp(option, "autosave") == 0) {
+		gbc->autosave = parse_bool(lineno, value, &err);
+	} else if (strcmp(option, "background") == 0) {
+		gbc->background_play = parse_bool(lineno, value, &err);
+	} else if (strcmp(option, "cheat") == 0) {
+		gbcc_cheats_add_fuzzy(&gbc->core, value);
+		gbc->core.cheats.enabled = true;
+	} else if (strcmp(option, "fractional") == 0) {
+		gbc->fractional_scaling = parse_bool(lineno, value, &err);
+	} else if (strcmp(option, "frame-blending") == 0) {
+		gbc->frame_blending = parse_bool(lineno, value, &err);
+	} else if (strcmp(option, "interlacing") == 0) {
+		gbc->interlacing = parse_bool(lineno, value, &err);
+	} else if (strcmp(option, "palette") == 0) {
+		gbc->core.ppu.palette = gbcc_get_palette(value);
+	} else if (strcmp(option, "shader") == 0) {
+		gbcc_window_use_shader(gbc, value);
+	} else if (strcmp(option, "save-dir") == 0) {
+		strncpy(gbc->save_directory, value, sizeof(gbc->save_directory));
+		gbc->save_directory[N_ELEM(gbc->save_directory) - 1] = '\0';
+	} else if (strcmp(option, "turbo") == 0) {
+		char *endptr;
+		gbc->turbo_speed = strtof(value, &endptr);
+		if (endptr == value) {
+			PARSE_ERROR(lineno, "Failed to parse \"%s\" as float.\n", value);
 		}
-	} else if (strcmp(opt, "background") == 0) {
-		gbc->background_play = strtol(val, NULL, 0);
-	} else if (strcmp(opt, "fractional") == 0) {
-		gbc->fractional_scaling = strtol(val, NULL, 0);
-	} else if (strcmp(opt, "interlacing") == 0) {
-		gbc->interlacing = strtol(val, NULL, 0);
-	} else if (strcmp(opt, "palette") == 0) {
-		gbc->core.ppu.palette = gbcc_get_palette(val);
-	} else if (strcmp(opt, "shader") == 0) {
-		gbcc_window_use_shader(gbc, val);
-	} else if (strcmp(opt, "turbo") == 0) {
-		gbc->turbo_speed = strtod(val, NULL);
-	} else if (strcmp(opt, "vsync") == 0) {
-	} else if (strcmp(opt, "vram-window") == 0) {
-		gbc->vram_display = strtol(val, NULL, 0);
+	} else if (strcmp(option, "vsync") == 0) {
+		gbc->core.sync_to_video = parse_bool(lineno, value, &err);
+	} else if (strcmp(option, "vram-window") == 0) {
+		gbc->vram_display = parse_bool(lineno, value, &err);
 	} else {
-		gbcc_log_warning("\tBad config file option \"%s\"\n", opt);
+		PARSE_ERROR(lineno, "Bad config file option \"%s\"\n", option);
+		err = true;
 	}
-	free(opt);
-	free(val);
+	return !err;
 }
 
 char *get_config_path()
@@ -171,8 +257,22 @@ char *get_config_path()
 			return NULL;
 		}
 	}
-	len += strlen(base_dir) + strlen(ext);
-	char *name = calloc(len, sizeof(char));
-	sprintf(name, "%s%s%s", base_dir, ext, "/gbcc/config");
+	len += strlen(base_dir) + strlen(ext) + 2;
+	char *name = calloc(len, sizeof(*name));
+	snprintf(name, len, "%s%s%s", base_dir, ext, "/gbcc/config");
 	return name;
+}
+
+bool parse_bool(size_t lineno, const char *str, bool *err)
+{
+	if (strcmp(str, "true") == 0) {
+		return true;
+	} else if (strcmp(str, "false") == 0) {
+		return false;
+	}
+	PARSE_ERROR(lineno, "Invalid boolean value \"%s\".\n", str);
+	if (err) {
+		*err = true;
+	}
+	return false;
 }

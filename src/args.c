@@ -12,11 +12,13 @@
 #include "config.h"
 #include "debug.h"
 #include "gbcc.h"
+#include "nelem.h"
 #include "save.h"
 #include <ctype.h>
 #include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
+#include <string.h>
 
 static void usage()
 {
@@ -96,7 +98,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		switch (opt) {
 			case 'a':
-				gbcc_load_state(gbc);
+				gbc->autoresume = true;
 				break;
 			case 'A':
 				gbc->autosave = true;
@@ -130,7 +132,8 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbcc_window_use_shader(gbc, optarg);
 				break;
 			case 'S':
-				gbc->save_directory = optarg;
+				strncpy(gbc->save_directory, optarg, sizeof(gbc->save_directory));
+				gbc->save_directory[N_ELEM(gbc->save_directory) - 1] = '\0';
 				break;
 			case 't':
 				errno = 0;
@@ -164,6 +167,10 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				usage();
 				return false;
 		}
+	}
+
+	if (gbc->autoresume) {
+		gbcc_load_state(gbc);
 	}
 
 	return true;

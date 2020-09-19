@@ -307,7 +307,7 @@ bool gbcc_check_savestate(struct gbcc *gbc, int state)
 
 void get_save_basename(struct gbcc *gbc, char savename[MAX_NAME_LEN]) {
 	int written  = 0;
-	if (gbc->save_directory != NULL) {
+	if (strlen(gbc->save_directory)) {
 		const char *fmt;
 		if (gbc->save_directory[strlen(gbc->save_directory) - 1] == PATH_SEP) {
 			fmt = "%s%s";

@@ -28,7 +28,7 @@ emulator development and writing a large project in C. Development is ongoing
 	Enable playback while unfocused.
 
 *-c, --config*=_path_
-	Specify path to custom config file (currently not recommended).
+	Specify path to custom config file.
 
 *-C, --cheat*=_code_
 	Add a GameGenie or GameShark cheat code. Dashes are ignored. Can be specified
