@@ -58,7 +58,7 @@ _gbcc()
                         COMPREPLY=$cur
                         ;;
                 -*)
-                        remaining=$(echo ${opts[@]} ${COMP_WORDS[@]} ${COMP_WORDS[@]} | tr ' ' '\n' | sort | uniq -u)
+                        remaining=$(echo ${opts[@]} ${COMP_WORDS[@]} ${COMP_WORDS[@]} | tr ' ' '\n' | sort | uniq -u | cat <(echo --cheat) -)
                         COMPREPLY=( $(compgen -W "${remaining}" -- ${cur}) )
                         return 0
                         ;;
@@ -67,7 +67,7 @@ _gbcc()
                                 _filedir '*@(gb|gbc)'
                                 return 0
                         fi
-                        remaining=$(echo ${opts[@]} ${COMP_WORDS[@]} ${COMP_WORDS[@]} | tr ' ' '\n' | sort | uniq -u)
+			remaining=$(echo ${opts[@]} ${COMP_WORDS[@]} ${COMP_WORDS[@]} | tr ' ' '\n' | sort | uniq -u | cat <(echo --cheat) -)
                         COMPREPLY=( $(compgen -W "${remaining}" -- ${cur}) )
                         return 0
                         ;;
