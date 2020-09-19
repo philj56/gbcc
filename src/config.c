@@ -24,8 +24,8 @@
 /* Maximum number of config file errors before we give up */
 #define MAX_ERRORS 5
 
-/* Anyone with a 100M config file is doing something very wrong */
-#define MAX_CONFIG_SIZE (100*1024*1024)
+/* Anyone with a 10M config file is doing something very wrong */
+#define MAX_CONFIG_SIZE (10*1024*1024)
 
 static char *strip(const char *str);
 static bool parse_option(struct gbcc *gbc, size_t lineno, const char *option, const char *value);
@@ -92,19 +92,26 @@ void gbcc_load_config(struct gbcc *gbc, char *filename)
 	if (fread(config, 1, size, fp) != size) {
 		gbcc_log_error("Failed to read config file: %s\n", strerror(errno));
 		fclose(fp);
-		goto CLEANUP_ALL;
+		goto CLEANUP_CONFIG;
 	}
 	fclose(fp);
 	config[size] = '\0';
+
+	char *config_copy = strdup(config);
+	if (!config_copy) {
+		gbcc_log_error("Failed to malloc second buffer for config file.\n");
+		goto CLEANUP_ALL;
+	}
 	
 	gbcc_log_info("Loading config from %s...\n", filename);
 	
-	char *str1 = config;
 	char *saveptr1 = NULL;
 	char *saveptr2 = NULL;
 
+	char *copy_pos = config_copy;
+	size_t lineno = 1;
 	size_t num_errs = 0;
-	for (size_t lineno = 1; ; lineno++, str1 = NULL, saveptr2 = NULL) {
+	for (char *str1 = config; ; str1 = NULL, saveptr2 = NULL) {
 		if (num_errs > MAX_ERRORS) {
 			gbcc_log_error("Too many config file errors (>%u), giving up.\n", MAX_ERRORS);
 			break;
@@ -114,24 +121,30 @@ void gbcc_load_config(struct gbcc *gbc, char *filename)
 			/* We're done here */
 			break;
 		}
+		while ((copy_pos - config_copy) < (line - config)) {
+			if (*copy_pos == '\n') {
+				lineno++;
+			}
+			copy_pos++;
+		}
 		{
 			char *line_stripped = strip(line);
 			if (!line_stripped) {
 				/* Skip blank lines */
 				continue;
 			}
+			char first_char = line_stripped[0];
+			free(line_stripped);
 			/*
 			 * Comment characters.
 			 * N.B. treating section headers as comments for now.
 			 */
-			switch (line_stripped[0]) {
+			switch (first_char) {
 				case '#':
 				case ';':
 				case '[':
-					free(line_stripped);
 					continue;
 			}
-			free(line_stripped);
 		}
 		if (line[0] == '=') {
 			PARSE_ERROR_NO_ARGS(lineno, "Missing option.\n");
@@ -176,6 +189,8 @@ void gbcc_load_config(struct gbcc *gbc, char *filename)
 	}
 
 CLEANUP_ALL:
+	free(config_copy);
+CLEANUP_CONFIG:
 	free(config);
 CLEANUP_FILENAME:
 	if (default_filename) {
@@ -232,10 +247,13 @@ bool parse_option(struct gbcc *gbc, size_t lineno, const char *option, const cha
 		strncpy(gbc->save_directory, value, sizeof(gbc->save_directory));
 		gbc->save_directory[N_ELEM(gbc->save_directory) - 1] = '\0';
 	} else if (strcasecmp(option, "turbo") == 0) {
+		errno = 0;
 		char *endptr;
 		gbc->turbo_speed = strtof(value, &endptr);
 		if (endptr == value) {
 			PARSE_ERROR(lineno, "Failed to parse \"%s\" as float.\n", value);
+		} else if (errno) {
+			PARSE_ERROR(lineno, "Float value \"%s\" out of range.\n", value);
 		}
 	} else if (strcasecmp(option, "vsync") == 0) {
 		gbc->core.sync_to_video = parse_bool(lineno, value, &err);
