@@ -44,15 +44,15 @@ bool parse_bool(size_t lineno, const char *str, bool *err);
 		gbcc_log_error("\tLine %zu: ", (lineno));\
 		gbcc_log_append_error((fmt), __VA_ARGS__);
 
-void gbcc_load_config(struct gbcc *gbc, char *filename)
+void gbcc_load_config(struct gbcc *gbc, const char *filename)
 {
-	bool default_filename = false;
+	char *default_filename = NULL;
 	if (!filename) {
-		default_filename = true;
-		filename = get_config_path();
-		if (!filename) {
+		default_filename = get_config_path();
+		if (!default_filename) {
 			return;
 		}
+		filename = default_filename;
 	}
 	char *config;
 	FILE *fp = fopen(filename, "rb");
@@ -194,7 +194,7 @@ CLEANUP_CONFIG:
 	free(config);
 CLEANUP_FILENAME:
 	if (default_filename) {
-		free(filename);
+		free(default_filename);
 	}
 }
 
