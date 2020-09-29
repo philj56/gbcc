@@ -165,7 +165,7 @@ void gbcc_load_config(struct gbcc *gbc, const char *filename)
 			num_errs++;
 			continue;
 		}
-		char *value = strtok_r(NULL, "\r\n", &saveptr2);
+		char *value = strtok_r(NULL, "#;\r\n", &saveptr2);
 		if (!value) {
 			PARSE_ERROR(lineno, "Config option \"%s\" missing value.\n", option_stripped);
 			num_errs++;
