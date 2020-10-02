@@ -36,11 +36,10 @@ void gbcc_screenshot(struct gbcc *gbc)
 
 	strncpy(fname, dir, MAX_NAME_LEN);
 
-	time_t raw_time;
-	struct tm *time_info;
-	time(&raw_time);
-	time_info = gmtime(&raw_time);
-	strftime(fname + strlen(dir), MAX_NAME_LEN - strlen(dir), "/%G-%m-%dT%H%M%SZ-gbcc.png", time_info);
+	time_t raw_time = time(NULL);
+	struct tm time_info;
+	gmtime_r(&raw_time, &time_info);
+	strftime(fname + strlen(dir), MAX_NAME_LEN - strlen(dir), "/%G-%m-%dT%H%M%SZ-gbcc.png", &time_info);
 
 	FILE *fp = fopen(fname, "wb");
 	if (!fp) {
