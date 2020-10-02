@@ -24,9 +24,11 @@
 #else
 #include <epoxy/gl.h>
 #endif
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
@@ -36,7 +38,7 @@
 
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
 static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
-static void render_box(struct gbcc_window *win, uint8_t x, uint8_t y);
+static void render_box(struct gbcc_window *win, unsigned int x, unsigned int y);
 static void update_timers(struct gbcc *gbc);
 
 void gbcc_window_initialise(struct gbcc *gbc)
@@ -266,11 +268,19 @@ void gbcc_window_update(struct gbcc *gbc)
 	}
 
 	if (gbc->menu.show) {
+		render_text(win, gbc->menu.text, 0, 0);
 		uint32_t tw = win->font.tile_width;
 		uint32_t th = win->font.tile_height;
-		render_text(win, gbc->menu.text, 0, 0);
-		render_box(win, 11.5 * tw + 2 + gbc->menu.save_state * tw * 2, th * 1 + 1);
-		render_box(win, 11.5 * tw + 2 + gbc->menu.load_state * tw * 2, th * 2 + 1);
+		/* 
+		 * First state is the 13th character, so start drawing 1px
+		 * before the end of the 12th.
+		 */
+		uint32_t xstart = 12 * tw - 1;
+		/* x2 offset as savestates are double-spaced */
+		uint32_t xoffset_save = (unsigned)gbc->menu.save_state * tw * 2;
+		uint32_t xoffset_load = (unsigned)gbc->menu.load_state * tw * 2;
+		render_box(win, xstart + xoffset_save, th * 0 + 1);
+		render_box(win, xstart + xoffset_load, th * 1 + 1);
 	} else {
 		if (gbc->show_fps && !screenshot) {
 			char fps_text[16];
@@ -278,7 +288,8 @@ void gbcc_window_update(struct gbcc *gbc)
 			render_text(win, fps_text, 0, 0);
 		}
 		if (win->msg.time_left > 0 && !screenshot) {
-			render_text(win, win->msg.text, 0, GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
+			uint8_t y = (uint8_t)(GBC_SCREEN_HEIGHT - win->msg.lines * win->font.tile_height);
+			render_text(win, win->msg.text, 0, y);
 		}
 	}
 
@@ -294,12 +305,12 @@ void gbcc_window_update(struct gbcc *gbc)
 	if (gbc->fractional_scaling) {
 		win->scale = min((float)win->width / GBC_SCREEN_WIDTH, (float)win->height / GBC_SCREEN_HEIGHT);
 	} else {
-		win->scale = min(win->width / GBC_SCREEN_WIDTH, win->height / GBC_SCREEN_HEIGHT);
+		win->scale = min((float)(win->width / GBC_SCREEN_WIDTH), (float)(win->height / GBC_SCREEN_HEIGHT));
 	}
-	int width = win->scale * GBC_SCREEN_WIDTH;
-	int height = win->scale * GBC_SCREEN_HEIGHT;
-	win->x = (win->width - width) / 2;
-	win->y = (win->height - height) / 2;
+	unsigned int width = (unsigned int)(win->scale * GBC_SCREEN_WIDTH);
+	unsigned int height = (unsigned int)(win->scale * GBC_SCREEN_HEIGHT);
+	win->x = ((unsigned int)win->width - width) / 2;
+	win->y = ((unsigned int)win->height - height) / 2;
 
 	glBindTexture(GL_TEXTURE_2D, win->gl.fbo_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -354,22 +365,34 @@ void gbcc_window_update(struct gbcc *gbc)
 
 void gbcc_load_shader(GLuint shader, const char *filename)
 {
+	errno = 0;
 	FILE *fp = fopen(filename, "rb");
 	if (!fp) {
-		gbcc_log_error("Failed to load shader %s.\n", filename);
+		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-	fseek(fp, 0, SEEK_END);
-	int size = ftell(fp);
-	GLchar *source = malloc(size);
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
+		fclose(fp);
+		exit(EXIT_FAILURE);
+	}
+	long size = ftell(fp);
+	if (size <= 0) {
+		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
+		fclose(fp);
+		exit(EXIT_FAILURE);
+	}
+	unsigned long usize = (unsigned long) size;
+	GLchar *source = malloc(usize + 1);
 	rewind(fp);
-	if (fread(source, 1, size, fp) == 0) {
-		gbcc_log_error("Error loading shader: %s\n", filename);
+	if (fread(source, 1, usize, fp) != usize) {
+		gbcc_log_error("Failed to load shader %s: %s.\n", filename, strerror(errno));
 		fclose(fp);
 		exit(EXIT_FAILURE);
 	}
 	fclose(fp);
-	glShaderSource(shader, 1, (const GLchar *const *)&source, &size);
+	source[usize] = '\0';
+	glShaderSource(shader, 1, (const GLchar *const *)&source, NULL);
 	free(source);
 
 	glCompileShader(shader);
@@ -382,7 +405,7 @@ void gbcc_load_shader(GLuint shader, const char *filename)
 		GLint info_length = 0;
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_length);
 		if (info_length > 1) {
-			char *log = malloc(info_length * sizeof(*log));
+			char *log = malloc((unsigned)info_length * sizeof(*log));
 			glGetShaderInfoLog(shader, info_length, NULL, log);
 			gbcc_log_append_error("%s\n", log);
 			free(log);
@@ -430,7 +453,7 @@ void gbcc_window_use_shader(struct gbcc *gbc, const char *name)
 	}
 }
 
-void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bool pad)
+void gbcc_window_show_message(struct gbcc *gbc, const char *msg, unsigned seconds, bool pad)
 {
 	struct gbcc_window *win = &gbc->window;
 	if (!win->initialised) {
@@ -441,8 +464,10 @@ void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bo
 		snprintf(win->msg.text, MSG_BUF_SIZE, " %s ", msg);
 	} else {
 		strncpy(win->msg.text, msg, MSG_BUF_SIZE);
+		win->msg.text[MSG_BUF_SIZE - 1] = '\0';
 	}
-	win->msg.lines = 1 + strlen(win->msg.text) / (GBC_SCREEN_WIDTH / win->font.tile_width);
+	uint8_t width_tiles = GBC_SCREEN_WIDTH / win->font.tile_width;
+	win->msg.lines = (uint8_t)(1 + strlen(win->msg.text) / width_tiles);
 	win->msg.time_left = seconds * SECOND;
 }
 
@@ -466,7 +491,7 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 	uint32_t tw = win->font.tile_width;
 	uint32_t th = win->font.tile_height;
 	uint32_t char_x = (c % 16) * tw;
-	uint32_t char_y = (c / 16) * (16 * tw) * th;
+	uint32_t char_y = (uint32_t)(c / 16) * (16 * tw) * th;
 	for (uint32_t j = 0; j < th; j++) {
 		for (uint32_t i = 0; i < tw; i++) {
 			uint32_t src_px = char_y + j * (16 * tw) + char_x + i;
@@ -491,15 +516,15 @@ void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
 	}
 }
 
-void render_box(struct gbcc_window *win, uint8_t x, uint8_t y)
+void render_box(struct gbcc_window *win, unsigned int x, unsigned int y)
 {
-	uint8_t width = win->font.tile_width * 2 - 3;
-	uint8_t height = win->font.tile_height - 3;
-	for (int i = x; i <= x + width; i++) {
+	unsigned int width = win->font.tile_width * 2 - 3;
+	unsigned int height = win->font.tile_height - 3;
+	for (unsigned int i = x; i <= x + width; i++) {
 		win->buffer[y * GBC_SCREEN_WIDTH + i] = 0xFFFFFFFFu;
 		win->buffer[(y + height) * GBC_SCREEN_WIDTH + i] = 0xFFFFFFFFu;
 	}
-	for (int i = y; i <= y + height; i++) {
+	for (unsigned int i = y; i <= y + height; i++) {
 		win->buffer[i * GBC_SCREEN_WIDTH + x] = 0xFFFFFFFFu;
 		win->buffer[i * GBC_SCREEN_WIDTH + x + width] = 0xFFFFFFFFu;
 	}
@@ -511,16 +536,16 @@ void update_timers(struct gbcc *gbc)
 	struct fps_counter *fps = &win->fps;
 	struct timespec cur_time;
 	clock_gettime(CLOCK_REALTIME, &cur_time);
-	float dt = gbcc_time_diff(&cur_time, &fps->last_time);
+	float dt = (float)gbcc_time_diff(&cur_time, &fps->last_time);
 	dt /= GBC_FRAME_PERIOD;
-	const float alpha = 0.001;
-	if (dt < 1.1 && dt > 0.9) {
+	const float alpha = 0.001f;
+	if (dt < 1.1f && dt > 0.9f) {
 		gbc->audio.scale = alpha * dt + (1 - alpha) * gbc->audio.scale;
 	}
 
 	/* Update FPS counter */
 	fps->last_time = cur_time;
-	float df = gbc->core.ppu.frame - fps->last_frame;
+	float df = (float)(gbc->core.ppu.frame - fps->last_frame);
 	uint8_t ly = gbcc_memory_read_force(&gbc->core, LY);
 	uint8_t tmp = ly;
 	if (ly < fps->last_ly) {
@@ -529,10 +554,10 @@ void update_timers(struct gbcc *gbc)
 	} else {
 		ly -= fps->last_ly;
 	}
-	df += ly / 154.0;
+	df += ly / 154.0f;
 	fps->last_frame = gbc->core.ppu.frame;
 	fps->last_ly = tmp;
-	fps->previous[fps->idx] = df / (dt * GBC_FRAME_PERIOD / 1e9);
+	fps->previous[fps->idx] = df / (dt * GBC_FRAME_PERIOD / 1e9f);
 	fps->idx++;
 	fps->idx %= N_ELEM(fps->previous);
 	float avg = 0;

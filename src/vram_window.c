@@ -223,11 +223,11 @@ void gbcc_vram_window_update(struct gbcc *gbc)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_framebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_framebuffer);
 
-	double scale = min(win->width / VRAM_WINDOW_WIDTH, win->height / VRAM_WINDOW_HEIGHT);
+	int scale = min(win->width / VRAM_WINDOW_WIDTH, win->height / VRAM_WINDOW_HEIGHT);
 	int width = scale * VRAM_WINDOW_WIDTH;
 	int height = scale * VRAM_WINDOW_HEIGHT;
-	win->x = (win->width - width) / 2;
-	win->y = (win->height - height) / 2;
+	win->x = (uint32_t)(win->width - width) / 2;
+	win->y = (uint32_t)(win->height - height) / 2;
 	glViewport(win->x, win->y, width, height);
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);

@@ -6,8 +6,8 @@ gbcc - Game Boy Color emulator written in C
 
 # SYNOPSIS
 
-*gbcc* [-aAbfFhivV] [-c _config_file_] [-p _palette_] [-s _shader_]\
-[-t _speed_] rom
+*gbcc* [-aAbfFhivV] [-c _config_file_] [-C _cheat_] [-p _palette_]\
+[-s _shader_] [-t _speed_] rom
 
 # DESCRIPTION
 
@@ -29,6 +29,10 @@ emulator development and writing a large project in C. Development is ongoing
 
 *-c, --config*=_path_
 	Specify path to custom config file.
+
+*-C, --cheat*=_code_
+	Add a 9-digit GameGenie or 8-digit GameShark cheat code. Dashes are ignored.
+	Can be specified multiple times for multiple cheats.
 
 *-f, --fractional*
 	Enable fractional scaling (default is integer).
@@ -123,6 +127,9 @@ l
 b
 	Toggle background playback
 
+c
+	Toggle cheats
+
 v
 	Toggle Vsync
 
@@ -170,18 +177,47 @@ _ICON_PATH_
 	Folder containing application icons.
 
 _$XDG_CONFIG_HOME/gbcc/config_
-	Config file. Available options are the same as command line options
-	(where possible), defined with syntax:
+	Default config file. See below for the format specification.
 
-		option = value
-	
-	For command line equivalents which take no arguments, value is taken to
-	be a boolean (i.e. value = 0 disables the option, any other number
-	enables it).
-.
-	Lines starting with '#' are ignored.
+# CONFIG FILE
 
-	Command line options override config file options.
+The config file format is basic .ini/.cfg style. Options are set one per line,
+with the syntax:
+
+	option = value
+
+Whitespace is ignored. Lines beginning with # or ; are treated as comments.
+Section headers of the form [header] are currently ignored. All options and
+values are case-insensitive, except where case is important e.g. paths.
+
+Available options are the same as command line options where applicable. For
+command line equivalents which take no arguments, value is taken to be a
+boolean, either 'true' or 'false'. All other options follow the same pattern as
+their equivalent command line option.
+
+Later options override earlier options, and command line options override
+config file options. The exception is the 'cheat' option, which can be
+specified multiple times in either the config file or command line.
+
+## EXAMPLE CONFIG
+
+```
+[Sensible Defaults]
+; Behaviour
+autoresume = true
+autosave = false
+background = false
+turbo = 0
+vram-window = false
+
+; Graphics
+fractional = false
+frame-blending = true
+interlacing = true
+palette = default
+shader = Subpixel
+vsync = true
+```
 
 # SAVE FILES
 

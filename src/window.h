@@ -65,7 +65,7 @@ struct gbcc_window {
 	struct fps_counter fps;
 	struct {
 		char text[MSG_BUF_SIZE];
-		int lines;
+		uint8_t lines;
 		int64_t time_left;
 	} msg;
 	bool screenshot;
@@ -77,7 +77,7 @@ void gbcc_window_initialise(struct gbcc *gbc);
 void gbcc_window_deinitialise(struct gbcc *gbc);
 void gbcc_window_update(struct gbcc *gbc);
 void gbcc_window_clear(void);
-void gbcc_window_show_message(struct gbcc *gbc, const char *msg, int seconds, bool pad);
+void gbcc_window_show_message(struct gbcc *gbc, const char *msg, unsigned seconds, bool pad);
 void gbcc_window_use_shader(struct gbcc *gbc, const char *name);
 void gbcc_load_shader(GLuint shader, const char *filename);
 GLuint gbcc_create_shader_program(const char *vert, const char *frag);

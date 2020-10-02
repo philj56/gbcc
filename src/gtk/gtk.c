@@ -222,7 +222,7 @@ void on_realise(GtkGLArea *gl_area, void *data)
 	gbcc_window_initialise(&gtk->gbc);
 	gbcc_menu_init(&gtk->gbc);
 	
-	for (size_t i = 0; i < N_ELEM(gtk->menu.shader.shader); i++) {
+	for (guint i = 0; i < N_ELEM(gtk->menu.shader.shader); i++) {
 		GtkWidget *button =  gtk_radio_menu_item_new_with_label(
 				gtk->menu.shader.group,
 				gtk->gbc.window.gl.shaders[i].name);
@@ -235,7 +235,7 @@ void on_realise(GtkGLArea *gl_area, void *data)
 		gtk->menu.shader.shader[i] = button;
 	}
 	
-	for (size_t i = 0; i < N_ELEM(gtk->menu.palette.palette); i++) {
+	for (guint i = 0; i < N_ELEM(gtk->menu.palette.palette); i++) {
 		GtkWidget *button =  gtk_radio_menu_item_new_with_label(
 				gtk->menu.palette.group,
 				gbcc_palettes[i].name);
@@ -400,7 +400,7 @@ void save_state(GtkWidget *widget, void *data)
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	struct gbcc *gbc = &gtk->gbc;
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
-	gbc->save_state = strtol(strstr(name, " _") + 2, NULL, 10);
+	gbc->save_state = (int8_t)strtol(strstr(name, " _") + 2, NULL, 10);
 }
 
 void load_state(GtkWidget *widget, void *data)
@@ -408,7 +408,7 @@ void load_state(GtkWidget *widget, void *data)
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	struct gbcc *gbc = &gtk->gbc;
 	const gchar *name = gtk_menu_item_get_label(GTK_MENU_ITEM(widget));
-	gbc->load_state = strtol(strstr(name, " _") + 2, NULL, 10);
+	gbc->load_state = (int8_t)strtol(strstr(name, " _") + 2, NULL, 10);
 }
 
 void quit(GtkWidget *widget, void *data)
@@ -423,7 +423,7 @@ void check_savestates(GtkWidget *widget, void *data)
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
 	struct gbcc *gbc = &gtk->gbc;
 	for (size_t i = 0; i < N_ELEM(gtk->menu.load_state.state); i++) {
-		gtk_widget_set_sensitive(gtk->menu.load_state.state[i], gbcc_check_savestate(gbc, i + 1));
+		gtk_widget_set_sensitive(gtk->menu.load_state.state[i], gbcc_check_savestate(gbc, (int)i + 1));
 	}
 }
 
@@ -569,7 +569,7 @@ void turbo_speed(GtkCheckMenuItem *widget, void *data)
 	if (!strncmp(name, "_Unlimited", 9)) {
 		gtk->gbc.turbo_speed = 0;
 	} else {
-		gtk->gbc.turbo_speed = strtod(strstr(name, "_") + 1, NULL);
+		gtk->gbc.turbo_speed = strtof(strstr(name, "_") + 1, NULL);
 		if (gtk->gbc.turbo_speed == 0) {
 			gtk->gbc.turbo_speed = 10;
 		}
@@ -594,9 +594,9 @@ void select_turbo_text(GtkWidget *widget, void *data)
 void custom_turbo_speed(GtkSpinButton *widget, void *data)
 {
 	struct gbcc_gtk *gtk = (struct gbcc_gtk *)data;
-	float val = 0;
+	double val = 0;
 	g_object_get(widget, "value", &val, NULL);
-	gtk->gbc.turbo_speed = val;
+	gtk->gbc.turbo_speed = (float)val;
 }
 
 void start_emulation_thread(struct gbcc_gtk *gtk, char *file)
@@ -657,9 +657,10 @@ void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
 		}
 	}
 	for (size_t i = 0; i < N_ELEM(gtk->keymap); i++) {
-		if (event->keyval == gtk->keymap[i]) {
+		enum gbcc_key key = (enum gbcc_key)i;
+		if (event->keyval == gtk->keymap[key]) {
 			if (!(event->state & GDK_SHIFT_MASK)) {
-				gbcc_input_process_key(gbc, i, val);
+				gbcc_input_process_key(gbc, key, val);
 				break;
 			}
 			switch (i) {
@@ -672,10 +673,10 @@ void on_keypress(GtkWidget *widget, GdkEventKey *event, void *data)
 				case GBCC_KEY_LOAD_STATE_7:
 				case GBCC_KEY_LOAD_STATE_8:
 				case GBCC_KEY_LOAD_STATE_9:
-					gbcc_input_process_key(gbc, i - 9, val);
+					gbcc_input_process_key(gbc, key - 9, val);
 					break;
 				default:
-					gbcc_input_process_key(gbc, i, val);
+					gbcc_input_process_key(gbc, key, val);
 					break;
 			}
 		}
@@ -715,9 +716,9 @@ void gbcc_gtk_process_input(struct gbcc_gtk *gtk)
 			val = false;
 		} else if (e.type == SDL_CONTROLLERAXISMOTION) {
 			if (e.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY) {
-				gbc->core.cart.mbc.accelerometer.real_y = 0x81D0u - (0x70 * ay / 32768.0);
+				gbc->core.cart.mbc.accelerometer.real_y = 0x81D0u - (uint16_t)(0x70 * ay / 32768.0);
 			} else if (e.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX) {
-				gbc->core.cart.mbc.accelerometer.real_x = 0x81D0u - (0x70 * ax / 32768.0);
+				gbc->core.cart.mbc.accelerometer.real_x = 0x81D0u - (uint16_t)(0x70 * ax / 32768.0);
 			}
 			if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
 				val = (abs(e.caxis.value) > abs(jx));
@@ -826,7 +827,7 @@ void process_game_controller(struct gbcc_gtk *gtk)
 	}
 
 	if (gtk->gbc.core.cart.rumble_state) {
-		if (SDL_HapticRumblePlay(gtk->haptic, 0.1, 1000) != 0) {
+		if (SDL_HapticRumblePlay(gtk->haptic, 0.1f, 1000) != 0) {
 			printf("%s\n", SDL_GetError());
 		}
 	} else {

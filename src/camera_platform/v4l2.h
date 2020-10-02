@@ -29,9 +29,9 @@ struct gbcc_camera_platform {
 	int fd;
 	struct {
 		uint8_t *data;
-		size_t size;
+		uint32_t size;
 	} *raw_buffers;
-	size_t n_buffers;
+	uint32_t n_buffers;
 	uint8_t *greyscale_buffer;
 	enum gbcc_camera_io_method method;
 	struct v4l2_pix_format format;

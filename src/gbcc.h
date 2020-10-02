@@ -32,7 +32,7 @@ struct gbcc {
 	struct gbcc_menu menu;
 	struct gbcc_camera_platform camera;
 	
-	const char *save_directory;
+	char save_directory[4096];
 	float turbo_speed;
 	bool quit;
 	bool pause;
@@ -40,6 +40,7 @@ struct gbcc {
 	int8_t load_state;
 	bool background_play;
 	bool has_focus;
+	bool autoresume;
 	bool autosave;
 	bool fractional_scaling;
 	bool frame_blending;

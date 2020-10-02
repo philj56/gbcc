@@ -73,8 +73,9 @@ completion_location = join_paths(
 add_project_arguments(
   [
     '-pedantic',
+    #'-Wconversion',
+    '-Wshadow',
     '-Wno-unused-parameter',
-    '-Wno-missing-braces',
     '-D_POSIX_C_SOURCE=200809L',
     '-D_GNU_SOURCE',
     '-DTILESET_PATH="@0@"'.format(tileset_location),
@@ -103,6 +104,7 @@ common_sources = files(
   'src/bit_utils.c',
   'src/camera.c',
   camera_platform,
+  'src/cheats.c',
   'src/colour.c',
   'src/config.c',
   'src/cpu.c',

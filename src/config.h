@@ -13,6 +13,6 @@
 
 #include "gbcc.h"
 
-void gbcc_load_config(struct gbcc *gbc, char *filename);
+void gbcc_load_config(struct gbcc *gbc, const char *filename);
 
 #endif /* GBCC_CONFIG_H */

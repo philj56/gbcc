@@ -75,8 +75,8 @@ void gbcc_screenshot(struct gbcc *gbc)
 	uint32_t height = GBC_SCREEN_HEIGHT;
 	uint8_t *buffer = NULL;
 	if (!win->raw_screenshot) {
-		width *= win->scale;
-		height *= win->scale;
+		width = (uint32_t)((float)width * win->scale);
+		height = (uint32_t)((float)height * win->scale);
 		buffer = malloc(width * height * 4 * sizeof(*buffer));
 		if (!buffer) {
 			gbcc_log_error("Couldn't malloc screenshot buffer.\n");
@@ -90,12 +90,14 @@ void gbcc_screenshot(struct gbcc *gbc)
 	png_bytepp row_pointers = png_malloc(png_ptr, height * sizeof(png_bytep));
 	if (!row_pointers) {
 		gbcc_log_error("Couldn't allocate row pointers.\n");
+		fclose(fp);
 		return;
 	}
 	for (uint32_t y = 0; y < height; y++) {
 		png_bytep row = png_malloc(png_ptr, width * 3);
 		if (!row) {
 			gbcc_log_error("Couldn't allocate row pointer.\n");
+			fclose(fp);
 			return;
 		}
 		row_pointers[y] = row;

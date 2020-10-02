@@ -24,35 +24,35 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 	switch(key) {
 		case GBCC_KEY_A:
 			gbc->core.keys.a = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4);
+			gbc->core.keys.interrupt = true;
 			break;
 		case GBCC_KEY_B:
 			gbc->core.keys.b = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4);
+			gbc->core.keys.interrupt = true;
 			break;
 		case GBCC_KEY_START:
 			gbc->core.keys.start = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4);
+			gbc->core.keys.interrupt = true;
 			break;
 		case GBCC_KEY_SELECT:
 			gbc->core.keys.select = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4);
+			gbc->core.keys.interrupt = true;
 			break;
 		case GBCC_KEY_UP:
 			gbc->core.keys.dpad.up = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4);
+			gbc->core.keys.interrupt = true;
 			break;
 		case GBCC_KEY_DOWN:
 			gbc->core.keys.dpad.down = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4);
+			gbc->core.keys.interrupt = true;
 			break;
 		case GBCC_KEY_LEFT:
 			gbc->core.keys.dpad.left = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4);
+			gbc->core.keys.interrupt = true;
 			break;
 		case GBCC_KEY_RIGHT:
 			gbc->core.keys.dpad.right = pressed;
-			gbcc_memory_set_bit(&gbc->core, IF, 4);
+			gbc->core.keys.interrupt = true;
 			break;
 		case GBCC_KEY_TURBO:
 			gbc->core.keys.turbo ^= pressed;
@@ -198,6 +198,17 @@ void gbcc_input_process_key(struct gbcc *gbc, enum gbcc_key key, bool pressed)
 				gbc->window.gl.cur_shader++;
 				gbc->window.gl.cur_shader %= N_ELEM(gbc->window.gl.shaders);
 				gbcc_window_show_message(gbc, gbc->window.gl.shaders[gbc->window.gl.cur_shader].name, 1, true);
+			}
+			break;
+		case GBCC_KEY_CHEATS:
+			gbc->core.cheats.enabled ^= pressed;
+			if (!pressed) {
+				break;
+			}
+			if (gbc->core.cheats.enabled) {
+				gbcc_window_show_message(gbc, "Cheats enabled", 1, true);
+			} else {
+				gbcc_window_show_message(gbc, "Cheats disabled", 1, true);
 			}
 			break;
 		case GBCC_KEY_ACCELEROMETER_UP:

@@ -46,6 +46,16 @@
 #define ALIVE_INDICATOR 7
 #define STATUS 8
 
+/* Meaning of status flag bits */
+#define STATUS_CHECKSUM_ERROR 0
+#define STATUS_PRINTING 1
+#define STATUS_DATA_FULL 2
+#define STATUS_DATA_UNPROCESSED 3
+#define STATUS_PACKET_ERROR 4
+#define STATUS_PAPER_JAM 5
+#define STATUS_HEAT_ERROR 6
+#define STATUS_LOW_BATTERY 7
+
 static void check_magic(struct printer *p, uint8_t byte);
 static void execute(struct printer *p);
 static void initialise(struct printer *p);
@@ -107,7 +117,7 @@ uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 				}
 				p->packet.data_byte++;
 				p->packet.printer_checksum += byte;
-				p->status = set_bit(p->status, 3);
+				p->status = set_bit(p->status, STATUS_DATA_UNPROCESSED);
 				break;
 			}
 			p->packet.current_byte++;
@@ -132,7 +142,7 @@ uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 						"Calculated 0x%04X).\n",
 						p->packet.printer_checksum,
 						p->packet.gb_checksum);
-				p->status = set_bit(p->status, 0);
+				p->status = set_bit(p->status, STATUS_CHECKSUM_ERROR);
 			}
 			{
 				uint8_t tmp = p->status;
@@ -164,13 +174,13 @@ void execute(struct printer *p)
 {
 	switch (p->packet.command) {
 		case 0x1u:
-			if (check_bit(p->status, 1)) {
+			if (check_bit(p->status, STATUS_PRINTING)) {
 				return;
 			}
 			initialise(p);
 			break;
 		case 0x2u:
-			if (check_bit(p->status, 1)) {
+			if (check_bit(p->status, STATUS_PRINTING)) {
 				return;
 			}
 			start_printing(p);
@@ -192,7 +202,7 @@ void initialise(struct printer *p)
 
 void start_printing(struct printer *p)
 {
-	p->status = set_bit(p->status, 1);
+	p->status = set_bit(p->status, STATUS_PRINTING);
 	pthread_create(&p->print_thread, NULL, print, p);
 	pthread_setname_np(p->print_thread, "PrinterThread");
 	return;
@@ -229,13 +239,13 @@ bool print_strip(struct printer *p)
 	}
 	unsigned int line;
 	for (line = 0; (line < PRINTER_STRIP_HEIGHT) && (p->print_byte < p->image_buffer.length); line++) {
-		uint8_t ty = (line + p->print_line) / 8;
+		uint8_t ty = (uint8_t)((line + p->print_line) / 8);
 		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {
-			uint16_t idx = ty * PRINTER_WIDTH_TILES * 16 + tx * 16 + (line + p->print_line - ty * 8) * 2;
+			uint16_t idx = ty * PRINTER_WIDTH_TILES * 16 + tx * 16 + (uint8_t)(line + p->print_line - ty * 8) * 2;
 			uint8_t lo = p->image_buffer.data[idx];
 			uint8_t hi = p->image_buffer.data[idx + 1];
 			for (uint8_t x = 0; x < 8; x++) {
-				switch (get_palette_colour(p, (check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x))) {
+				switch (get_palette_colour(p, (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x))) {
 					case 0:
 						printf("█");
 						break;
@@ -272,11 +282,11 @@ uint8_t get_palette_colour(struct printer *p, uint8_t colour) {
 
 void fill_buffer(struct printer *p, uint8_t byte)
 {
-	if (p->image_buffer.length <= GBC_PRINTER_IMAGE_BUFFER_SIZE) {
+	if (p->image_buffer.length < GBC_PRINTER_IMAGE_BUFFER_SIZE) {
 		p->image_buffer.data[p->image_buffer.length] = byte;
 		p->image_buffer.length++;
 	} else {
-		p->status = set_bit(p->status, 2);
+		p->status = set_bit(p->status, STATUS_DATA_FULL);
 	}
 }
 

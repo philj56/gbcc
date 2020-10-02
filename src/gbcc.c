@@ -9,6 +9,7 @@
  */
 
 #include "gbcc.h"
+#include "debug.h"
 #include "camera.h"
 #include "save.h"
 
@@ -21,6 +22,12 @@ void *gbcc_emulation_loop(void *_gbc)
 			/* Only check for savestates, pause etc.
 			 * every 1000 cycles */
 			gbcc_emulate_cycle(&gbc->core);
+			if (gbc->core.error) {
+				gbcc_log_error("Invalid opcode: 0x%02X\n", gbc->core.cpu.opcode);
+				gbcc_print_registers(&gbc->core, false);
+				gbc->quit = true;
+				return 0;
+			}
 			gbcc_audio_update(gbc);
 			gbcc_camera_clock(gbc);
 		}

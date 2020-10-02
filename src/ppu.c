@@ -69,7 +69,6 @@ void gbcc_disable_lcd(struct gbcc_core *gbc)
 	}
 	ppu->lcd_disable = true;
 	ppu->ly = 0;
-	gbcc_memory_clear_bit(gbc, IF, 1);
 	gbcc_memory_write_force(gbc, LY, 0);
 	
 	uint8_t stat = gbcc_memory_read_force(gbc, STAT);
@@ -119,7 +118,6 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		 */
 		ppu->scy = gbcc_memory_read_force(gbc, SCY);
 		ppu->scx = gbcc_memory_read_force(gbc, SCX);
-		ppu->ly = gbcc_memory_read_force(gbc, LY);
 		ppu->lyc = gbcc_memory_read_force(gbc, LYC);
 		ppu->wy = gbcc_memory_read_force(gbc, WY);
 		ppu->wx = gbcc_memory_read_force(gbc, WX);
@@ -162,7 +160,6 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 		/* Final value of these variables for the rest of this line */
 		ppu->scy = gbcc_memory_read_force(gbc, SCY);
 		ppu->scx = gbcc_memory_read_force(gbc, SCX);
-		ppu->ly = gbcc_memory_read_force(gbc, LY);
 		ppu->lyc = gbcc_memory_read_force(gbc, LYC);
 		ppu->wy = gbcc_memory_read_force(gbc, WY);
 		ppu->wx = gbcc_memory_read_force(gbc, WX);
@@ -632,7 +629,7 @@ void load_window_tile(struct gbcc_core *gbc)
 void load_sprite_tile(struct gbcc_core *gbc, int n)
 {
 	struct ppu *ppu = &gbc->ppu;
-	uint8_t ly = gbcc_memory_read_force(gbc, LY);
+	uint8_t ly = ppu->ly;
 	bool double_size = check_bit(ppu->lcdc, 2); /* 1 or 2 8x8 tiles */
 	struct tile *t = &ppu->sprites[n].tile;
 	/* 

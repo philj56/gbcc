@@ -30,6 +30,7 @@
 static void get_save_basename(struct gbcc *gbc, char savename[MAX_NAME_LEN]);
 static void strip_ext(char *fname);
 static const char *gbcc_basename(const char *fname);
+static bool read_v7_struct(struct gbcc_core *gbc, FILE *f);
 
 void gbcc_save(struct gbcc *gbc)
 {
@@ -84,7 +85,7 @@ void gbcc_load(struct gbcc *gbc)
 	sav = fopen(fname, "rb");
 	if (sav == NULL) {
 		for (size_t i = 0; i < core->cart.ram_size; i++) {
-			core->cart.ram[i] = rand();
+			core->cart.ram[i] = (uint8_t)rand();
 		}
 		if (core->cart.mbc.type == MBC3) {
 			clock_gettime(CLOCK_REALTIME, &core->cart.mbc.rtc.base_time);
@@ -93,13 +94,13 @@ void gbcc_load(struct gbcc *gbc)
 	}
 	gbcc_log_info("Loading %s...\n", fname);
 	if (core->cart.mbc.type == MBC7) {
-		if (fread(core->cart.mbc.eeprom.data, 2, 128, sav) == 0) {
+		if (fread(core->cart.mbc.eeprom.data, 2, 128, sav) != 128) {
 			gbcc_log_error("Failed to read eeprom data: %s\n", fname);
 			fclose(sav);
 			return;
 		}
 	} else {
-		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) == 0) {
+		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) != core->cart.ram_size) {
 			gbcc_log_error("Failed to read save data: %s\n", fname);
 			fclose(sav);
 			return;
@@ -160,6 +161,7 @@ void gbcc_save_state(struct gbcc *gbc)
 void gbcc_load_state(struct gbcc *gbc)
 {
 	struct gbcc_core *core = &gbc->core;
+	size_t ram_size = core->cart.ram_size;
 	uint8_t *rom = core->cart.rom;
 	uint8_t *ram = core->cart.ram;
 	uint8_t wram_bank;
@@ -187,16 +189,32 @@ void gbcc_load_state(struct gbcc *gbc)
 		gbc->load_state = 0;
 		return;
 	}
+	uint32_t old_version = 0;
+	if (fread(&old_version, 4, 1, sav) != 1) {
+		gbcc_log_error("Couldn't read save state version.\n");
+		fclose(sav);
+		return;
+	}
+	rewind(sav);
 	{
-		struct gbcc_core tmp_core;
-		if (fread(&tmp_core, sizeof(struct gbcc_core), 1, sav) == 0) {
+
+		struct gbcc_core tmp_core = {0};
+		bool read_success = false;
+
+		/* Hardcoded check, should be updated when updating the core version */
+		if (old_version == 7 && gbc->core.version == 8) {
+			read_success = read_v7_struct(&tmp_core, sav);
+		} else {
+			read_success = (fread(&tmp_core, sizeof(struct gbcc_core), 1, sav) == 1);
+		}
+		if (!read_success) {
 			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
 			gbc->save_state = 0;
 			gbc->load_state = 0;
 			fclose(sav);
 			return;
 		}
-		if (tmp_core.version != core->version) {
+		if (old_version != 7 && tmp_core.version != core->version) {
 			gbcc_log_error("Save state %d version mismatch, tried "
 					"to load v%u (current version is v%u).\n",
 					gbc->load_state, tmp_core.version,
@@ -224,8 +242,8 @@ void gbcc_load_state(struct gbcc *gbc)
 	core->cart.ram = ram;
 	core->cart.filename = name;
 	
-	if (core->cart.ram_size > 0) {
-		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) == 0) {
+	if (ram_size > 0) {
+		if (fread(core->cart.ram, 1, ram_size, sav) != ram_size) {
 			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
 			gbc->save_state = 0;
 			gbc->load_state = 0;
@@ -290,7 +308,7 @@ bool gbcc_check_savestate(struct gbcc *gbc, int state)
 
 void get_save_basename(struct gbcc *gbc, char savename[MAX_NAME_LEN]) {
 	int written  = 0;
-	if (gbc->save_directory != NULL) {
+	if (strlen(gbc->save_directory)) {
 		const char *fmt;
 		if (gbc->save_directory[strlen(gbc->save_directory) - 1] == PATH_SEP) {
 			fmt = "%s%s";
@@ -331,4 +349,25 @@ const char *gbcc_basename(const char *fname)
 {
 	const char *ret = strrchr(fname, PATH_SEP);
 	return ret ? ret + 1 : fname;
+}
+
+/*
+ * In-place conversion from the previous core struct version to this one.
+ * This is a dirty hack, but the alternative is trusting users to not rely on
+ * savestates when upgrading.
+ * Proper serialisation of the core struct would be nice....
+ * WARNING: This needs to be updated when changing the core version.
+ */
+bool read_v7_struct(struct gbcc_core *gbc, FILE *f)
+{
+	/*
+	 * v8 added cheats - luckily we can just ignore the lost values this
+	 * time, as they don't matter, and re-zero the cheats struct.
+	 */
+	size_t old_size = sizeof(*gbc) - sizeof(gbc->cheats);
+	bool success = fread(gbc, old_size, 1, f) == 1;
+	memset(&gbc->cheats, 0, sizeof(gbc->cheats));
+	gbc->version = GBCC_SAVE_STATE_VERSION;
+	gbc->initialised = true;
+	return success;
 }

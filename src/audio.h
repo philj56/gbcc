@@ -33,6 +33,7 @@ struct gbcc_audio {
 	size_t buffer_bytes;
 	float clocks_per_sample;
 	float scale;
+	float volume;
 	GBCC_AUDIO_FMT *mix_buffer;
 };
 

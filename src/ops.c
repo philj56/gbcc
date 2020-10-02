@@ -10,6 +10,7 @@
 
 #include "core.h"
 #include "bit_utils.h"
+#include "cheats.h"
 #include "cpu.h"
 #include "debug.h"
 #include "memory.h"
@@ -194,6 +195,14 @@ void INTERRUPT(struct gbcc_core *gbc)
 	switch (cpu->interrupt.addr) {
 		case INT_VBLANK:
 			gbcc_memory_clear_bit(gbc, IF, 0);
+			/*
+			 * The GameShark apparently hooks the vblank interrupt
+			 * & applies any codes. This is meant to take some cpu
+			 * time, but here I just complete it instantaneously.
+			 */
+			if (gbc->cheats.enabled) {
+				gbcc_cheats_gameshark_update(gbc);
+			}
 			break;
 		case INT_LCDSTAT:
 			gbcc_memory_clear_bit(gbc, IF, 1);
@@ -216,12 +225,10 @@ void INTERRUPT(struct gbcc_core *gbc)
 
 /* Miscellaneous */
 
-__attribute__((noreturn))
 void INVALID(struct gbcc_core *gbc)
 {
-	struct cpu *cpu = &gbc->cpu;
-	gbcc_log_error("Invalid opcode: 0x%02X\n", cpu->opcode);
-	exit(EXIT_FAILURE);
+	gbc->error = true;
+	gbc->error_msg = "Invalid opcode encountered.";
 }
 
 void NOP(struct gbcc_core *gbc)
@@ -355,7 +362,7 @@ void LD_REG_REG(struct gbcc_core *gbc)
 {
 	if (gbc->cpu.opcode == 0x52) {
 		/* Use ld d,d as a debug statement */
-		gbcc_print_registers(gbc);
+		gbcc_print_registers(gbc, true);
 	}
 	WRITE_OPERAND_DIV(gbc, 0x40u, READ_OPERAND_MOD(gbc));
 	done(&gbc->cpu);

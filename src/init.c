@@ -80,11 +80,11 @@ void gbcc_initialise(struct gbcc_core *gbc, const char *filename)
 
 	for (size_t i = 0; i < N_ELEM(gbc->memory.wram_bank); i++) {
 		for (size_t j = 0; j < N_ELEM(gbc->memory.wram_bank[i]); j++) {
-			gbc->memory.wram_bank[i][j] = rand();
+			gbc->memory.wram_bank[i][j] = (uint8_t)rand();
 		}
 	}
 	for (size_t i = 0; i < N_ELEM(gbc->memory.hram); i++) {
-		gbc->memory.hram[i] = rand();
+		gbc->memory.hram[i] = (uint8_t)rand();
 	}
 
 	sem_init(&gbc->ppu.vsync_semaphore, 0, 0);
@@ -108,7 +108,6 @@ void gbcc_free(struct gbcc_core *gbc)
 void load_rom(struct gbcc_core *gbc, const char *filename)
 {
 	gbcc_log_info("Loading %s...\n", filename);
-	size_t read;
 
 	FILE *rom = fopen(filename, "rb");
 	if (rom == NULL)
@@ -128,7 +127,15 @@ void load_rom(struct gbcc_core *gbc, const char *filename)
 		return;
 	}
 
-	gbc->cart.rom_size = ftell(rom);
+	long pos = ftell(rom);
+	if (pos <= 0) {
+		gbcc_log_error("Error seeking in file %s: %s\n", filename, strerror(errno));
+		fclose(rom);
+		gbc->error = true;
+		gbc->error_msg = "Couldn't read ROM file.\n";
+		return;
+	}
+	gbc->cart.rom_size = (size_t)pos;
 
 	gbc->cart.rom_banks = gbc->cart.rom_size / ROM0_SIZE;
 	gbcc_log_info("\tCartridge size: 0x%zX bytes (%zu banks)\n", gbc->cart.rom_size, gbc->cart.rom_banks);
@@ -157,7 +164,7 @@ void load_rom(struct gbcc_core *gbc, const char *filename)
 		return;
 	}
 
-	read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
+	size_t read = fread(gbc->cart.rom, 1, gbc->cart.rom_size, rom);
 	if (read == 0) {
 		gbcc_log_error("Error reading from file %s: %s\n", filename, strerror(errno));
 		fclose(rom);
@@ -174,8 +181,9 @@ void parse_header(struct gbcc_core *gbc)
 {
 	gbcc_log_info("Parsing header...\n");
 	/* Check for MMM01, which has its header at the end of the file */
-	gbc->memory.rom0 = gbc->cart.rom + (0x1FEu * 0x4000) % gbc->cart.rom_size;
-	gbc->cart.mbc.rom0_bank = (gbc->memory.rom0 - gbc->cart.rom) / 0x4000u;
+	size_t last_bank = (0x1FEu * 0x4000) % gbc->cart.rom_size;
+	gbc->memory.rom0 = gbc->cart.rom + last_bank;
+	gbc->cart.mbc.rom0_bank = (uint16_t)(last_bank / 0x4000u);
 	if (!verify_cartridge(gbc, false)) {
 		gbc->memory.rom0 = gbc->cart.rom;
 		gbc->cart.mbc.rom0_bank = 0;

@@ -37,13 +37,15 @@
 #include <linux/videodev2.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define CLAMP_UINT8(x) ((uint8_t)(MIN(MAX((x), 0), UINT8_MAX)))
 
 static bool initialise_v4l2(struct gbcc_camera_platform *camera);
 static void log_errno(const char *s);
-static int xioctl(int fh, int request, void *arg);
+static int xioctl(int fh, unsigned long request, void *arg);
 static void process_image(struct gbcc_camera_platform *camera,
 		uint8_t image[GB_CAMERA_SENSOR_SIZE],
-		size_t buffer_index);
+		uint32_t buffer_index);
 static int read_frame(struct gbcc_camera_platform *camera, uint8_t image[GB_CAMERA_SENSOR_SIZE]);
 
 static bool init_read(struct gbcc_camera_platform *camera);
@@ -138,21 +140,6 @@ bool initialise_v4l2(struct gbcc_camera_platform *camera)
 	camera->device_name = "/dev/video0";
 	camera->method = GBCC_CAMERA_IO_METHOD_NONE;
 
-	/* Check that the specified path is a character device */
-	{
-		struct stat st;
-		if (stat(camera->device_name, &st) == -1) {
-			gbcc_log_debug("Cannot identify '%s': %d, %s\n",
-					camera->device_name, errno, strerror(errno));
-			return false;
-		}
-
-		if (!S_ISCHR(st.st_mode)) {
-			gbcc_log_debug("%s is not a device\n", camera->device_name);
-			return false;
-		}
-	}
-
 	/* Open the device */
         camera->fd = open(camera->device_name, O_RDWR /* required */ | O_NONBLOCK, 0);
 
@@ -161,6 +148,26 @@ bool initialise_v4l2(struct gbcc_camera_platform *camera)
                          camera->device_name, errno, strerror(errno));
 		return false;
         }
+
+	/* Check that the specified path is a character device */
+	{
+		struct stat st;
+		if (stat(camera->device_name, &st) == -1) {
+			gbcc_log_error("Cannot identify '%s': %d, %s\n",
+					camera->device_name, errno, strerror(errno));
+			close(camera->fd);
+			camera->fd = -1;
+			return false;
+		}
+
+		if (!S_ISCHR(st.st_mode)) {
+			gbcc_log_error("%s is not a device\n", camera->device_name);
+			close(camera->fd);
+			camera->fd = -1;
+			return false;
+		}
+	}
+
 
 	/* Initialise v4l2 */
         struct v4l2_capability cap = {0};
@@ -232,7 +239,7 @@ bool initialise_v4l2(struct gbcc_camera_platform *camera)
 		default:
 			{
 				uint32_t px = camera->format.pixelformat;
-				char str[5] = {
+				unsigned char str[5] = {
 					(px >> 0u) & 0xFFu,
 					(px >> 8u) & 0xFFu,
 					(px >> 16u) & 0xFFu,
@@ -316,7 +323,7 @@ void log_errno(const char *s)
         gbcc_log_error("%s error %d, %s\n", s, errno, strerror(errno));
 }
 
-int xioctl(int fd, int request, void *arg)
+int xioctl(int fd, unsigned long request, void *arg)
 {
         int r;
 
@@ -330,7 +337,7 @@ int xioctl(int fd, int request, void *arg)
 
 void process_image(struct gbcc_camera_platform *camera,
 		uint8_t image[GB_CAMERA_SENSOR_SIZE],
-		size_t buffer_index)
+		uint32_t buffer_index)
 {
 	uint32_t width = camera->format.width;
 	uint32_t height = camera->format.height;
@@ -378,7 +385,7 @@ void process_image(struct gbcc_camera_platform *camera,
 			}
 
 			if (i >= box_size) {
-				new_row[i - box_size] = sum / div;
+				new_row[i - box_size] = CLAMP_UINT8(sum / div);
 			}
 		}
 		memcpy(row, new_row, min_dim);
@@ -404,7 +411,7 @@ void process_image(struct gbcc_camera_platform *camera,
 			}
 
 			if (j >= box_size) {
-				new_col[j - box_size] = sum / div;
+				new_col[j - box_size] = CLAMP_UINT8(sum / div);
 			}
 		}
 		for (uint32_t j = 0; j < min_dim; j++) {
@@ -414,10 +421,10 @@ void process_image(struct gbcc_camera_platform *camera,
 	free(new_col);
 
 	/* Then we nearest-neighbour downscale */
-	double scale = MIN(min_dim, min_dim) / (double)GB_CAMERA_SENSOR_WIDTH;
+	double scale = min_dim / (double)GB_CAMERA_SENSOR_WIDTH;
 	for (int j = 0; j < GB_CAMERA_SENSOR_HEIGHT; j++) {
 		for (int i = 0; i < GB_CAMERA_SENSOR_WIDTH; i++) {
-			size_t src_idx = (size_t)(j * scale) * min_dim + i * scale;
+			size_t src_idx = (size_t)(j * scale) * min_dim + (size_t)(i * scale);
 			int dst_idx = j * GB_CAMERA_SENSOR_WIDTH + i;
 
 			image[dst_idx] = camera->greyscale_buffer[src_idx];
@@ -427,7 +434,7 @@ void process_image(struct gbcc_camera_platform *camera,
 
 int read_frame(struct gbcc_camera_platform *camera, uint8_t image[GB_CAMERA_SENSOR_SIZE])
 {
-	int res;
+	ssize_t res;
         struct v4l2_buffer buf;
 
 	switch (camera->method) {
@@ -482,7 +489,7 @@ int read_frame(struct gbcc_camera_platform *camera, uint8_t image[GB_CAMERA_SENS
 				}
 			}
 
-			for (size_t i = 0; i < camera->n_buffers; i++) {
+			for (uint32_t i = 0; i < camera->n_buffers; i++) {
 				if (buf.m.userptr == (unsigned long)camera->raw_buffers[i].data
 						&& buf.length == camera->raw_buffers[i].size) {
 					process_image(camera, image, i);
@@ -540,7 +547,7 @@ bool init_userptr(struct gbcc_camera_platform *camera)
 	camera->n_buffers = req.count;
         camera->raw_buffers = calloc(camera->n_buffers, sizeof(*camera->raw_buffers));
 
-	for (size_t i = 0; i < camera->n_buffers; i++) {
+	for (uint32_t i = 0; i < camera->n_buffers; i++) {
                 camera->raw_buffers[i].size = camera->format.sizeimage;
                 camera->raw_buffers[i].data = malloc(camera->format.sizeimage);
 
@@ -556,17 +563,17 @@ bool init_userptr(struct gbcc_camera_platform *camera)
 			log_errno("VIDIOC_QBUF");
 
 			/* Deallocate any allocated buffers */
-			for (size_t j = 0; j < i; j++) {
+			for (uint32_t j = 0; j < i; j++) {
 				free(camera->raw_buffers[j].data);
 			}
 
 			/* Attempt to clear our requested buffers. */
-			struct v4l2_requestbuffers req = {
+			struct v4l2_requestbuffers err_req = {
 				.count = 0,
 				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 				.memory = V4L2_MEMORY_USERPTR
 			};
-			xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+			xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 			return false;
 		}
 	}
@@ -577,17 +584,17 @@ bool init_userptr(struct gbcc_camera_platform *camera)
 		log_errno("VIDIOC_STREAMON");
 
 		/* Deallocate any allocated buffers */
-		for (size_t j = 0; j < camera->n_buffers; j++) {
+		for (uint32_t j = 0; j < camera->n_buffers; j++) {
 			free(camera->raw_buffers[j].data);
 		}
 
 		/* Attempt to clear our requested buffers. */
-		struct v4l2_requestbuffers req = {
+		struct v4l2_requestbuffers err_req = {
 			.count = 0,
 			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			.memory = V4L2_MEMORY_USERPTR
 		};
-		xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+		xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 		return false;
 	}
 
@@ -610,7 +617,7 @@ void destroy_userptr(struct gbcc_camera_platform *camera)
 
         xioctl(camera->fd, VIDIOC_REQBUFS, &req);
 
-        for (size_t i = 0; i < camera->n_buffers; i++) {
+        for (uint32_t i = 0; i < camera->n_buffers; i++) {
 		free(camera->raw_buffers[i].data);
         }
 	free(camera->raw_buffers);
@@ -641,12 +648,12 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 		gbcc_log_error("Insufficient buffer memory on %s\n",
 				camera->device_name);
 		/* Attempt to clear our requested buffers. */
-		struct v4l2_requestbuffers req = {
+		struct v4l2_requestbuffers err_req = {
 			.count = 0,
 			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			.memory = V4L2_MEMORY_MMAP
 		};
-		xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+		xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 		return false;
 	}
 
@@ -654,7 +661,7 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 	camera->n_buffers = req.count;
         camera->raw_buffers = calloc(camera->n_buffers, sizeof(*camera->raw_buffers));
 
-	for (size_t i = 0; i < camera->n_buffers; i++) {
+	for (uint32_t i = 0; i < camera->n_buffers; i++) {
 		struct v4l2_buffer buf = {
 			.index = i,
 			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
@@ -665,18 +672,18 @@ bool init_mmap(struct gbcc_camera_platform *camera)
                         log_errno("VIDIOC_QUERYBUF");
 
 			/* Unmap any mapped buffers */
-			for (size_t j = 0; i > 0 && j < i - 1; j++) {
+			for (uint32_t j = 0; i > 0 && j < i - 1; j++) {
 				munmap(camera->raw_buffers[j].data,
 					camera->raw_buffers[j].size);
 			}
 
 			/* Attempt to clear our requested buffers. */
-			struct v4l2_requestbuffers req = {
+			struct v4l2_requestbuffers err_req = {
 				.count = 0,
 				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 				.memory = V4L2_MEMORY_MMAP
 			};
-			xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+			xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 			return false;
 		}
 
@@ -693,18 +700,18 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 			log_errno("mmap");
 
 			/* Unmap any mapped buffers */
-			for (size_t j = 0; i > 0 && j < i - 1; j++) {
+			for (uint32_t j = 0; i > 0 && j < i - 1; j++) {
 				munmap(camera->raw_buffers[j].data,
 					camera->raw_buffers[j].size);
 			}
 
 			/* Attempt to clear our requested buffers. */
-			struct v4l2_requestbuffers req = {
+			struct v4l2_requestbuffers err_req = {
 				.count = 0,
 				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 				.memory = V4L2_MEMORY_MMAP
 			};
-			xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+			xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 			return false;
 		}
 
@@ -713,18 +720,18 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 			log_errno("VIDIOC_QBUF");
 
 			/* Unmap any mapped buffers */
-			for (size_t j = 0; j < i; j++) {
+			for (uint32_t j = 0; j < i; j++) {
 				munmap(camera->raw_buffers[j].data,
 					camera->raw_buffers[j].size);
 			}
 
 			/* Attempt to clear our requested buffers. */
-			struct v4l2_requestbuffers req = {
+			struct v4l2_requestbuffers err_req = {
 				.count = 0,
 				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 				.memory = V4L2_MEMORY_MMAP
 			};
-			xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+			xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 			return false;
 		}
 	}
@@ -735,18 +742,18 @@ bool init_mmap(struct gbcc_camera_platform *camera)
 		log_errno("VIDIOC_STREAMON");
 
 		/* Unmap any mapped buffers */
-		for (size_t j = 0; j < camera->n_buffers; j++) {
+		for (uint32_t j = 0; j < camera->n_buffers; j++) {
 			munmap(camera->raw_buffers[j].data,
 				camera->raw_buffers[j].size);
 		}
 
 		/* Attempt to clear our requested buffers. */
-		struct v4l2_requestbuffers req = {
+		struct v4l2_requestbuffers err_req = {
 			.count = 0,
 			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			.memory = V4L2_MEMORY_MMAP
 		};
-		xioctl(camera->fd, VIDIOC_REQBUFS, &req);
+		xioctl(camera->fd, VIDIOC_REQBUFS, &err_req);
 		return false;
 	}
 
@@ -761,7 +768,7 @@ void destroy_mmap(struct gbcc_camera_platform *camera)
 		log_errno("VIDIOC_STREAMOFF");
 	}
 
-        for (size_t i = 0; i < camera->n_buffers; i++) {
+        for (uint32_t i = 0; i < camera->n_buffers; i++) {
 		if (munmap(camera->raw_buffers[i].data, camera->raw_buffers[i].size) == -1) {
 			log_errno("munmap");
 		}
@@ -795,8 +802,8 @@ void initialise_default_image()
 		gbcc_log_error("Couldn't open %s\n", CAMERA_PATH);
 		return;
 	}
-	if (fread(header, 1, HEADER_BYTES, fp) == 0) {
-		gbcc_log_error("Failed to read fontmap data: %s\n", CAMERA_PATH);
+	if (fread(header, 1, HEADER_BYTES, fp) != HEADER_BYTES) {
+		gbcc_log_error("Failed to read camera data: %s\n", CAMERA_PATH);
 		fclose(fp);
 		return;
 	}

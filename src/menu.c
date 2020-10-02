@@ -84,7 +84,6 @@ void gbcc_menu_update(struct gbcc *gbc)
 	}
 
 	snprintf(menu->text, menu->width * menu->height + 1,
-			"                                "
 			"%cSave state:  1 2 3 4 5 6 7 8 9 "
 			"%cLoad state:  1 2 3 4 5 6 7 8 9 "
 			"%cAutosave:    %-18s"
@@ -95,6 +94,7 @@ void gbcc_menu_update(struct gbcc *gbc)
 			"%cVsync:       %-18s"
 			"%cInterlacing: %-18s"
 			"%cFPS counter: %-18s"
+			"%cCheats:      %-18s"
 			"%cPalette:     %-18s",
 			selected(menu, GBCC_MENU_ENTRY_SAVE_STATE),
 			selected(menu, GBCC_MENU_ENTRY_LOAD_STATE),
@@ -114,6 +114,8 @@ void gbcc_menu_update(struct gbcc *gbc)
 			bool2str(gbc->interlacing),
 			selected(menu, GBCC_MENU_ENTRY_FPS_COUNTER),
 			bool2str(gbc->show_fps),
+			selected(menu, GBCC_MENU_ENTRY_CHEATS),
+			bool2str(gbc->core.cheats.enabled),
 			selected(menu, GBCC_MENU_ENTRY_PALETTE),
 			gbc->core.ppu.palette.name
 	);
@@ -125,14 +127,17 @@ void gbcc_menu_process_key(struct gbcc *gbc, enum gbcc_key key)
 
 	switch (key) {
 		case GBCC_KEY_UP:
+			if (menu->selection == 0) {
+				menu->selection = GBCC_MENU_ENTRY_NUM_ENTRIES;
+			}
 			menu->selection--;
-			menu->selection = modulo(menu->selection,
-					GBCC_MENU_ENTRY_NUM_ENTRIES);
 			break;
 		case GBCC_KEY_DOWN:
-			menu->selection++;
-			menu->selection = modulo(menu->selection,
-					GBCC_MENU_ENTRY_NUM_ENTRIES);
+			if (menu->selection == GBCC_MENU_ENTRY_NUM_ENTRIES - 1) {
+				menu->selection = 0;
+			} else {
+				menu->selection++;
+			}
 			break;
 		case GBCC_KEY_LEFT:
 		case GBCC_KEY_RIGHT:
@@ -163,7 +168,7 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 				gbc->save_state = menu->save_state;
 				menu->show = false;
 			}
-			menu->save_state = modulo(menu->save_state - 1, 9) + 1;
+			menu->save_state = (int8_t)modulo(menu->save_state - 1, 9) + 1;
 			break;
 		case GBCC_MENU_ENTRY_LOAD_STATE:
 			if (key == GBCC_KEY_LEFT) {
@@ -174,7 +179,7 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 				gbc->load_state = menu->load_state;
 				menu->show = false;
 			}
-			menu->load_state = modulo(menu->load_state - 1, 9) + 1;
+			menu->load_state = (int8_t)modulo(menu->load_state - 1, 9) + 1;
 			break;
 		case GBCC_MENU_ENTRY_AUTOSAVE:
 			gbc->autosave ^= 1;
@@ -223,12 +228,15 @@ void toggle_option(struct gbcc *gbc, enum gbcc_key key)
 			{
 				unsigned int p_idx = gbcc_get_palette_index(gbc->core.ppu.palette.name);
 				if (key == GBCC_KEY_LEFT) {
-					p_idx++;
-				} else {
 					p_idx = p_idx + GBCC_NUM_PALETTES - 1;
+				} else {
+					p_idx++;
 				}
 				gbc->core.ppu.palette = gbcc_get_palette_by_index(p_idx % GBCC_NUM_PALETTES);
 			}
+			break;
+		case GBCC_MENU_ENTRY_CHEATS:
+			gbc->core.cheats.enabled ^= 1;
 			break;
 		case GBCC_MENU_ENTRY_NUM_ENTRIES:
 			break;
@@ -247,14 +255,14 @@ char selected(struct gbcc_menu *menu, enum GBCC_MENU_ENTRY entry)
 
 int modulo(int x, int n)
 {
-	return (x % n + n) % n;
+	return (x % n + abs(n)) % n;
 }
 
 void turbo_index(struct gbcc *gbc, bool inc)
 {
 	const float mult = gbc->turbo_speed;
-	const size_t len = N_ELEM(turbo_speeds);
-	size_t idx;
+	const int len = N_ELEM(turbo_speeds);
+	int idx;
 	if (inc) {
 		for (idx = len - 1; idx > 0 && turbo_speeds[idx] > mult; idx--);
 		idx++;
@@ -262,6 +270,5 @@ void turbo_index(struct gbcc *gbc, bool inc)
 		for (idx = 0; idx < len && turbo_speeds[idx] < mult; idx++);
 		idx--;
 	}
-	idx = modulo(idx, len);
-	gbc->turbo_speed = turbo_speeds[idx];
+	gbc->turbo_speed = turbo_speeds[modulo(idx, len)];
 }

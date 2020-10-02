@@ -29,8 +29,9 @@ void gbcc_audio_initialise(struct gbcc *gbc, size_t sample_rate, size_t buffer_s
 	audio->sample_rate = sample_rate;
 	audio->buffer_samples = buffer_samples;
 	audio->buffer_bytes = buffer_samples * 2 * sizeof(*audio->mix_buffer);
-	audio->clocks_per_sample = (float)GBC_CLOCK_FREQ / sample_rate;
+	audio->clocks_per_sample = (float)GBC_CLOCK_FREQ / (float)sample_rate;
 	audio->mix_buffer = calloc(buffer_samples * 2, sizeof(*audio->mix_buffer));
+	audio->volume = 1.0f;
 	gbcc_audio_platform_initialise(gbc);
 }
 
@@ -58,7 +59,7 @@ void gbcc_audio_update(struct gbcc *gbc)
 		mult /= audio->scale;
 	}
 	/* When err > 0, it tells us how much we overshot the last sample by */
-	float err = audio->clock - audio->clocks_per_sample * mult * audio->sample;
+	float err = audio->clock - audio->clocks_per_sample * mult * (float)audio->sample;
 	if (err >= 0) {
 		if (err < 1) {
 			/*
@@ -84,8 +85,10 @@ void gbcc_audio_update(struct gbcc *gbc)
 		ch2_update(gbc);
 		ch3_update(gbc);
 		ch4_update(gbc);
-		audio->mix_buffer[audio->index] *= (1 + gbc->core.apu.left_vol);
-		audio->mix_buffer[audio->index + 1] *= (1 + gbc->core.apu.right_vol);
+		float left_vol = (1 + gbc->core.apu.left_vol) * audio->volume;
+		float right_vol = (1 + gbc->core.apu.right_vol) * audio->volume;
+		audio->mix_buffer[audio->index] = (int16_t)(audio->mix_buffer[audio->index] * left_vol);
+		audio->mix_buffer[audio->index + 1] = (int16_t)(audio->mix_buffer[audio->index + 1] * right_vol);
 		audio->index += 2;
 	}
 }

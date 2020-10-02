@@ -88,7 +88,7 @@ void gbcc_apu_clock(struct gbcc_core *gbc)
 			apu->noise.lfsr &= ~bit(6);
 			apu->noise.lfsr |= tmp * bit(6);
 		}
-		apu->ch4.state = !check_bit(apu->noise.lfsr, 0);
+		apu->ch4.state = !check_bit16(apu->noise.lfsr, 0);
 	}
 
 	/* Wave */
@@ -159,10 +159,11 @@ void envelope_clock(struct envelope *envelope)
 
 uint16_t frequency_calc(struct sweep *sweep)
 {
-	if (sweep->dir < 0) {
+	if (sweep->decreasing) {
 		sweep->calculated = true;
+		return sweep->freq - (sweep->freq >> sweep->shift);
 	}
-	return sweep->freq + sweep->dir * (sweep->freq >> sweep->shift);
+	return sweep->freq + (sweep->freq >> sweep->shift);
 }
 
 void gbcc_apu_sequencer_clock(struct gbcc_core *gbc)
@@ -246,11 +247,11 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 				gbc->apu.sweep.timer.period = 8;
 			}
 			if (!check_bit(val, 3)
-					&& gbc->apu.sweep.dir < 0
+					&& gbc->apu.sweep.decreasing
 					&& gbc->apu.sweep.calculated) {
 				gbc->apu.ch1.enabled = false;
 			}
-			gbc->apu.sweep.dir = check_bit(val, 3) ? -1 : 1;
+			gbc->apu.sweep.decreasing = check_bit(val, 3);
 			gbc->apu.sweep.shift = val & 0x07u;
 			break;
 		case NR11:
@@ -263,7 +264,7 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 				gbc->apu.ch1.enabled = false;
 			}
 			gbc->apu.ch1.envelope.start_volume = (val & 0xF0u) >> 4u;
-			gbc->apu.ch1.envelope.dir = val & 0x08u ? 1 : -1;
+			gbc->apu.ch1.envelope.dir = (val & 0x08u) ? 1 : -1;
 			gbc->apu.ch1.envelope.timer.period = val & 0x07u;
 
 			// Obscure behaviour: writing a value in add mode with
@@ -308,7 +309,7 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 				gbc->apu.ch2.enabled = false;
 			}
 			gbc->apu.ch2.envelope.start_volume = (val & 0xF0u) >> 4u;
-			gbc->apu.ch2.envelope.dir = val & 0x08u ? 1 : -1;
+			gbc->apu.ch2.envelope.dir = (val & 0x08u) ? 1 : -1;
 			gbc->apu.ch2.envelope.timer.period = val & 0x07u;
 
 			// Obscure behaviour: writing a value in add mode with
@@ -386,7 +387,7 @@ void gbcc_apu_memory_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 				gbc->apu.ch4.enabled = false;
 			}
 			gbc->apu.ch4.envelope.start_volume = (val & 0xF0u) >> 4u;
-			gbc->apu.ch4.envelope.dir = val & 0x08u ? 1 : -1;
+			gbc->apu.ch4.envelope.dir = (val & 0x08u) ? 1 : -1;
 			gbc->apu.ch4.envelope.timer.period = val & 0x07u;
 
 			// Obscure behaviour: writing a value in add mode with

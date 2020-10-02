@@ -29,6 +29,7 @@ enum GBCC_MENU_ENTRY {
 	GBCC_MENU_ENTRY_VSYNC,
 	GBCC_MENU_ENTRY_INTERLACING,
 	GBCC_MENU_ENTRY_FPS_COUNTER,
+	GBCC_MENU_ENTRY_CHEATS,
 	GBCC_MENU_ENTRY_PALETTE,
 	GBCC_MENU_ENTRY_NUM_ENTRIES
 };
@@ -36,10 +37,10 @@ enum GBCC_MENU_ENTRY {
 struct gbcc_menu {
 	bool initialised;
 	bool show;
-	int save_state;
-	int load_state;
-	int width;
-	int height;
+	int8_t save_state;
+	int8_t load_state;
+	unsigned int width;
+	unsigned int height;
 	enum GBCC_MENU_ENTRY selection;
 	char *text;
 };

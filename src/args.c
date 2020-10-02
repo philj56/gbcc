@@ -12,10 +12,13 @@
 #include "config.h"
 #include "debug.h"
 #include "gbcc.h"
+#include "nelem.h"
 #include "save.h"
 #include <ctype.h>
+#include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
+#include <string.h>
 
 static void usage()
 {
@@ -24,6 +27,7 @@ static void usage()
 	       "  -A, --autosave        Automatically save SRAM after last write.\n"
 	       "  -b, --background      Enable playback while unfocused.\n"
 	       "  -c, --config=PATH     Path to custom config file.\n"
+	       "  -C, --cheat=CODE      Cheat code to apply.\n"
 	       "  -f, --fractional      Enable fractional scaling.\n"
 	       "  -F, --frame-blending  Enable simple frame blending.\n"
 	       "  -h, --help            Print this message and exit.\n"
@@ -47,6 +51,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"autosave", no_argument, NULL, 'A'},
 		{"background", no_argument, NULL, 'b'},
 		{"config", required_argument, NULL, 'c'},
+		{"cheat", required_argument, NULL, 'C'},
 		{"fractional", no_argument, NULL, 'f'},
 		{"frame-blending", no_argument, NULL, 'F'},
 		{"help", no_argument, NULL, 'h'},
@@ -56,9 +61,10 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		{"save-dir", required_argument, NULL, 'S'},
 		{"turbo", required_argument, NULL, 't'},
 		{"vsync", no_argument, NULL, 'v'},
-		{"vram-window", no_argument, NULL, 'V'}
+		{"vram-window", no_argument, NULL, 'V'},
+		{0, 0, 0, 0}
 	};
-	const char *short_options = "aAbc:fFhip:s:S:t:vV";
+	const char *short_options = "aAbc:C:fFhip:s:S:t:vV";
 
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		if (opt == 'h') {
@@ -76,6 +82,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 		if (gbc->core.error) {
 			return false;
 		}
+		argc -= 1;
 	}
 
 	char *config = NULL;
@@ -91,7 +98,7 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 	for (int opt; (opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1;) {
 		switch (opt) {
 			case 'a':
-				gbcc_load_state(gbc);
+				gbc->autoresume = true;
 				break;
 			case 'A':
 				gbc->autosave = true;
@@ -100,6 +107,10 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbc->background_play = true;
 				break;
 			case 'c':
+				break;
+			case 'C':
+				gbcc_cheats_add_fuzzy(&gbc->core, optarg);
+				gbc->core.cheats.enabled = true;
 				break;
 			case 'f':
 				gbc->fractional_scaling = true;
@@ -121,11 +132,14 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbcc_window_use_shader(gbc, optarg);
 				break;
 			case 'S':
-				gbc->save_directory = optarg;
+				strncpy(gbc->save_directory, optarg, sizeof(gbc->save_directory));
+				gbc->save_directory[N_ELEM(gbc->save_directory) - 1] = '\0';
 				break;
 			case 't':
-				/* TODO: error check */
-				gbc->turbo_speed = strtod(optarg, NULL);
+				errno = 0;
+				if (!sscanf(optarg, "%f", &gbc->turbo_speed) || errno) {
+					gbcc_log_error("Failed to parse turbo multiplier '%s'.\n", optarg);
+				}
 				break;
 			case 'v':
 				gbc->core.sync_to_video = true;
@@ -134,10 +148,16 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbc->vram_display = true;
 				break;
 			case '?':
-				if (optopt == 'p' || optopt == 't') {
+				if (optopt == 'c'
+						|| optopt == 'p'
+						|| optopt == 's'
+						|| optopt == 'S'
+						|| optopt == 't') {
 					gbcc_log_error("Option -%c requires an argument.\n", optopt);
 				} else if (isprint(optopt)) {
 					gbcc_log_error("Unknown option `-%c'.\n", optopt);
+				} else if (optopt == 0) {
+					gbcc_log_error("Unknown option `%s'.\n", argv[optind - 1]);
 				} else {
 					gbcc_log_error("Unknown option character `\\x%x'.\n", optopt);
 				}
@@ -147,6 +167,10 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				usage();
 				return false;
 		}
+	}
+
+	if (gbc->autoresume) {
+		gbcc_load_state(gbc);
 	}
 
 	return true;

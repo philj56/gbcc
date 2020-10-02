@@ -30,7 +30,7 @@
 
 #define HEADER_BYTES 8
 
-static const SDL_Scancode keymap[35] = {
+static const SDL_Scancode keymap[36] = {
 	SDL_SCANCODE_Z,		/* A */
 	SDL_SCANCODE_X, 	/* B */
 	SDL_SCANCODE_RETURN,	/* Start */
@@ -53,6 +53,7 @@ static const SDL_Scancode keymap[35] = {
 	SDL_SCANCODE_ESCAPE, 	/* Toggle menu */
 	SDL_SCANCODE_I,         /* Toggle interlacing */
 	SDL_SCANCODE_O,         /* Cycle through shaders */
+	SDL_SCANCODE_C,         /* Toggle cheats */
 	SDL_SCANCODE_KP_2, 	/* MBC7 accelerometer down */
 	SDL_SCANCODE_KP_4, 	/* MBC7 accelerometer left */
 	SDL_SCANCODE_KP_6, 	/* MBC7 accelerometer right */
@@ -312,34 +313,36 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 				emulator_key = GBCC_KEY_SHADER;
 				break;
 			case 22:
+				emulator_key = GBCC_KEY_CHEATS;
+				break;
+			case 23:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_DOWN;
 				} else {
 					continue;
 				}
 				break;
-			case 23:
+			case 24:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_LEFT;
 				} else {
 					continue;
 				}
 				break;
-			case 24:
+			case 25:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_RIGHT;
 				} else {
 					continue;
 				}
 				break;
-			case 25:
+			case 26:
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					emulator_key = GBCC_KEY_ACCELEROMETER_MAX_UP;
 				} else {
 					continue;
 				}
 				break;
-			case 26:
 			case 27:
 			case 28:
 			case 29:
@@ -349,10 +352,11 @@ void gbcc_sdl_process_input(struct gbcc_sdl *sdl)
 			case 33:
 			case 34:
 			case 35:
+			case 36:
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					emulator_key = GBCC_KEY_SAVE_STATE_1 + (int8_t)(key - 26);
+					emulator_key = GBCC_KEY_SAVE_STATE_1 + (uint8_t)(key - 27);
 				} else {
-					emulator_key = GBCC_KEY_LOAD_STATE_1 + (int8_t)(key - 26);
+					emulator_key = GBCC_KEY_LOAD_STATE_1 + (uint8_t)(key - 27);
 				}
 				break;
 			default:
@@ -475,7 +479,7 @@ void process_game_controller(struct gbcc_sdl *sdl)
 		return;
 	}
 	if (sdl->gbc.core.cart.rumble_state) {
-		if (SDL_HapticRumblePlay(sdl->haptic, 0.1, 100) != 0) {
+		if (SDL_HapticRumblePlay(sdl->haptic, 0.1f, 100) != 0) {
 			printf("%s\n", SDL_GetError());
 		}
 	} else {
@@ -501,8 +505,8 @@ void set_icon(SDL_Window *win, const char *filename)
 		gbcc_log_error("Couldn't open %s: %s\n", filename, strerror(errno));
 		return;
 	}
-	if (fread(header, 1, HEADER_BYTES, fp) == 0) {
-		gbcc_log_error("Failed to read fontmap data: %s\n", filename);
+	if (fread(header, 1, HEADER_BYTES, fp) != HEADER_BYTES) {
+		gbcc_log_error("Failed to read icon data: %s\n", filename);
 		fclose(fp);
 		return;
 	}
@@ -563,10 +567,10 @@ void set_icon(SDL_Window *win, const char *filename)
 
 	SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormatFrom(
 			bitmap,
-			width,
-			height,
+			(int)width,
+			(int)height,
 			32,
-			width * 4,
+			(int)width * 4,
 			SDL_PIXELFORMAT_RGBA32);
 
 	if (surface == NULL) {
