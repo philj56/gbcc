@@ -335,24 +335,22 @@ void oam_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 
 uint8_t unused_read(struct gbcc_core *gbc, uint16_t addr)
 {
-	uint16_t offset;
-	if (addr < 0xFED0u) {
-		offset = 0;
-	} else {
-		offset = addr - 0xFED0u;
+	/*
+	 * According to Antonio's TCAGBD, the CGB rev. D repeats the 16 bytes
+	 * from 0xFEC0-0xFECF throughout the rest of this memory area.
+	 */
+	if (addr > 0xFED0u) {
+		addr = 0xFED0u + (addr % 0x10u);
 	}
-	return gbc->memory.unused[addr - UNUSED_START - offset];
+	return gbc->memory.unused[addr - UNUSED_START];
 }
 
 void unused_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
-	uint16_t offset;
-	if (addr < 0xFED0u) {
-		offset = 0;
-	} else {
-		offset = addr - 0xFED0u;
+	if (addr > 0xFED0u) {
+		addr = 0xFED0u + (addr % 0x10u);
 	}
-	gbc->memory.unused[addr - UNUSED_START - offset] = val;
+	gbc->memory.unused[addr - UNUSED_START] = val;
 }
 
 uint8_t ioreg_read(struct gbcc_core *gbc, uint16_t addr)
