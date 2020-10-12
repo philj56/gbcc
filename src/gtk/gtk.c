@@ -118,6 +118,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	g_signal_connect(G_OBJECT(gtk->window), "destroy", G_CALLBACK(on_destroy), gtk);
 	g_signal_connect(G_OBJECT(gtk->window), "destroy", gtk_main_quit, NULL);
 	g_signal_connect(G_OBJECT(gtk->window), "window-state-event", G_CALLBACK(on_window_state_change), gtk);
+	int scale = gtk_widget_get_scale_factor(GTK_WIDGET(gtk->window));
 
 	gtk->gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "gl_area"));
 	gtk_widget_add_events(gtk->gl_area, GDK_KEY_PRESS_MASK | GDK_POINTER_MOTION_MASK);
@@ -127,6 +128,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	g_signal_connect(G_OBJECT(gtk->gl_area), "key-release-event", G_CALLBACK(on_keypress), gtk);
 	g_signal_connect(G_OBJECT(gtk->gl_area), "motion-notify-event", G_CALLBACK(mouse_motion), gtk);
 	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->gl_area), 3, 2);
+	gtk_widget_set_size_request(gtk->gl_area, GBC_SCREEN_WIDTH / scale, GBC_SCREEN_HEIGHT / scale);
 	
 	gtk->vram_gl_area = GTK_WIDGET(gtk_builder_get_object(builder, "vram_gl_area"));
 	gtk_widget_add_events(gtk->vram_gl_area, GDK_POINTER_MOTION_MASK);
@@ -134,6 +136,7 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "render", G_CALLBACK(on_vram_render), gtk);
 	g_signal_connect(G_OBJECT(gtk->vram_gl_area), "motion-notify-event", G_CALLBACK(mouse_motion), gtk);
 	gtk_gl_area_set_required_version(GTK_GL_AREA(gtk->vram_gl_area), 3, 2);
+	gtk_widget_set_size_request(gtk->vram_gl_area, VRAM_WINDOW_WIDTH / scale, VRAM_WINDOW_HEIGHT / scale);
 	
 	gtk->menu.bar = GTK_WIDGET(gtk_builder_get_object(builder, "menu_bar"));
 	gtk->menu.stop = GTK_WIDGET(gtk_builder_get_object(builder, "stop"));
