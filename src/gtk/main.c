@@ -21,6 +21,8 @@
 #include <pthread.h>
 #include <time.h>
 
+static struct gbcc_gtk gtk = {0};
+
 static void quit(int sig);
 
 __attribute__((noreturn))
@@ -43,7 +45,6 @@ int main(int argc, char **argv)
 	sigaction(SIGINT, &act, NULL);
 #endif
 
-	struct gbcc_gtk gtk = {0};
 	struct gbcc *gbc = &gtk.gbc;
 
 	gbcc_audio_initialise(gbc, 96000, 2048);
