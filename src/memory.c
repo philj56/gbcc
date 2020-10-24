@@ -382,18 +382,20 @@ uint8_t ioreg_read(struct gbcc_core *gbc, uint16_t addr)
 			break;
 		case JOYP:
 			/* Only update the keys when we actually want to read from them */
-			if (check_bit(gbc->memory.ioreg[addr - IOREG_START], 5)) {
+			ret |= 0x0Fu;
+			if (!check_bit(ret, 5)) {
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.start << 3u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.select << 2u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.b << 1u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.a << 0u);
 			}
-			if (check_bit(gbc->memory.ioreg[addr - IOREG_START], 4)) {
+			if (!check_bit(ret, 4)) {
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.down << 3u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.up << 2u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.left << 1u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.right << 0u);
 			}
+			gbc->memory.ioreg[addr - IOREG_START] = ret;
 			break;
 		case DIV:
 			return high_byte(gbc->cpu.div_timer);
@@ -470,13 +472,8 @@ void ioreg_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			*dest = 0;
 			break;
 		case JOYP:
-			if (check_bit(val, 5)) {
-				*dest = set_bit(*dest, 4);
-				*dest = clear_bit(*dest, 5);
-			} else if (check_bit(val, 4)) {
-				*dest = set_bit(*dest, 5);
-				*dest = clear_bit(*dest, 4);
-			}
+			*dest &= 0x0Fu;
+			*dest |= val;
 			break;
 		case SC:
 			*dest = tmp | (val & mask);
