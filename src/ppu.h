@@ -43,8 +43,8 @@ struct ppu {
 	uint64_t frame;
 	uint32_t clock;
 	bool lcd_disable;
-	uint8_t bgp[64]; 	/* 8 x 8-byte sprites */
-	uint8_t obp[64]; 	/* 8 x 8-byte sprites */
+	uint8_t bgp[64]; 	/* 8 x 8-byte palettes */
+	uint8_t obp[64]; 	/* 8 x 8-byte palettes */
 	struct palette palette;
 	struct line_buffer bg_line;
 	struct line_buffer window_line;

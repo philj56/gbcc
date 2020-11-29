@@ -47,13 +47,13 @@ ANDROID_INLINE
 void cpu_clock(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
-	if (!(cpu->instruction.running) && (cpu->halt.set || cpu->stop)) {
-		return;
-	}
 	/* CPU clocks every 4 cycles */
 	cpu->clock++;
 	cpu->clock &= 3u;
 	if (cpu->clock != 0) {
+		return;
+	}
+	if (!(cpu->instruction.running) && (cpu->halt.set || cpu->stop)) {
 		return;
 	}
 	if (cpu->ime_timer.timer > 0) {
@@ -102,7 +102,7 @@ void clock_div(struct gbcc_core *gbc)
 {
 	struct cpu *cpu = &gbc->cpu;
 	cpu->div_timer++;
-	uint8_t tac = gbcc_memory_read(gbc, TAC);
+	uint8_t tac = gbcc_memory_read_force(gbc, TAC);
 	uint16_t mask = 0;
 	switch (tac & 0x03u) {
 		/* 
@@ -124,7 +124,9 @@ void clock_div(struct gbcc_core *gbc)
 	}
 	/* If TAC is disabled, this will always see 0 */
 	mask *= check_bit(tac, 2);
-	if (!(cpu->div_timer & mask) && cpu->tac_bit) {
+	bool old_bit = cpu->tac_bit;
+	cpu->tac_bit = cpu->div_timer & mask;
+	if (old_bit && !cpu->tac_bit) {
 		/* 
 		 * The selected bit was previously high, and is now low, so
 		 * the tima increment logic triggers.
@@ -143,7 +145,6 @@ void clock_div(struct gbcc_core *gbc)
 		}
 		gbcc_memory_write(gbc, TIMA, tima);
 	}
-	cpu->tac_bit = cpu->div_timer & mask;
 	if (cpu->tima_reload > 0) {
 		cpu->tima_reload--;
 		if (cpu->tima_reload == 4) {
@@ -171,10 +172,11 @@ void clock_div(struct gbcc_core *gbc)
 		} else {
 			mask = bit16(12);
 		}
-		if (!(cpu->div_timer & mask) && gbc->apu.div_bit) {
+		old_bit = gbc->apu.div_bit;
+		gbc->apu.div_bit = cpu->div_timer & mask;
+		if (old_bit && !gbc->apu.div_bit) {
 			gbcc_apu_sequencer_clock(gbc);
 		}
-		gbc->apu.div_bit = cpu->div_timer & mask;
 	}
 }
 

@@ -260,11 +260,24 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 	 * when this condition goes from 0->1, so switching between two
 	 * different conditions being satisfied in a single cycle will *NOT*
 	 * trigger the interrupt.
+	 *
+	 * N.B. this is a switch statement for performance reasons - apparently
+	 * all this bit-checking is expensive, and this set of checks accounts
+	 * for ~4% of *all* of gbcc_emulate_cycle!
 	 */
-	if ((check_bit(stat, 2) && check_bit(stat, 6)) /* LY = LYC */
-			|| (check_bit(stat, 3) && get_video_mode(stat) == GBC_LCD_MODE_HBLANK)
-			|| (check_bit(stat, 4) && get_video_mode(stat) == GBC_LCD_MODE_VBLANK)
-			|| (check_bit(stat, 5) && get_video_mode(stat) == GBC_LCD_MODE_OAM_READ)) {
+	bool mode_interrupt = false;
+	switch (get_video_mode(stat)) {
+		case GBC_LCD_MODE_HBLANK:
+			mode_interrupt = check_bit(stat, 3);
+			break;
+		case GBC_LCD_MODE_VBLANK:
+			mode_interrupt = check_bit(stat, 4);
+			break;
+		case GBC_LCD_MODE_OAM_READ:
+			mode_interrupt = check_bit(stat, 5);
+			break;
+	}
+	if (mode_interrupt || (check_bit(stat, 2) && check_bit(stat, 6)) /* LY = LYC */) {
 		if (!ppu->last_stat) {
 			ppu->last_stat = true;
 			gbcc_memory_set_bit(gbc, IF, 1);
@@ -293,13 +306,15 @@ void draw_background_pixel(struct gbcc_core *gbc)
 		palette = t->attr & 0x07u;
 	}
 	ppu->bg_line.colour[ppu->x] = get_palette_colour(gbc, palette, colour, BACKGROUND);
-	ppu->bg_line.attr[ppu->x] |= ATTR_DRAWN;
+
+	uint8_t attr = ATTR_DRAWN;
 	if (colour == 0) {
-		ppu->bg_line.attr[ppu->x] |= ATTR_COLOUR0;
+		attr |= ATTR_COLOUR0;
 	}
 	if (check_bit(t->attr, 7)) {
-		ppu->bg_line.attr[ppu->x] |= ATTR_PRIORITY;
+		attr |= ATTR_PRIORITY;
 	}
+	ppu->bg_line.attr[ppu->x] = attr;
 	t->x++;
 	t->x %= 8;
 }
@@ -335,13 +350,14 @@ void draw_window_pixel(struct gbcc_core *gbc)
 		palette = t->attr & 0x07u;
 	}
 	ppu->window_line.colour[ppu->x] = get_palette_colour(gbc, palette, colour, BACKGROUND);
-	ppu->window_line.attr[ppu->x] |= ATTR_DRAWN;
+	uint8_t attr = ATTR_DRAWN;
 	if (colour == 0) {
-		ppu->window_line.attr[ppu->x] |= ATTR_COLOUR0;
+		attr |= ATTR_COLOUR0;
 	}
 	if (check_bit(t->attr, 7)) {
-		ppu->window_line.attr[ppu->x] |= ATTR_PRIORITY;
+		attr |= ATTR_PRIORITY;
 	}
+	ppu->window_line.attr[ppu->x] = attr;
 	t->x++;
 	t->x %= 8;
 }
@@ -382,11 +398,7 @@ void draw_sprite_pixel(struct gbcc_core *gbc)
 			ppu->next_dot += 11 - MIN(5, (ppu->x + ppu->scx) % 8);
 		}
 		uint8_t x = ppu->x + 8 - s->x;
-		if (check_bit(s->tile.attr, 5)) {
-			/* x-flip */
-			x = 7 - x;
-		}
-		uint8_t colour = (uint8_t)(check_bit(s->tile.hi, 7 - x) << 1u) | check_bit(s->tile.lo, 7 - x);
+		uint8_t colour = get_tile_pixel(s->tile.hi, s->tile.lo, x, check_bit(s->tile.attr, 5));
 		/* Colour 0 is transparent */
 		if (!colour) {
 			continue;
@@ -406,10 +418,11 @@ void draw_sprite_pixel(struct gbcc_core *gbc)
 			pf = SPRITE_1;
 		}
 		ppu->sprite_line.colour[ppu->x] = get_palette_colour(gbc, palette, colour, pf);
-		ppu->sprite_line.attr[ppu->x] |= ATTR_DRAWN;
+		uint8_t attr = ATTR_DRAWN;
 		if (check_bit(s->tile.attr, 7)) {
-			ppu->sprite_line.attr[ppu->x] |= ATTR_PRIORITY;
+			attr |= ATTR_PRIORITY;
 		}
+		ppu->sprite_line.attr[ppu->x] = attr;
 	}
 }
 
@@ -677,8 +690,8 @@ void load_sprite_tile(struct gbcc_core *gbc, int n)
 
 uint8_t get_tile_pixel(uint8_t hi, uint8_t lo, uint8_t x, bool flip)
 {
-	if (flip) {
-		return (uint8_t)(check_bit(hi, x) << 1u) | check_bit(lo, x);
+	if (!flip) {
+		x = 7 - x;
 	}
-	return (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x);
+	return (uint8_t)(check_bit(hi, x) << 1u) | check_bit(lo, x);
 }

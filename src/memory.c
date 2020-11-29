@@ -663,12 +663,11 @@ void hram_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 
 void gbcc_link_cable_clock(struct gbcc_core *gbc)
 {
-	uint8_t sb = gbcc_memory_read_force(gbc, SB);
 	uint8_t sc = gbcc_memory_read_force(gbc, SC);
-
 	if (!check_bit(sc, 7) || !check_bit(sc, 0)) {
 		return;
 	}
+	uint8_t sb = gbcc_memory_read_force(gbc, SB);
 
 	gbc->link_cable.clock++;
 	if (gbc->link_cable.clock < gbc->link_cable.divider) {
