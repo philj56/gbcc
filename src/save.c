@@ -161,15 +161,6 @@ void gbcc_save_state(struct gbcc *gbc)
 void gbcc_load_state(struct gbcc *gbc)
 {
 	struct gbcc_core *core = &gbc->core;
-	size_t ram_size = core->cart.ram_size;
-	uint8_t *rom = core->cart.rom;
-	uint8_t *ram = core->cart.ram;
-	uint8_t wram_bank;
-	uint8_t vram_bank;
-	const char *name = core->cart.filename;
-	uint32_t *buf0 = core->ppu.screen.buffer_0;
-	uint32_t *buf1 = core->ppu.screen.buffer_1;
-	bool sync_to_video = core->sync_to_video;
 
 	char fname[MAX_NAME_LEN];
 	char tmp[MAX_NAME_LEN];
@@ -196,85 +187,126 @@ void gbcc_load_state(struct gbcc *gbc)
 		return;
 	}
 	rewind(sav);
-	{
-
-		struct gbcc_core tmp_core = {0};
-		bool read_success = false;
-
-		/* Hardcoded check, should be updated when updating the core version */
-		if (old_version == 7 && gbc->core.version == 8) {
-			read_success = read_v7_struct(&tmp_core, sav);
-		} else {
-			read_success = (fread(&tmp_core, sizeof(struct gbcc_core), 1, sav) == 1);
-		}
-		if (!read_success) {
-			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
-			gbc->save_state = 0;
-			gbc->load_state = 0;
-			fclose(sav);
-			return;
-		}
-		if (old_version != 7 && tmp_core.version != core->version) {
-			gbcc_log_error("Save state %d version mismatch, tried "
-					"to load v%u (current version is v%u).\n",
-					gbc->load_state, tmp_core.version,
-					core->version);
-			snprintf(tmp, MAX_NAME_LEN, "Save state %d version "
-					"mismatch:\n have v%u, loaded v%u",
-					gbc->load_state, core->version,
-					tmp_core.version);
-			gbcc_window_show_message(gbc, tmp, 2, true);
-			gbc->save_state = 0;
-			gbc->load_state = 0;
-			fclose(sav);
-			return;
-		}
-		*core = tmp_core;
+	/* Hardcoded check, should be updated when updating the core version */
+	if (old_version != 7 && old_version != core->version) {
+		gbcc_log_error("Save state %d version mismatch, tried "
+				"to load v%u (current version is v%u).\n",
+				gbc->load_state,
+				old_version,
+				core->version);
+		snprintf(tmp, MAX_NAME_LEN, "Save state %d version "
+				"mismatch:\n have v%u, loaded v%u",
+				gbc->load_state,
+				core->version,
+				old_version);
+		gbcc_window_show_message(gbc, tmp, 2, true);
+		gbc->save_state = 0;
+		gbc->load_state = 0;
+		fclose(sav);
+		return;
 	}
-	/* FIXME: Thread-unsafe, screen could try to read from here while the
-	 * pointer is still invalid */
-	core->ppu.screen.buffer_0 = buf0;
-	core->ppu.screen.buffer_1 = buf1;
-	core->ppu.screen.gbc = buf0;
-	core->ppu.screen.sdl = buf1;
 
-	core->cart.rom = rom;
-	core->cart.ram = ram;
-	core->cart.filename = name;
-	
-	if (ram_size > 0) {
-		if (fread(core->cart.ram, 1, ram_size, sav) != ram_size) {
+	struct gbcc_core *tmp_core = calloc(1, sizeof(*tmp_core));
+	bool read_success = false;
+
+	/* Hardcoded check, should be updated when updating the core version */
+	if (old_version == 7 && gbc->core.version == 8) {
+		read_success = read_v7_struct(tmp_core, sav);
+	} else {
+		read_success = (fread(tmp_core, sizeof(struct gbcc_core), 1, sav) == 1);
+	}
+	if (!read_success) {
+		gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
+		free(tmp_core);
+		fclose(sav);
+		gbc->save_state = 0;
+		gbc->load_state = 0;
+		return;
+	}
+
+	/*
+	 * Load the sram data from the savestate if there is any, and then we
+	 * can safely close the file
+	 * */
+	if (core->cart.ram_size > 0) {
+		if (fread(core->cart.ram, 1, core->cart.ram_size, sav) != core->cart.ram_size) {
 			gbcc_log_error("Error reading %s: %s\n", fname, strerror(errno));
+			free(tmp_core);
+			fclose(sav);
 			gbc->save_state = 0;
 			gbc->load_state = 0;
-			fclose(sav);
 			return;
 		}
 	}
 	fclose(sav);
 
-	switch (core->mode) {
+	/*
+	 * Now that we've loaded the struct, we need to make sure all pointers
+	 * are updated to be correct. This is done roughly in order of
+	 * definition within "core.h"
+	 */
+
+	/* cpu */
+	/* No pointers */
+
+	/* apu */
+	/* No pointers */
+
+	/* ppu */
+	tmp_core->ppu.screen.buffer_0 = core->ppu.screen.buffer_0;
+	tmp_core->ppu.screen.buffer_1 = core->ppu.screen.buffer_1;
+	tmp_core->ppu.screen.gbc = core->ppu.screen.gbc;
+	tmp_core->ppu.screen.sdl = core->ppu.screen.sdl;
+
+	/* cart */
+	/* No pointers in the mbc */
+	tmp_core->cart.filename = core->cart.filename;
+	tmp_core->cart.rom = core->cart.rom;
+	tmp_core->cart.ram = core->cart.ram;
+
+	/* memory */
+	/*
+	 * We first need to work out which banks the wram & vram are set to.
+	 * This can safely be done before the rest of memory is initialised as
+	 * the io registers are an array in the struct, so we've already loaded
+	 * them.
+	 */
+	uint8_t wram_bank;
+	uint8_t vram_bank;
+	switch (tmp_core->mode) {
 		case DMG:
 			wram_bank = 1;
 			vram_bank = 0;
 			break;
 		case GBC:
-			wram_bank = gbcc_memory_read(core, SVBK) & 0x07u;
-			vram_bank = gbcc_memory_read(core, VBK) & 0x01u;
+			wram_bank = gbcc_memory_read(tmp_core, SVBK) & 0x07u;
+			vram_bank = gbcc_memory_read(tmp_core, VBK) & 0x01u;
 			break;
 	}
 
-	core->memory.rom0 = core->cart.rom;
-	core->memory.romx = core->cart.rom + core->cart.mbc.romx_bank * ROMX_SIZE;
-	core->memory.vram = core->memory.vram_bank[vram_bank];
-	if (core->cart.ram != NULL) {
-		core->memory.sram = core->cart.ram + core->cart.mbc.sram_bank * SRAM_SIZE;
+	tmp_core->memory.rom0 = core->cart.rom;
+	tmp_core->memory.romx = core->cart.rom + tmp_core->cart.mbc.romx_bank * ROMX_SIZE;
+	tmp_core->memory.vram = core->memory.vram_bank[vram_bank];
+	if (tmp_core->cart.ram != NULL) {
+		tmp_core->memory.sram = core->cart.ram + tmp_core->cart.mbc.sram_bank * SRAM_SIZE;
+	} else {
+		tmp_core->memory.sram = NULL;
 	}
-	core->memory.wram0 = core->memory.wram_bank[0];
-	core->memory.wramx = core->memory.wram_bank[wram_bank];
-	core->memory.echo = core->memory.wram0;
-	memset(&core->keys, 0, sizeof(core->keys));
-	core->sync_to_video = sync_to_video;
+	tmp_core->memory.wram0 = core->memory.wram_bank[0];
+	tmp_core->memory.wramx = core->memory.wram_bank[wram_bank];
+	tmp_core->memory.echo = core->memory.wram0;
+
+	/* printer */
+	/* No pointers */
+
+	/* Reset some things that shouldn't be saved */
+	memset(&tmp_core->keys, 0, sizeof(tmp_core->keys));
+	tmp_core->sync_to_video = core->sync_to_video;
+	tmp_core->error_msg = NULL;
+
+	/* Perform the actual switch */
+	*core = *tmp_core;
+	free(tmp_core);
 
 	snprintf(tmp, MAX_NAME_LEN, "Loaded state %d", gbc->load_state);
 	gbcc_window_show_message(gbc, tmp, 2, true);

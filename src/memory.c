@@ -335,24 +335,22 @@ void oam_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 
 uint8_t unused_read(struct gbcc_core *gbc, uint16_t addr)
 {
-	uint16_t offset;
-	if (addr < 0xFED0u) {
-		offset = 0;
-	} else {
-		offset = addr - 0xFED0u;
+	/*
+	 * According to Antonio's TCAGBD, the CGB rev. D repeats the 16 bytes
+	 * from 0xFEC0-0xFECF throughout the rest of this memory area.
+	 */
+	if (addr > 0xFED0u) {
+		addr = 0xFED0u + (addr % 0x10u);
 	}
-	return gbc->memory.unused[addr - UNUSED_START - offset];
+	return gbc->memory.unused[addr - UNUSED_START];
 }
 
 void unused_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 {
-	uint16_t offset;
-	if (addr < 0xFED0u) {
-		offset = 0;
-	} else {
-		offset = addr - 0xFED0u;
+	if (addr > 0xFED0u) {
+		addr = 0xFED0u + (addr % 0x10u);
 	}
-	gbc->memory.unused[addr - UNUSED_START - offset] = val;
+	gbc->memory.unused[addr - UNUSED_START] = val;
 }
 
 uint8_t ioreg_read(struct gbcc_core *gbc, uint16_t addr)
@@ -384,18 +382,20 @@ uint8_t ioreg_read(struct gbcc_core *gbc, uint16_t addr)
 			break;
 		case JOYP:
 			/* Only update the keys when we actually want to read from them */
-			if (check_bit(gbc->memory.ioreg[addr - IOREG_START], 5)) {
+			ret |= 0x0Fu;
+			if (!check_bit(ret, 5)) {
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.start << 3u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.select << 2u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.b << 1u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.a << 0u);
 			}
-			if (check_bit(gbc->memory.ioreg[addr - IOREG_START], 4)) {
+			if (!check_bit(ret, 4)) {
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.down << 3u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.up << 2u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.left << 1u);
 				ret &= (uint8_t)~(uint8_t)(gbc->keys.dpad.right << 0u);
 			}
+			gbc->memory.ioreg[addr - IOREG_START] = ret;
 			break;
 		case DIV:
 			return high_byte(gbc->cpu.div_timer);
@@ -472,13 +472,8 @@ void ioreg_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 			*dest = 0;
 			break;
 		case JOYP:
-			if (check_bit(val, 5)) {
-				*dest = set_bit(*dest, 4);
-				*dest = clear_bit(*dest, 5);
-			} else if (check_bit(val, 4)) {
-				*dest = set_bit(*dest, 5);
-				*dest = clear_bit(*dest, 4);
-			}
+			*dest &= 0x0Fu;
+			*dest |= val;
 			break;
 		case SC:
 			*dest = tmp | (val & mask);
@@ -668,12 +663,11 @@ void hram_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 
 void gbcc_link_cable_clock(struct gbcc_core *gbc)
 {
-	uint8_t sb = gbcc_memory_read_force(gbc, SB);
 	uint8_t sc = gbcc_memory_read_force(gbc, SC);
-
 	if (!check_bit(sc, 7) || !check_bit(sc, 0)) {
 		return;
 	}
+	uint8_t sb = gbcc_memory_read_force(gbc, SB);
 
 	gbc->link_cable.clock++;
 	if (gbc->link_cable.clock < gbc->link_cable.divider) {

@@ -34,6 +34,7 @@
 #include <unistd.h>
 
 static bool force_quit;
+static struct gbcc_sdl sdl = {0};
 
 static void quit(int sig);
 
@@ -59,7 +60,6 @@ int main(int argc, char **argv)
 	sigaction(SIGINT, &act, NULL);
 #endif
 
-	struct gbcc_sdl sdl = {0};
 	struct gbcc *gbc = &sdl.gbc;
 	gbcc_audio_initialise(gbc, 96000, 2048);
 	gbcc_sdl_initialise(&sdl);

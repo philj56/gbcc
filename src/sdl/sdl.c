@@ -126,6 +126,8 @@ void gbcc_sdl_initialise(struct gbcc_sdl *sdl)
 		exit(EXIT_FAILURE);
 	}
 
+	SDL_SetWindowMinimumSize(sdl->window, GBC_SCREEN_WIDTH, GBC_SCREEN_HEIGHT);
+
 	set_icon(sdl->window, ICON_PATH "icon-32x32.png");
 
 	sdl->context = SDL_GL_CreateContext(sdl->window);

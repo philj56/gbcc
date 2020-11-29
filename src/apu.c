@@ -78,6 +78,11 @@ void gbcc_apu_clock(struct gbcc_core *gbc)
 	}
 
 	/* Noise */
+	/*
+	 * < 14 check is some obscure behaviour, where the lfsr isn't clocked
+	 * if the shift is 14 or 15. Short-circuiting prevents timer_clock
+	 * being called in this case.
+	 */
 	if (apu->noise.shift < 14 && timer_clock(&apu->noise.timer)) {
 		uint8_t lfsr_low = apu->noise.lfsr & 0xFFu;
 		uint8_t tmp = check_bit(lfsr_low, 0) ^ check_bit(lfsr_low, 1);
@@ -133,10 +138,18 @@ void timer_reset(struct timer *timer)
 bool duty_clock(struct duty *duty)
 {
 	duty->timer.period = (2048u - duty->freq) * 4;
-	if (timer_clock(&duty->timer)) {
+	/*
+	 * Manually clock the duty timer here for performance reasons, rather
+	 * than calling timer_clock.
+	 */
+	if (duty->timer.counter == 1) {
 		duty->counter++;
 		duty->counter %= 8u;
+		duty->timer.counter = duty->timer.period;
+	} else {
+		duty->timer.counter--;
 	}
+
 	return duty_table[duty->cycle][duty->counter];
 }
 

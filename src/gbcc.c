@@ -17,6 +17,7 @@ void *gbcc_emulation_loop(void *_gbc)
 {
 	struct gbcc *gbc = (struct gbcc *)_gbc;
 	gbcc_load(gbc);
+	bool is_camera = gbc->core.cart.mbc.type == CAMERA;
 	while (!gbc->quit) {
 		for (int i = 1000; i > 0; i--) {
 			/* Only check for savestates, pause etc.
@@ -29,7 +30,9 @@ void *gbcc_emulation_loop(void *_gbc)
 				return 0;
 			}
 			gbcc_audio_update(gbc);
-			gbcc_camera_clock(gbc);
+			if (is_camera) {
+				gbcc_camera_clock(gbc);
+			}
 		}
 		if (gbc->load_state > 0) {
 			gbcc_load_state(gbc);
