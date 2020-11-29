@@ -62,7 +62,7 @@ jobs:
 
       - name: Setup shell
         shell: pwsh
-        run: echo ::add-path::C:\msys64\usr\bin\
+        run: echo C:\msys64\usr\bin\ >> $GITHUB_PATH
 
       - name: Build package
         shell: bash.exe --login -eo pipefail "{0}"
