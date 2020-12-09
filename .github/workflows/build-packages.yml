@@ -62,6 +62,7 @@ jobs:
         with:
           msystem: "MINGW64"
           update: true
+          install: git mingw-w64-x86_64-toolchain
 
       - name: Checkout main repo
         uses: actions/checkout@v2
