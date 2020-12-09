@@ -313,7 +313,7 @@ bool initialise_v4l2(struct gbcc_camera_platform *camera)
 		return false;
 	}
 
-	uint32_t min_dim = MIN(camera->format.width, camera->format.height);
+	size_t min_dim = MIN(camera->format.width, camera->format.height);
 	camera->greyscale_buffer = malloc(min_dim * min_dim);
 	return true;
 }

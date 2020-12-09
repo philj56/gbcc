@@ -550,7 +550,7 @@ void set_icon(SDL_Window *win, const char *filename)
 	uint32_t height = png_get_image_height(png_ptr, info_ptr);
 	png_get_channels(png_ptr, info_ptr);
 
-	uint32_t *bitmap = calloc(width * height, sizeof(*bitmap));
+	uint32_t *bitmap = calloc((size_t)width * (size_t)height, sizeof(*bitmap));
 
 	png_bytepp row_pointers = calloc(height, sizeof(png_bytep));
 	for (uint32_t y = 0; y < height; y++) {
