@@ -9,6 +9,7 @@ on:
 
     branches:
       - master
+      - actions
 
 jobs:
   ubuntu:
@@ -51,21 +52,21 @@ jobs:
   windows:
 
     runs-on: windows-latest
-
-    env:
-      MSYSTEM: "MINGW64"
-      CHERE_INVOKING: 1
+    defaults:
+      run:
+        shell: msys2 {0}
 
     steps:
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: "MINGW64"
+          update: true
+
       - name: Checkout main repo
         uses: actions/checkout@v2
 
-      - name: Setup shell
-        shell: pwsh
-        run: echo ::add-path::C:\msys64\usr\bin\
-
       - name: Build package
-        shell: bash.exe --login -eo pipefail "{0}"
         run: |
           cd windows
           ./msys2.sh --install-deps
