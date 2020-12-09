@@ -76,7 +76,7 @@ void gbcc_fontmap_load(struct gbcc_fontmap *fontmap)
 	
 	fontmap->tile_width = width / 16;
 	fontmap->tile_height = height / 16;
-	fontmap->bitmap = calloc(width * height, sizeof(*fontmap->bitmap));
+	fontmap->bitmap = calloc((size_t)width * (size_t)height, sizeof(*fontmap->bitmap));
 
 	png_bytepp row_pointers = calloc(height, sizeof(png_bytep));
 	for (uint32_t y = 0; y < height; y++) {

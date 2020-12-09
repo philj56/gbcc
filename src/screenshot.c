@@ -76,7 +76,7 @@ void gbcc_screenshot(struct gbcc *gbc)
 	if (!win->raw_screenshot) {
 		width = (uint32_t)((float)width * win->scale);
 		height = (uint32_t)((float)height * win->scale);
-		buffer = malloc(width * height * 4 * sizeof(*buffer));
+		buffer = malloc((size_t)width * (size_t)height * 4 * sizeof(*buffer));
 		if (!buffer) {
 			gbcc_log_error("Couldn't malloc screenshot buffer.\n");
 			png_destroy_write_struct(&png_ptr, &info_ptr);
