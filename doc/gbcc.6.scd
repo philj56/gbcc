@@ -222,8 +222,25 @@ vsync = true
 # SAVE FILES
 
 Saves are created with the same name as the rom, ending in .sav. The save file
-format is a plain dump of SRAM. For MBC3 cartridges, RTC data is appended to
-this ram dump in plain text.
+format is a plain dump of SRAM.
+
+For MBC3 cartridges, RTC data is appended to this ram dump in plain text on a
+new line. The RTC data consists of colon-separated values in the following
+form:
+
+```
+seconds:minutes:hours:day_low:day_high:latch:cur_reg:base_sec:base_nsec
+```
+
+The first 5 values correspond to the 8-bit counters exposed to the Game Boy,
+and are expected to be unsigned 8-bit integers. _latch_ is a boolean,
+indicating whether an rtc register has currently been latched for reading.
+_cur_reg_ takes values from 0-4, indicating which 8-bit counter is currently
+selected to be read. The last two values are signed 64-bit integers, and are
+the UNIX timestamp corresponding to an RTC time of 0:0:0:0:0. When a game tries
+to read from the RTC, the current time is retrieved via
+_clock_gettime(CLOCK_REALTIME)_, and the difference with the base time stored
+in the various RTC registers.
 
 # SAVE STATES
 
