@@ -14,7 +14,7 @@ or the [manpage](https://gbcc.github.io/manpage) for details.
 
 ## Install
 ### Prebuilt packages ![](https://github.com/philj56/gbcc/workflows/Build%20packages/badge.svg)
-Packages for Windows and Ubuntu 18.04 are generated on each commit. To download
+Packages for Windows and Ubuntu 20.04 are generated on each commit. To download
 them, navigate to the [actions](https://github.com/philj56/gbcc/actions) tab
 (you'll need to be logged in to GitHub to do this). Select the latest "Build
 Packages" job that succeeded, and look for the artifacts dropdown.
