@@ -96,6 +96,7 @@ void gbcc_free(struct gbcc_core *gbc)
 	if (!gbc->initialised) {
 		return;
 	}
+	gbc->initialised = false;
 	sem_destroy(&gbc->ppu.vsync_semaphore);
 	free(gbc->cart.rom);
 	if (gbc->cart.ram_size > 0) {
@@ -103,6 +104,7 @@ void gbcc_free(struct gbcc_core *gbc)
 	}
 	free(gbc->ppu.screen.buffer_0);
 	free(gbc->ppu.screen.buffer_1);
+	*gbc = (const struct gbcc_core){0};
 }
 
 void load_rom(struct gbcc_core *gbc, const char *filename)
