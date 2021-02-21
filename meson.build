@@ -8,6 +8,7 @@ project(
     'buildtype=release',
     'warning_level=3',
     'b_lto=true',
+    'b_lto_threads=-1',
     'b_pie=true',
     'prefix=/usr'
   ],
