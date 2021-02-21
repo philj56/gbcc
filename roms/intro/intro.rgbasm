@@ -311,6 +311,7 @@ WelcomeScroll:
   ld hl, _OAMRAM ; First tile to update
 .scroll
   ld a, [bc] ; a = index in bounce table for current sprite
+  ld [FrameCounter2], a
   inc bc
   push bc ; Store bc so we can re-use it
   ld bc, BounceTable ; Table of y-coordinates for bounce animation
@@ -319,14 +320,11 @@ WelcomeScroll:
   jr nc, .scroll2
   inc b ; Manually add the carried bit, so we add an 8-bit reg to bc
 .scroll2
-  ld a, [hl] ; a = current y-coordinate
+  ld a, [FrameCounter2]
 
-  ; Play a beep when going from y < 30 to y >= 30
-  cp 28
-  jr nc, .scroll3 ; We're not currently above 39
-  ld a, [bc] ; a = next y-coordinate
-  cp 28
-  jr c, .scroll3 ; We'll not be at 40 next frame
+  ; Play a beep on frame 29 (the first bounce)
+  cp 29
+  jr nz, .scroll3
   ld a, %00111111
   ldh [rNR11], a ; 50% duty, No length
 
