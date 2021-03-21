@@ -37,7 +37,7 @@
 #endif
 
 static void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y);
-static void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y);
+static void render_character(struct gbcc_window *win, unsigned char c, uint8_t x, uint8_t y);
 static void render_box(struct gbcc_window *win, unsigned int x, unsigned int y);
 static void update_timers(struct gbcc *gbc);
 
@@ -486,7 +486,7 @@ void render_text(struct gbcc_window *win, const char *text, uint8_t x, uint8_t y
 	}
 }
 
-void render_character(struct gbcc_window *win, char c, uint8_t x, uint8_t y)
+void render_character(struct gbcc_window *win, unsigned char c, uint8_t x, uint8_t y)
 {
 	uint32_t tw = win->font.tile_width;
 	uint32_t th = win->font.tile_height;

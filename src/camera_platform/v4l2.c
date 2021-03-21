@@ -250,7 +250,6 @@ bool initialise_v4l2(struct gbcc_camera_platform *camera)
 				close(camera->fd);
 				return false;
 			}
-			break;
 	}
 
 	switch (camera->format.field) {
