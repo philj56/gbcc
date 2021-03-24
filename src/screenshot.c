@@ -70,7 +70,7 @@ void gbcc_screenshot(struct gbcc *gbc)
 		return;
 	}
 
-	uint32_t width = GBC_SCREEN_WIDTH;;
+	uint32_t width = GBC_SCREEN_WIDTH;
 	uint32_t height = GBC_SCREEN_HEIGHT;
 	uint8_t *buffer = NULL;
 	if (!win->raw_screenshot) {

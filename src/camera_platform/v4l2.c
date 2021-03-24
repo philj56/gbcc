@@ -57,7 +57,7 @@ static void destroy_userptr(struct gbcc_camera_platform *camera);
 static bool init_mmap(struct gbcc_camera_platform *camera);
 static void destroy_mmap(struct gbcc_camera_platform *camera);
 
-static void initialise_default_image();
+static void initialise_default_image(void);
 static void get_default_image(uint8_t image[GB_CAMERA_SENSOR_SIZE]);
 
 void gbcc_camera_platform_initialise(struct gbcc_camera_platform *camera)
@@ -793,7 +793,7 @@ void get_default_image(uint8_t image[GB_CAMERA_SENSOR_SIZE])
 	memcpy(image, default_image, GB_CAMERA_SENSOR_SIZE);
 }
 
-void initialise_default_image()
+void initialise_default_image(void)
 {
 	FILE *fp = fopen(CAMERA_PATH, "rb");
 	uint8_t header[HEADER_BYTES];

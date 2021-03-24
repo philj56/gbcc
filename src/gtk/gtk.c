@@ -165,9 +165,9 @@ void gbcc_gtk_initialise(struct gbcc_gtk *gtk, int *argc, char ***argv)
 	{
 		char name[] = "load_state_n";
 		for (size_t i = 0; i < N_ELEM(gtk->menu.load_state.state); i++) {
-			snprintf(name, N_ELEM(name), "save_state_%lu", i + 1);
+			snprintf(name, N_ELEM(name), "save_state_%zu", i + 1);
 			gtk->menu.save_state.state[i] = GTK_WIDGET(gtk_builder_get_object(builder, name));
-			snprintf(name, N_ELEM(name), "load_state_%lu", i + 1);
+			snprintf(name, N_ELEM(name), "load_state_%zu", i + 1);
 			gtk->menu.load_state.state[i] = GTK_WIDGET(gtk_builder_get_object(builder, name));
 		}
 	}

@@ -148,6 +148,7 @@ void gbcc_menu_process_key(struct gbcc *gbc, enum gbcc_key key)
 		case GBCC_KEY_MENU:
 		case GBCC_KEY_B:
 			menu->show = false;
+			break;
 		default:
 			break;
 	}

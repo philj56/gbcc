@@ -38,11 +38,11 @@ bool parse_bool(size_t lineno, const char *str, bool *err);
  */
 #define PARSE_ERROR_NO_ARGS(lineno, fmt) \
 		gbcc_log_error("\tLine %zu: ", (lineno));\
-		gbcc_log_append_error((fmt));
+		gbcc_log_append_error((fmt))
 
 #define PARSE_ERROR(lineno, fmt, ...) \
 		gbcc_log_error("\tLine %zu: ", (lineno));\
-		gbcc_log_append_error((fmt), __VA_ARGS__);
+		gbcc_log_append_error((fmt), __VA_ARGS__)
 
 void gbcc_load_config(struct gbcc *gbc, const char *filename)
 {
