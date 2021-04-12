@@ -33,11 +33,6 @@ jobs:
         repository: philj56/gbcc-debian-tools
         path: debian-tools
 
-    # If this run was triggered by a pull request event, then checkout
-    # the head of the pull request instead of the merge commit.
-    - run: git checkout HEAD^2
-      if: ${{ github.event_name == 'pull_request' }}
-
     - name: Install dependencies
       run: |
         sudo apt-get update
