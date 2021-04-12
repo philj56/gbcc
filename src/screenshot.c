@@ -27,7 +27,7 @@ void gbcc_screenshot(struct gbcc *gbc)
 {
 	struct gbcc_window *win = &gbc->window;
 	char *dir;
-	char fname[MAX_NAME_LEN];
+	char *fname = malloc(MAX_NAME_LEN);
 
 	dir = getenv("HOME");
 	if (!dir) {
@@ -43,6 +43,7 @@ void gbcc_screenshot(struct gbcc *gbc)
 
 	FILE *fp = fopen(fname, "wb");
 	if (!fp) {
+		free(fname);
 		gbcc_log_error("Couldn't open %s: %s\n", fname, strerror(errno));
 		return;
 	}
@@ -51,6 +52,7 @@ void gbcc_screenshot(struct gbcc *gbc)
 			NULL, NULL, NULL);
 	if (!png_ptr) {
 		fclose(fp);
+		free(fname);
 		gbcc_log_error("Couldn't create PNG write struct.\n");
 		return;
 	}
@@ -59,6 +61,7 @@ void gbcc_screenshot(struct gbcc *gbc)
 	if (!info_ptr) {
 		png_destroy_write_struct(&png_ptr, NULL);
 		fclose(fp);
+		free(fname);
 		gbcc_log_error("Couldn't create PNG info struct.\n");
 		return;
 	}
@@ -66,6 +69,7 @@ void gbcc_screenshot(struct gbcc *gbc)
 	if (setjmp(png_jmpbuf(png_ptr)) != 0) {
 		png_destroy_write_struct(&png_ptr, NULL);
 		fclose(fp);
+		free(fname);
 		gbcc_log_error("Couldn't setjmp for libpng.\n");
 		return;
 	}
@@ -78,9 +82,10 @@ void gbcc_screenshot(struct gbcc *gbc)
 		height = (uint32_t)((float)height * win->scale);
 		buffer = malloc((size_t)width * (size_t)height * 4 * sizeof(*buffer));
 		if (!buffer) {
-			gbcc_log_error("Couldn't malloc screenshot buffer.\n");
 			png_destroy_write_struct(&png_ptr, &info_ptr);
 			fclose(fp);
+			free(fname);
+			gbcc_log_error("Couldn't malloc screenshot buffer.\n");
 			return;
 		}
 		glReadPixels(win->x, win->y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
@@ -88,15 +93,17 @@ void gbcc_screenshot(struct gbcc *gbc)
 	/* Initialize rows of PNG. */
 	png_bytepp row_pointers = png_malloc(png_ptr, height * sizeof(png_bytep));
 	if (!row_pointers) {
-		gbcc_log_error("Couldn't allocate row pointers.\n");
 		fclose(fp);
+		free(fname);
+		gbcc_log_error("Couldn't allocate row pointers.\n");
 		return;
 	}
 	for (uint32_t y = 0; y < height; y++) {
 		png_bytep row = png_malloc(png_ptr, width * 3);
 		if (!row) {
-			gbcc_log_error("Couldn't allocate row pointer.\n");
 			fclose(fp);
+			free(fname);
+			gbcc_log_error("Couldn't allocate row pointer.\n");
 			return;
 		}
 		row_pointers[y] = row;
@@ -137,9 +144,11 @@ void gbcc_screenshot(struct gbcc *gbc)
 	}
 
 	gbcc_log_info("Saved screenshot %s\n", fname);
-	char message[MAX_NAME_LEN];
+	char *message = malloc(MAX_NAME_LEN);
 	snprintf(message, MAX_NAME_LEN, "Saved screenshot: %s ", fname);
 	gbcc_window_show_message(gbc, message, 2, false);
 	win->screenshot = false;
 	win->raw_screenshot = false;
+	free(message);
+	free(fname);
 }
