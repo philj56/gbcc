@@ -242,7 +242,8 @@ bool parse_option(struct gbcc *gbc, size_t lineno, const char *option, const cha
 	} else if (strcasecmp(option, "palette") == 0) {
 		gbc->core.ppu.palette = gbcc_get_palette(value);
 	} else if (strcasecmp(option, "shader") == 0) {
-		gbcc_window_use_shader(gbc, value);
+		strncpy(gbc->default_shader, value, N_ELEM(gbc->default_shader));
+		gbc->default_shader[N_ELEM(gbc->default_shader) - 1] = '\0';
 	} else if (strcasecmp(option, "save-dir") == 0) {
 		strncpy(gbc->save_directory, value, sizeof(gbc->save_directory));
 		gbc->save_directory[N_ELEM(gbc->save_directory) - 1] = '\0';

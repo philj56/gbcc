@@ -26,7 +26,7 @@
 struct gbcc;
 
 struct shader {
-	char *name;
+	const char *name;
 	GLuint program;
 };
 

@@ -209,6 +209,10 @@ void gbcc_window_initialise(struct gbcc *gbc)
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, win->gl.ebo);
 
 	win->initialised = true;
+
+	if (gbc->default_shader[0]) {
+		gbcc_window_use_shader(gbc, gbc->default_shader);
+	}
 }
 
 void gbcc_window_deinitialise(struct gbcc *gbc)

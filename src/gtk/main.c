@@ -47,13 +47,12 @@ int main(int argc, char **argv)
 
 	struct gbcc *gbc = &gtk.gbc;
 
-	gbcc_audio_initialise(gbc, 96000, 2048);
-	gbcc_gtk_initialise(&gtk, &argc, &argv);
-
 	if (!gbcc_parse_args(gbc, false, argc, argv)) {
-		gbcc_audio_destroy(gbc);
 		exit(EXIT_FAILURE);
 	}
+
+	gbcc_audio_initialise(gbc, 96000, 2048);
+	gbcc_gtk_initialise(&gtk, &argc, &argv);
 
 	if (gbc->core.initialised) {
 		gbcc_camera_initialise(gbc);

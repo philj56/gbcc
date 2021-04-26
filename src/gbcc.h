@@ -33,6 +33,7 @@ struct gbcc {
 	struct gbcc_camera_platform camera;
 	
 	char save_directory[4096];
+	char default_shader[32];
 	float turbo_speed;
 	bool quit;
 	bool pause;

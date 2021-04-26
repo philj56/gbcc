@@ -129,7 +129,8 @@ bool gbcc_parse_args(struct gbcc *gbc, bool file_required, int argc, char **argv
 				gbcc_log_debug("%s palette selected\n", gbc->core.ppu.palette.name);
 				break;
 			case 's':
-				gbcc_window_use_shader(gbc, optarg);
+				strncpy(gbc->default_shader, optarg, N_ELEM(gbc->default_shader));
+				gbc->default_shader[N_ELEM(gbc->default_shader) - 1] = '\0';
 				break;
 			case 'S':
 				strncpy(gbc->save_directory, optarg, sizeof(gbc->save_directory));

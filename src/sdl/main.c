@@ -61,14 +61,12 @@ int main(int argc, char **argv)
 #endif
 
 	struct gbcc *gbc = &sdl.gbc;
-	gbcc_audio_initialise(gbc, 96000, 2048);
-	gbcc_sdl_initialise(&sdl);
-
 	if (!gbcc_parse_args(gbc, true, argc, argv)) {
-		gbcc_audio_destroy(gbc);
 		exit(EXIT_FAILURE);
 	}
 
+	gbcc_audio_initialise(gbc, 96000, 2048);
+	gbcc_sdl_initialise(&sdl);
 	gbcc_camera_initialise(gbc);
 
 	pthread_t emu_thread;
