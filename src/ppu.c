@@ -458,7 +458,7 @@ void composite_line(struct gbcc_core *gbc)
 		}
 
 		if (ob_attr & ATTR_DRAWN) {
-			if ((win_attr & ATTR_DRAWN)) {
+			if ((win_attr & ATTR_DRAWN) && !(win_attr & ATTR_COLOUR0)) {
 				if (win_attr & ATTR_PRIORITY) {
 					continue;
 				}
@@ -466,11 +466,11 @@ void composite_line(struct gbcc_core *gbc)
 					continue;
 				}
 			}
-			if ((bg_attr & ATTR_DRAWN)) {
-				if (bg_attr & ATTR_PRIORITY && !(bg_attr & ATTR_COLOUR0)) {
+			if ((bg_attr & ATTR_DRAWN) && !(bg_attr & ATTR_COLOUR0)) {
+				if (bg_attr & ATTR_PRIORITY) {
 					continue;
 				}
-				if (!(bg_attr & ATTR_COLOUR0) && (ob_attr & ATTR_PRIORITY)) {
+				if (ob_attr & ATTR_PRIORITY) {
 					continue;
 				}
 			}
