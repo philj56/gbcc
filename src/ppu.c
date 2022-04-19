@@ -261,22 +261,27 @@ void gbcc_ppu_clock(struct gbcc_core *gbc)
 	 * different conditions being satisfied in a single cycle will *NOT*
 	 * trigger the interrupt.
 	 *
-	 * N.B. this is a switch statement for performance reasons - apparently
-	 * all this bit-checking is expensive, and this set of checks accounts
-	 * for ~4% of *all* of gbcc_emulate_cycle!
+	 * N.B. this convoluted logic is for performance reasons - apparently
+	 * all this bit-checking is expensive, and this set of checks used to
+	 * account for ~4% of *all* of gbcc_emulate_cycle!
+	 *
+	 * This should be equivalent to the following switch statement:
+	 *
+	 * bool mode_interrupt = false;
+	 * switch (get_video_mode(stat)) {
+	 * 	case GBC_LCD_MODE_HBLANK:
+	 * 		mode_interrupt = check_bit(stat, 3);
+	 * 		break;
+	 * 	case GBC_LCD_MODE_VBLANK:
+	 * 		mode_interrupt = check_bit(stat, 4);
+	 * 		break;
+	 * 	case GBC_LCD_MODE_OAM_READ:
+	 * 		mode_interrupt = check_bit(stat, 5);
+	 * 		break;
+	 * }
 	 */
-	bool mode_interrupt = false;
-	switch (get_video_mode(stat)) {
-		case GBC_LCD_MODE_HBLANK:
-			mode_interrupt = check_bit(stat, 3);
-			break;
-		case GBC_LCD_MODE_VBLANK:
-			mode_interrupt = check_bit(stat, 4);
-			break;
-		case GBC_LCD_MODE_OAM_READ:
-			mode_interrupt = check_bit(stat, 5);
-			break;
-	}
+	bool mode_interrupt = check_bit(stat, (stat & 0x03u) + 3)
+			& ~(check_bit(stat, 0) & check_bit(stat, 1));
 	if (mode_interrupt || (check_bit(stat, 2) && check_bit(stat, 6)) /* LY = LYC */) {
 		if (!ppu->last_stat) {
 			ppu->last_stat = true;
