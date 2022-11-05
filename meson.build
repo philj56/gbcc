@@ -123,6 +123,7 @@ common_sources = files(
   'src/paths.c',
   'src/ppu.c',
   'src/printer.c',
+  'src/printer_platform/terminal.c',
   'src/save.c',
   'src/screenshot.c',
   'src/time_diff.c',

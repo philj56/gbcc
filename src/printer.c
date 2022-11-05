@@ -11,6 +11,7 @@
 #include "bit_utils.h"
 #include "debug.h"
 #include "printer.h"
+#include "printer_platform.h"
 #include "audio.h"
 
 #include <pthread.h>
@@ -18,16 +19,9 @@
 #include <string.h>
 #include <time.h>
 
-#ifndef PRINTER_SOUND_PATH
-#define PRINTER_SOUND_PATH "print.wav"
-#endif
-
 /* Magic bytes that mark the start of a command packet */
 #define MAGIC_BYTE_1 0x88u
 #define MAGIC_BYTE_2 0x33u
-
-#define PRINTER_WIDTH_TILES 20
-#define PRINTER_STRIP_HEIGHT 16
 
 /* Meaning of command bytes */
 #define INITALISE 0x01u
@@ -58,14 +52,13 @@
 
 static void check_magic(struct printer *p, uint8_t byte);
 static void execute(struct printer *p);
-static void initialise(struct printer *p);
-static void start_printing(struct printer *p);
 static void fill_buffer(struct printer *p, uint8_t byte);
 static void parse_print_args(struct printer *p, uint8_t byte);
-static void *print(void *printer);
-static bool print_margin(struct printer *p, bool top);
-static bool print_strip(struct printer *p);
-static uint8_t get_palette_colour(struct printer *p, uint8_t colour);
+
+void gbcc_printer_initialise(struct printer *p)
+{
+	*p = (struct printer){0};
+}
 
 uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 {
@@ -154,6 +147,16 @@ uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte)
 	return 0;
 }
 
+uint8_t gbcc_printer_get_palette_colour(struct printer *p, uint8_t colour) {
+	uint8_t colours[4] = {
+		(p->palette & 0x03u) >> 0u,
+		(p->palette & 0x0Cu) >> 2u,
+		(p->palette & 0x30u) >> 4u,
+		(p->palette & 0xC0u) >> 6u
+	};
+	return colours[colour];
+}
+
 void check_magic(struct printer *p, uint8_t byte)
 {
 	switch (byte) {
@@ -177,13 +180,14 @@ void execute(struct printer *p)
 			if (check_bit(p->status, STATUS_PRINTING)) {
 				return;
 			}
-			initialise(p);
+			gbcc_printer_initialise(p);
 			break;
 		case 0x2u:
 			if (check_bit(p->status, STATUS_PRINTING)) {
 				return;
 			}
-			start_printing(p);
+			p->status = set_bit(p->status, STATUS_PRINTING);
+			gbcc_printer_platform_start_printing(p);
 			break;
 		case 0x4u:
 			break;
@@ -193,91 +197,6 @@ void execute(struct printer *p)
 			gbcc_log_error("Invalid printer command %02X.\n", p->packet.command);
 			break;
 	}
-}
-
-void initialise(struct printer *p)
-{
-	*p = (struct printer){0};
-}
-
-void start_printing(struct printer *p)
-{
-	p->status = set_bit(p->status, STATUS_PRINTING);
-	pthread_create(&p->print_thread, NULL, print, p);
-	pthread_setname_np(p->print_thread, "PrinterThread");
-	return;
-}
-
-bool print_margin(struct printer *p, bool top) {
-	if (top && p->margin.top_line >= p->margin.top_width) {
-		return 1;
-	} else if (!top && p->margin.bottom_line >= p->margin.bottom_width) {
-		return 1;
-	}
-	for (int line = 0; line < PRINTER_STRIP_HEIGHT; line++) {
-		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {
-			for (uint8_t x = 0; x < 8; x++) {
-				printf("█");
-			}
-		}
-		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 3000000};
-		nanosleep(&to_sleep, NULL);
-		printf("\n");
-	}
-	if (top) {
-		p->margin.top_line++;
-	} else {
-		p->margin.bottom_line++;
-	}
-	return 0;
-}
-
-bool print_strip(struct printer *p)
-{
-	if (p->print_byte == p->image_buffer.length) {
-		return 1;
-	}
-	unsigned int line;
-	for (line = 0; (line < PRINTER_STRIP_HEIGHT) && (p->print_byte < p->image_buffer.length); line++) {
-		uint8_t ty = (uint8_t)((line + p->print_line) / 8);
-		for (uint8_t tx = 0; tx < PRINTER_WIDTH_TILES; tx++) {
-			uint16_t idx = ty * PRINTER_WIDTH_TILES * 16 + tx * 16 + (uint8_t)(line + p->print_line - ty * 8) * 2;
-			uint8_t lo = p->image_buffer.data[idx];
-			uint8_t hi = p->image_buffer.data[idx + 1];
-			for (uint8_t x = 0; x < 8; x++) {
-				switch (get_palette_colour(p, (uint8_t)(check_bit(hi, 7 - x) << 1u) | check_bit(lo, 7 - x))) {
-					case 0:
-						printf("█");
-						break;
-					case 1:
-						printf("▒");
-						break;
-					case 2:
-						printf("░");
-						break;
-					case 3:
-						printf(" ");
-						break;
-				}
-			}
-			p->print_byte += 2;
-		}
-		printf("\n");
-		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 3000000};
-		nanosleep(&to_sleep, NULL);
-	}
-	p->print_line += line;
-	return 0;
-}
-
-uint8_t get_palette_colour(struct printer *p, uint8_t colour) {
-	uint8_t colours[4] = {
-		(p->palette & 0x03u) >> 0u,
-		(p->palette & 0x0Cu) >> 2u,
-		(p->palette & 0x30u) >> 4u,
-		(p->palette & 0xC0u) >> 6u
-	};
-	return colours[colour];
 }
 
 void fill_buffer(struct printer *p, uint8_t byte)
@@ -307,32 +226,4 @@ void parse_print_args(struct printer *p, uint8_t byte)
 			p->exposure = byte;
 			break;
 	}
-}
-
-void *print(void *printer)
-{
-	struct printer *p = (struct printer *)printer;
-	int stage = 0;
-	while (stage < 3) {
-		gbcc_audio_play_wav(PRINTER_SOUND_PATH);
-		const struct timespec to_sleep = {.tv_sec = 0, .tv_nsec = 850000000};
-		nanosleep(&to_sleep, NULL);
-		if (stage == 0) {
-			stage += print_margin(p, true);
-		}
-		if (stage == 1) {
-			stage += print_strip(p);
-			if (p->print_byte == p->image_buffer.length && p->margin.bottom_width == 0) {
-				break;
-			}
-		}
-		if (stage == 2) {
-			stage += print_margin(p, false);
-			if (p->margin.bottom_line >= p->margin.bottom_width) {
-				break;
-			}
-		}
-	}
-	initialise(p);
-	return 0;
 }

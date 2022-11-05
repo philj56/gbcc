@@ -17,6 +17,9 @@
 
 #define GBC_PRINTER_IMAGE_BUFFER_SIZE 0x2000
 
+#define PRINTER_WIDTH_TILES 20
+#define PRINTER_STRIP_HEIGHT 16
+
 struct printer {
 	struct {
 		uint8_t data[GBC_PRINTER_IMAGE_BUFFER_SIZE];
@@ -47,6 +50,8 @@ struct printer {
 	pthread_t print_thread;
 };
 
+void gbcc_printer_initialise(struct printer *p);
 uint8_t gbcc_printer_parse_byte(struct printer *p, uint8_t byte);
+uint8_t gbcc_printer_get_palette_colour(struct printer *p, uint8_t colour);
 
 #endif /* GBCC_PRINTER_H */
