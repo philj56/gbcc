@@ -34,11 +34,6 @@ void *gbcc_emulation_loop(void *_gbc)
 				gbcc_camera_clock(gbc);
 			}
 		}
-		if (gbc->load_state > 0) {
-			gbcc_load_state(gbc);
-		} else if (gbc->save_state > 0) {
-			gbcc_save_state(gbc);
-		}
 		if (gbc->autosave && gbc->core.cart.mbc.sram_changed) {
 			if (time(NULL) > gbc->core.cart.mbc.last_save_time) {
 				gbcc_save(gbc);
@@ -51,6 +46,11 @@ void *gbcc_emulation_loop(void *_gbc)
 			if (gbc->quit) {
 				break;
 			}
+		}
+		if (gbc->load_state > 0) {
+			gbcc_load_state(gbc);
+		} else if (gbc->save_state > 0) {
+			gbcc_save_state(gbc);
 		}
 	}
 	gbcc_save(gbc);
