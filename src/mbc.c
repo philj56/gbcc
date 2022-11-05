@@ -886,6 +886,10 @@ void gbcc_mbc_cam_write(struct gbcc_core *gbc, uint16_t addr, uint8_t val)
 						cam->reg4 = 0x01u;
 						cam->reg5 = 0x00u;
 						break;
+					/*
+					 * Cases 2 & 3 are deliberately
+					 * identical
+					 */
 					case 2:
 						cam->reg4 = 0x01u;
 						cam->reg5 = 0x02u;

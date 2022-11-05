@@ -22,7 +22,7 @@ static char selected(struct gbcc_menu *menu, enum GBCC_MENU_ENTRY entry);
 static int modulo(int x, int n);
 static void turbo_index(struct gbcc *gbc, bool inc);
 
-static const float turbo_speeds[] = {0, 0.25, 0.5, 1.5, 2, 3, 4, 5, 10};
+static const float turbo_speeds[] = {0, 0.25f, 0.5f, 1.5f, 2, 3, 4, 5, 10};
 
 void gbcc_menu_init(struct gbcc *gbc)
 {

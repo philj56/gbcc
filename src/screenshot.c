@@ -43,8 +43,8 @@ void gbcc_screenshot(struct gbcc *gbc)
 
 	FILE *fp = fopen(fname, "wb");
 	if (!fp) {
-		free(fname);
 		gbcc_log_error("Couldn't open %s: %s\n", fname, strerror(errno));
+		free(fname);
 		return;
 	}
 	png_structp png_ptr = png_create_write_struct(
